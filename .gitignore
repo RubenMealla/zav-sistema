@@ -117,3 +117,17 @@ Thumbs.db
 .vscode/*
 !.vscode/extensions.json
 !.vscode/settings.json
+
+# =========================================================
+# ARCHIVOS LOCALES DE APOYO PARA AGENTES
+# =========================================================
+
+apps/web/AGENTS.md
+apps/web/CLAUDE.md
+
+# =========================================================
+# TYPESCRIPT
+# =========================================================
+
+*.tsbuildinfo
+**/next-env.d.ts
