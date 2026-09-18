@@ -21,6 +21,9 @@ secrets/
 credentials/
 **/credentials/
 
+.npmrc
+!.npmrc.example
+
 
 # =========================================================
 # CLAVES, CERTIFICADOS Y CREDENCIALES
@@ -76,12 +79,31 @@ build/
 .expo-shared/
 web-build/
 
+.kotlin/
+.metro-health-check*
+
+*.mobileprovision
+
+# Directorios nativos generados por Expo Prebuild.
+# Revisar esta decisión si posteriormente se incorpora
+# código nativo personalizado.
+apps/mobile/android/
+apps/mobile/ios/
+
 
 # =========================================================
 # PRUEBAS Y COBERTURA
 # =========================================================
 
 coverage/
+
+
+# =========================================================
+# TYPESCRIPT
+# =========================================================
+
+*.tsbuildinfo
+**/next-env.d.ts
 
 
 # =========================================================
@@ -118,6 +140,7 @@ Thumbs.db
 !.vscode/extensions.json
 !.vscode/settings.json
 
+
 # =========================================================
 # ARCHIVOS LOCALES DE APOYO PARA AGENTES
 # =========================================================
@@ -125,9 +148,6 @@ Thumbs.db
 apps/web/AGENTS.md
 apps/web/CLAUDE.md
 
-# =========================================================
-# TYPESCRIPT
-# =========================================================
-
-*.tsbuildinfo
-**/next-env.d.ts
+apps/mobile/AGENTS.md
+apps/mobile/CLAUDE.md
+apps/mobile/.claude/
