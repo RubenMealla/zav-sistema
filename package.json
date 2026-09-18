@@ -1,0 +1,12 @@
+{
+  "name": "zav-sistema",
+  "version": "0.1.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "description": "Sistema web y móvil para ZAV - Trabajo Final de Diplomado UAJMS 2026",
+  "packageManager": "pnpm@12.4.2",
+  "engines": {
+    "node": "24.x",
+    "pnpm": "12.x"
+  }
+}
