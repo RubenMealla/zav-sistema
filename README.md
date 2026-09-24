@@ -15,7 +15,7 @@ El proyecto busca centralizar la información de los procesos comerciales y oper
 
 La solución se desarrolla mediante una aplicación web y una aplicación móvil que comparten una API REST y una base de datos centralizada.
 
-El sistema contempla dos roles internos: Administrador y Vendedor. Ambos podrán acceder a las aplicaciones web y móvil según sus permisos.
+El sistema contempla dos roles internos: Administrador y Vendedor. El Administrador podrá utilizar web y móvil según sus permisos; las operaciones internas del Vendedor se centrarán en la aplicación móvil.
 
 Adicionalmente, se contempla un módulo público para consultar información de la empresa, productos, noticias y promociones sin necesidad de iniciar sesión.
 
@@ -82,7 +82,7 @@ El proyecto se organiza como un monorepo, con tres aplicaciones independientes q
       └──────────────────────────┘
 ```
 
-**Estado de la arquitectura:** las aplicaciones web, móvil y backend cuentan con su configuración inicial. La conexión con PostgreSQL y las funcionalidades empresariales se incorporarán durante el desarrollo.
+**Estado de la arquitectura:** la API ya se conecta con PostgreSQL en Neon development y cuenta con autenticación de Administrador, registro y consulta de productos y lotes e ingreso inicial de existencias. Las aplicaciones web y móvil aún tienen su estructura inicial; su integración con la API está pendiente.
 
 La aplicación web y la aplicación móvil consumirán una misma API para mantener centralizadas las reglas de negocio y la información del sistema.
 
@@ -143,7 +143,7 @@ Directorio: `apps/api`
 | Vercel | Despliegue de la aplicación web |
 | Render | Despliegue de la API |
 
-La conexión con la base de datos y la publicación del sistema forman parte de las siguientes etapas de implementación.
+La conexión con la base de datos se comprobó en Neon development. El despliegue público de las aplicaciones y la API sigue pendiente.
 
 ### Herramientas de desarrollo
 
@@ -300,7 +300,7 @@ http://localhost:3001
 
 El puerto puede modificarse mediante la variable de entorno `PORT`.
 
-La API cuenta actualmente con el endpoint inicial generado por NestJS. Las rutas correspondientes a los módulos empresariales se incorporarán durante el desarrollo.
+La API cuenta con el endpoint inicial y con rutas de autenticación (`/api/v1/auth`), productos (`/api/v1/productos`) y lotes (`/api/v1/lotes`). Las rutas empresariales existentes requieren un JWT de Administrador; los demás módulos siguen pendientes.
 
 ---
 
@@ -323,11 +323,12 @@ PORT=3001
 DATABASE_URL=postgresql://usuario:contrasena@localhost:5432/zav_db
 
 WEB_ORIGIN=http://localhost:3000
+JWT_SECRET=
 ```
 
 Los valores mostrados son únicamente ejemplos.
 
-Actualmente, el backend utiliza la variable `PORT`. La carga de archivos `.env`, la conexión con PostgreSQL y la configuración de CORS deberán implementarse y verificarse durante el desarrollo.
+El backend ya carga variables de entorno y utiliza `DATABASE_URL` para PostgreSQL y `JWT_SECRET` para firmar tokens. Los valores reales se guardan únicamente en el archivo privado `.env`. La configuración definitiva de CORS para web y móvil aún debe verificarse.
 
 **Seguridad:** no incorporar al repositorio archivos `.env`, contraseñas reales, tokens, claves privadas ni cadenas de conexión que contengan credenciales.
 
@@ -453,11 +454,16 @@ El desarrollo del software utiliza Git para el control de versiones y GitHub par
 - Backend: compilación y análisis estático completados.
 - Backend: prueba unitaria inicial y prueba E2E del endpoint de ejemplo superadas.
 
+### Desarrollo implementado y comprobado en development
+
+- Conexión API–PostgreSQL y migración inicial de seis tablas.
+- Inicio de sesión y consulta de perfil del Administrador mediante JWT.
+- Registro y consulta de productos y lotes; ingreso inicial de existencias y un movimiento por lote.
+- En la ejecución local del script de comprobación se obtuvieron 11 resultados correctos y 0 fallidos, incluidos reintento idéntico sin duplicación, conflicto 409, cantidad cero y fechas inválidas 400 y solicitud sin token 401. El script se conservó como herramienta local y no forma parte del repositorio.
+
 ### Desarrollo pendiente
 
-- Implementación de la autenticación y los permisos.
-- Conexión del backend con PostgreSQL.
-- Implementación de los módulos de productos, lotes e inventario.
+- Completar pruebas de autorización con cuenta Vendedor y pruebas de rollback ante fallos internos de transacción.
 - Registro y seguimiento de pedidos.
 - Gestión de movimientos de inventario.
 - Integración de las aplicaciones web y móvil con la API.
