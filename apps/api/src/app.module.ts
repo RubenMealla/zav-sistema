@@ -12,6 +12,7 @@ import { UbicacionEntity } from './database/entities/ubicacion.entity.js';
 import { ExistenciaEntity } from './database/entities/existencia.entity.js';
 import { MovimientoEntity } from './database/entities/movimiento.entity.js';
 import { AuthModule } from './auth/auth.module.js';
+import { InventarioModule } from './inventario/inventario.module.js';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { AuthModule } from './auth/auth.module.js';
       envFilePath: '.env',
     }),
     AuthModule,
+    InventarioModule,
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
