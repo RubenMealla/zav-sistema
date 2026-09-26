@@ -1,0 +1,100 @@
+name: QA backend
+
+on:
+  push:
+    branches:
+      - "desarrollo/**"
+      - "correccion/**"
+      - "pruebas/**"
+      - "configuracion/**"
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: qa-backend-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verificar-api:
+    name: Verificar API
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: zav_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d zav_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/zav_test
+      JWT_SECRET: zav-qa-jwt-secret-solo-pruebas-2026-0123456789abcdef
+      QA_ADMIN_IDENTIFICADOR: admin.qa
+      QA_ADMIN_PASSWORD: Admin-QA-2026-Pruebas!
+      QA_VENDEDOR_IDENTIFICADOR: vendedor.qa
+      QA_VENDEDOR_PASSWORD: Vendedor-QA-2026-Pruebas!
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.4.2
+          run_install: false
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+
+      - name: Preparar carpeta de evidencias
+        run: mkdir -p apps/api/test-results
+
+      - name: Verificar lint
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm --filter @zav/api lint 2>&1 | tee apps/api/test-results/lint.log
+
+      - name: Verificar compilacion
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm --filter @zav/api build 2>&1 | tee apps/api/test-results/build.log
+
+      - name: Ejecutar pruebas unitarias
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm --filter @zav/api test 2>&1 | tee apps/api/test-results/unitarias.log
+
+      - name: Ejecutar pruebas E2E
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm --filter @zav/api test:e2e 2>&1 | tee apps/api/test-results/e2e.log
+
+      - name: Guardar evidencias de QA
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-backend-${{ github.run_number }}
+          path: apps/api/test-results/
+          retention-days: 30
+          if-no-files-found: warn

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Post, Req, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service.js';
 import { JwtAuthGuard } from './jwt-auth.guard.js';
 import type { SolicitudAutenticada } from './jwt-auth.guard.js';
@@ -8,6 +8,7 @@ export class AuthController {
   constructor(private readonly autenticacion: AuthService) {}
 
   @Post('login')
+  @HttpCode(HttpStatus.OK)
   iniciarSesion(@Body() cuerpo: unknown) {
     return this.autenticacion.iniciarSesion(cuerpo);
   }
