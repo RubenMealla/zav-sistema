@@ -68,7 +68,7 @@ test('permite al Administrador registrar producto y lote y conserva los datos al
     has: page.getByRole('button', { name: 'Guardar lote e ingreso' }),
   });
 
-  await formularioLote.getByLabel('Producto').selectOption({ label: /QA-WEB-001 · Producto QA Playwright/ });
+  await formularioLote.getByLabel('Producto').selectOption({ label: 'QA-WEB-001 · Producto QA Playwright' });
   await formularioLote.getByLabel('Código de lote').fill('QA-WEB-LOTE-001');
   await formularioLote.getByLabel('Fecha de elaboración').fill('2026-09-20');
   await formularioLote.getByLabel('Fecha de vencimiento').fill('2026-12-20');
