@@ -22,7 +22,7 @@ test('protege el panel cuando no existe una sesion administrativa', async ({ pag
   await page.goto('/panel');
 
   await expect(page).toHaveURL(/\/acceso\?error=sesion$/);
-  await expect(page.getByRole('alert')).toContainText('La sesión terminó o ya no es válida');
+  await expect(page.locator('p[role="alert"]')).toContainText('La sesión terminó o ya no es válida');
 
   await captura(page, '01-panel-protegido-sin-sesion.png');
 });
