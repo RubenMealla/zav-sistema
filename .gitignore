@@ -151,3 +151,12 @@ apps/web/CLAUDE.md
 apps/mobile/AGENTS.md
 apps/mobile/CLAUDE.md
 apps/mobile/.claude/
+
+
+# =========================================================
+# PLAYWRIGHT
+# =========================================================
+
+apps/web/playwright-report/
+apps/web/test-results/
+apps/web/blob-report/
