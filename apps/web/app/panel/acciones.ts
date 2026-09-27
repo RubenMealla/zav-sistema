@@ -72,3 +72,20 @@ export async function registrarTraslado(formulario: FormData) {
   }
   redirect(`/panel?error=${estado === 409 ? 'traslado-conflicto' : estado === 'conexion' ? 'conexion' : 'traslado'}#movimientos`);
 }
+
+
+export async function cambiarCondicionLote(formulario: FormData) {
+  const loteId = String(formulario.get('loteId') ?? '');
+  const accion = String(formulario.get('accion') ?? '');
+  const rutaAccion = accion === 'bloquear' ? 'bloquear' : 'liberar';
+  const estado = await enviar(`/api/v1/lotes/${encodeURIComponent(loteId)}/${rutaAccion}`, {
+    operacionClave: String(formulario.get('operacionClave') ?? ''),
+    motivo: String(formulario.get('motivo') ?? ''),
+  });
+  if (estado === 401 || estado === 403) redirect('/acceso?error=sesion');
+  if (estado === 201) {
+    revalidatePath('/panel');
+    redirect(`/panel?mensaje=condicion&historialCondicionLoteId=${encodeURIComponent(loteId)}#condiciones`);
+  }
+  redirect(`/panel?error=${estado === 409 ? 'condicion-conflicto' : estado === 'conexion' ? 'conexion' : 'condicion'}#condiciones`);
+}

@@ -27,7 +27,7 @@ test('protege el panel cuando no existe una sesion administrativa', async ({ pag
   await captura(page, '01-panel-protegido-sin-sesion.png');
 });
 
-test('permite al Administrador registrar producto, lote y traslado y conserva los datos al recargar', async ({ page }, testInfo) => {
+test('permite al Administrador gestionar producto, lote, traslado y condición con persistencia', async ({ page }, testInfo) => {
   const identificador = requerida('QA_ADMIN_IDENTIFICADOR');
   const contrasena = requerida('QA_ADMIN_PASSWORD');
   const productoCodigo = `QA-WEB-001-R${testInfo.retry}`;
@@ -108,4 +108,43 @@ test('permite al Administrador registrar producto, lote y traslado y conserva lo
   await expect(page.getByText('PRODUCCION_ALMACENAMIENTO: 7 · VENTA_DESPACHO: 5')).toBeVisible();
   await expect(page.getByRole('cell', { name: 'TRASLADO' })).toBeVisible();
   await captura(page, '08-traslado-persistente.png');
+
+  await page.getByText('+ Cambiar condición del lote').click();
+  const formularioCondicion = page.locator('form').filter({
+    has: page.getByRole('button', { name: 'Guardar condición' }),
+  });
+  await formularioCondicion.getByLabel('Lote').selectOption({ label: `${loteCodigo} · RETENIDO` });
+  await formularioCondicion.getByLabel('Acción').selectOption('liberar');
+  await formularioCondicion.getByLabel('Motivo').fill('QA: revisión interna completada');
+  await formularioCondicion.getByRole('button', { name: 'Guardar condición' }).click();
+
+  await expect(page).toHaveURL(/\/panel\?mensaje=condicion&historialCondicionLoteId=[0-9a-f-]+#condiciones$/);
+  await expect(page.getByRole('status')).toContainText('Condición del lote actualizada correctamente');
+  const filaLoteLiberado = page.getByRole('row').filter({ has: page.getByRole('cell', { name: loteCodigo }) }).first();
+  await expect(filaLoteLiberado.getByText('LIBERADO')).toBeVisible();
+  const filaLiberacion = page.getByRole('row').filter({ has: page.getByRole('cell', { name: 'QA: revisión interna completada' }) });
+  await expect(filaLiberacion.getByRole('cell', { name: 'RETENIDO' })).toBeVisible();
+  await expect(filaLiberacion.getByRole('cell', { name: 'LIBERADO' })).toBeVisible();
+  await captura(page, '09-lote-liberado.png');
+
+  await page.getByText('+ Cambiar condición del lote').click();
+  const formularioBloqueo = page.locator('form').filter({
+    has: page.getByRole('button', { name: 'Guardar condición' }),
+  });
+  await formularioBloqueo.getByLabel('Lote').selectOption({ label: `${loteCodigo} · LIBERADO` });
+  await formularioBloqueo.getByLabel('Acción').selectOption('bloquear');
+  await formularioBloqueo.getByLabel('Motivo').fill('QA: observación temporal');
+  await formularioBloqueo.getByRole('button', { name: 'Guardar condición' }).click();
+
+  await expect(page.getByRole('status')).toContainText('Condición del lote actualizada correctamente');
+  const filaLoteBloqueado = page.getByRole('row').filter({ has: page.getByRole('cell', { name: loteCodigo }) }).first();
+  await expect(filaLoteBloqueado.getByText('BLOQUEADO')).toBeVisible();
+  const filaBloqueo = page.getByRole('row').filter({ has: page.getByRole('cell', { name: 'QA: observación temporal' }) });
+  await expect(filaBloqueo.getByRole('cell', { name: 'LIBERADO' })).toBeVisible();
+  await expect(filaBloqueo.getByRole('cell', { name: 'BLOQUEADO' })).toBeVisible();
+  await captura(page, '10-lote-bloqueado.png');
+
+  await page.reload();
+  await expect(filaLoteBloqueado.getByText('BLOQUEADO')).toBeVisible();
+  await expect(page.getByRole('cell', { name: 'QA: observación temporal' })).toBeVisible();
 });
