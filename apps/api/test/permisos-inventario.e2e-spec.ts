@@ -502,4 +502,256 @@ describe('Permisos y transacciones de inventario (e2e)', () => {
     expect(movimientos.rows[0].total).toBe(0);
   });
 
+
+  it('impide al Vendedor liberar o bloquear lotes', async () => {
+    const antes = await db.query(
+      'SELECT count(*)::int AS total FROM lote_condicion_historial',
+    );
+
+    await request(app.getHttpServer())
+      .post(`/api/v1/lotes/${loteId}/liberar`)
+      .set('Authorization', `Bearer ${tokenVendedor}`)
+      .send({
+        operacionClave: randomUUID(),
+        motivo: 'Intento no autorizado',
+      })
+      .expect(403);
+
+    await request(app.getHttpServer())
+      .post(`/api/v1/lotes/${loteId}/bloquear`)
+      .set('Authorization', `Bearer ${tokenVendedor}`)
+      .send({
+        operacionClave: randomUUID(),
+        motivo: 'Intento no autorizado',
+      })
+      .expect(403);
+
+    const despues = await db.query(
+      'SELECT count(*)::int AS total FROM lote_condicion_historial',
+    );
+    expect(despues.rows[0].total).toBe(antes.rows[0].total);
+  });
+
+  it('libera un lote retenido con auditoria e idempotencia', async () => {
+    const operacionClave = randomUUID();
+    const cuerpo = {
+      operacionClave,
+      motivo: 'QA: revision interna completada',
+    };
+
+    const liberado = await request(app.getHttpServer())
+      .post(`/api/v1/lotes/${loteId}/liberar`)
+      .set('Authorization', `Bearer ${tokenAdmin}`)
+      .send(cuerpo)
+      .expect(201);
+
+    expect(liberado.body.condicion).toBe('LIBERADO');
+    expect(liberado.body.evento.condicionAnterior).toBe('RETENIDO');
+    expect(liberado.body.evento.condicionNueva).toBe('LIBERADO');
+    expect(liberado.body.evento.usuario.identificador).toBe(admin.identificador);
+
+    const repetido = await request(app.getHttpServer())
+      .post(`/api/v1/lotes/${loteId}/liberar`)
+      .set('Authorization', `Bearer ${tokenAdmin}`)
+      .send(cuerpo)
+      .expect(201);
+
+    expect(repetido.body.evento.id).toBe(liberado.body.evento.id);
+
+    await request(app.getHttpServer())
+      .post(`/api/v1/lotes/${loteId}/liberar`)
+      .set('Authorization', `Bearer ${tokenAdmin}`)
+      .send({ ...cuerpo, motivo: 'Otro motivo con la misma clave' })
+      .expect(409);
+
+    const lote = await request(app.getHttpServer())
+      .get(`/api/v1/lotes/${loteId}`)
+      .set('Authorization', `Bearer ${tokenAdmin}`)
+      .expect(200);
+    expect(lote.body.condicion).toBe('LIBERADO');
+  });
+
+  it('bloquea y vuelve a liberar un lote conservando historial', async () => {
+    const bloqueado = await request(app.getHttpServer())
+      .post(`/api/v1/lotes/${loteId}/bloquear`)
+      .set('Authorization', `Bearer ${tokenAdmin}`)
+      .send({
+        operacionClave: randomUUID(),
+        motivo: 'QA: observacion temporal',
+      })
+      .expect(201);
+
+    expect(bloqueado.body.condicion).toBe('BLOQUEADO');
+    expect(bloqueado.body.evento.condicionAnterior).toBe('LIBERADO');
+
+    const reliberado = await request(app.getHttpServer())
+      .post(`/api/v1/lotes/${loteId}/liberar`)
+      .set('Authorization', `Bearer ${tokenAdmin}`)
+      .send({
+        operacionClave: randomUUID(),
+        motivo: 'QA: observacion resuelta',
+      })
+      .expect(201);
+
+    expect(reliberado.body.condicion).toBe('LIBERADO');
+    expect(reliberado.body.evento.condicionAnterior).toBe('BLOQUEADO');
+
+    const historial = await request(app.getHttpServer())
+      .get(`/api/v1/lotes/${loteId}/condiciones?page=1&limit=20`)
+      .set('Authorization', `Bearer ${tokenAdmin}`)
+      .expect(200);
+
+    expect(historial.body.total).toBe(3);
+    expect(historial.body.items[0].condicionNueva).toBe('LIBERADO');
+  });
+
+  it('impide liberar un lote vencido', async () => {
+    const creado = await request(app.getHttpServer())
+      .post('/api/v1/lotes')
+      .set('Authorization', `Bearer ${tokenAdmin}`)
+      .send({
+        operacionClave: randomUUID(),
+        productoId,
+        codigo: 'QA-LOTE-VENCIDO',
+        elaboradoEl: '2026-08-01',
+        venceEl: '2026-09-01',
+        cantidadInicial: 3,
+        ubicacionCodigo: 'PRODUCCION_ALMACENAMIENTO',
+      })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .post(`/api/v1/lotes/${creado.body.id}/liberar`)
+      .set('Authorization', `Bearer ${tokenAdmin}`)
+      .send({
+        operacionClave: randomUUID(),
+        motivo: 'QA: no debe liberarse',
+      })
+      .expect(409);
+
+    const lote = await request(app.getHttpServer())
+      .get(`/api/v1/lotes/${creado.body.id}`)
+      .set('Authorization', `Bearer ${tokenAdmin}`)
+      .expect(200);
+    expect(lote.body.condicion).toBe('RETENIDO');
+
+    const historial = await request(app.getHttpServer())
+      .get(`/api/v1/lotes/${creado.body.id}/condiciones`)
+      .set('Authorization', `Bearer ${tokenAdmin}`)
+      .expect(200);
+    expect(historial.body.total).toBe(0);
+  });
+
+  it('impide liberar un lote de un producto inactivo', async () => {
+    const creado = await request(app.getHttpServer())
+      .post('/api/v1/lotes')
+      .set('Authorization', `Bearer ${tokenAdmin}`)
+      .send({
+        operacionClave: randomUUID(),
+        productoId,
+        codigo: 'QA-LOTE-PRODUCTO-INACTIVO',
+        elaboradoEl: '2026-09-10',
+        venceEl: '2026-12-15',
+        cantidadInicial: 2,
+        ubicacionCodigo: 'PRODUCCION_ALMACENAMIENTO',
+      })
+      .expect(201);
+
+    await db.query(
+      'UPDATE producto SET activo = FALSE WHERE id = $1::uuid',
+      [productoId],
+    );
+
+    try {
+      await request(app.getHttpServer())
+        .post(`/api/v1/lotes/${creado.body.id}/liberar`)
+        .set('Authorization', `Bearer ${tokenAdmin}`)
+        .send({
+          operacionClave: randomUUID(),
+          motivo: 'QA: no debe liberarse con producto inactivo',
+        })
+        .expect(409);
+    } finally {
+      await db.query(
+        'UPDATE producto SET activo = TRUE WHERE id = $1::uuid',
+        [productoId],
+      );
+    }
+
+    const lote = await request(app.getHttpServer())
+      .get(`/api/v1/lotes/${creado.body.id}`)
+      .set('Authorization', `Bearer ${tokenAdmin}`)
+      .expect(200);
+    expect(lote.body.condicion).toBe('RETENIDO');
+
+    const historial = await request(app.getHttpServer())
+      .get(`/api/v1/lotes/${creado.body.id}/condiciones`)
+      .set('Authorization', `Bearer ${tokenAdmin}`)
+      .expect(200);
+    expect(historial.body.total).toBe(0);
+  });
+
+  it('revierte el cambio de condicion si falla la auditoria', async () => {
+    const creado = await request(app.getHttpServer())
+      .post('/api/v1/lotes')
+      .set('Authorization', `Bearer ${tokenAdmin}`)
+      .send({
+        operacionClave: randomUUID(),
+        productoId,
+        codigo: 'QA-LOTE-COND-ROLLBACK',
+        elaboradoEl: '2026-09-10',
+        venceEl: '2026-12-10',
+        cantidadInicial: 2,
+        ubicacionCodigo: 'PRODUCCION_ALMACENAMIENTO',
+      })
+      .expect(201);
+
+    const operacionClave = randomUUID();
+
+    await db.query(`
+      CREATE OR REPLACE FUNCTION qa_fallar_condicion_lote()
+      RETURNS trigger AS $$
+      BEGIN
+        IF NEW.motivo = 'QA-FALLO-CONDICION' THEN
+          RAISE EXCEPTION 'FALLO_QA_CONDICION';
+        END IF;
+        RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql
+    `);
+    await db.query(`
+      CREATE TRIGGER qa_fallar_condicion_lote_trigger
+      BEFORE INSERT ON lote_condicion_historial
+      FOR EACH ROW EXECUTE FUNCTION qa_fallar_condicion_lote()
+    `);
+
+    try {
+      await request(app.getHttpServer())
+        .post(`/api/v1/lotes/${creado.body.id}/liberar`)
+        .set('Authorization', `Bearer ${tokenAdmin}`)
+        .send({
+          operacionClave,
+          motivo: 'QA-FALLO-CONDICION',
+        })
+        .expect(500);
+    } finally {
+      await db.query(
+        'DROP TRIGGER IF EXISTS qa_fallar_condicion_lote_trigger ON lote_condicion_historial',
+      );
+      await db.query('DROP FUNCTION IF EXISTS qa_fallar_condicion_lote()');
+    }
+
+    const lote = await db.query(
+      'SELECT condicion FROM lote WHERE id = $1::uuid',
+      [creado.body.id],
+    );
+    expect(lote.rows[0].condicion).toBe('RETENIDO');
+
+    const historial = await db.query(
+      'SELECT count(*)::int AS total FROM lote_condicion_historial WHERE operacion_clave = $1::uuid',
+      [operacionClave],
+    );
+    expect(historial.rows[0].total).toBe(0);
+  });
+
 });
