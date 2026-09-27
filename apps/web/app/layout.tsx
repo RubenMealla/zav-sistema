@@ -3,7 +3,7 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: 'ZAV | Gestión de productos terminados',
-  description: 'Sistema web de ZAV para el registro y la consulta de productos y lotes.',
+  description: 'Sistema web administrativo de ZAV para inventario y trazabilidad de productos terminados.',
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
