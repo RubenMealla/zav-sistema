@@ -293,4 +293,213 @@ describe('Permisos y transacciones de inventario (e2e)', () => {
     expect(lote.body.id).toBe(loteId);
     expect(lote.body.existencias[0].cantidad_fisica).toBe(10);
   });
+
+  it('impide al Vendedor registrar traslados de inventario', async () => {
+    const antes = await db.query(
+      "SELECT count(*)::int AS total FROM movimiento WHERE tipo = 'TRASLADO'",
+    );
+
+    await request(app.getHttpServer())
+      .post('/api/v1/movimientos/traslado')
+      .set('Authorization', `Bearer ${tokenVendedor}`)
+      .send({
+        operacionClave: randomUUID(),
+        loteId,
+        origenCodigo: 'PRODUCCION_ALMACENAMIENTO',
+        destinoCodigo: 'VENTA_DESPACHO',
+        cantidad: 1,
+      })
+      .expect(403);
+
+    const despues = await db.query(
+      "SELECT count(*)::int AS total FROM movimiento WHERE tipo = 'TRASLADO'",
+    );
+    expect(despues.rows[0].total).toBe(antes.rows[0].total);
+  });
+
+  it('traslada saldo, mantiene el lote retenido y evita duplicados por reintento', async () => {
+    const operacionClave = randomUUID();
+    const traslado = {
+      operacionClave,
+      loteId,
+      origenCodigo: 'PRODUCCION_ALMACENAMIENTO',
+      destinoCodigo: 'VENTA_DESPACHO',
+      cantidad: 4,
+      referencia: 'QA-TRASLADO-001',
+      motivo: 'Prueba automatizada de traslado',
+    };
+
+    const creado = await request(app.getHttpServer())
+      .post('/api/v1/movimientos/traslado')
+      .set('Authorization', `Bearer ${tokenAdmin}`)
+      .send(traslado)
+      .expect(201);
+
+    expect(creado.body.movimiento.tipo).toBe('TRASLADO');
+    expect(creado.body.movimiento.origen.codigo).toBe('PRODUCCION_ALMACENAMIENTO');
+    expect(creado.body.movimiento.destino.codigo).toBe('VENTA_DESPACHO');
+
+    const produccion = creado.body.existencias.find(
+      (fila: { codigo: string }) => fila.codigo === 'PRODUCCION_ALMACENAMIENTO',
+    );
+    const venta = creado.body.existencias.find(
+      (fila: { codigo: string }) => fila.codigo === 'VENTA_DESPACHO',
+    );
+    expect(produccion.cantidad_fisica).toBe(6);
+    expect(venta.cantidad_fisica).toBe(4);
+
+    const repetido = await request(app.getHttpServer())
+      .post('/api/v1/movimientos/traslado')
+      .set('Authorization', `Bearer ${tokenAdmin}`)
+      .send(traslado)
+      .expect(201);
+
+    expect(repetido.body.movimiento.id).toBe(creado.body.movimiento.id);
+
+    const movimientos = await db.query(
+      'SELECT count(*)::int AS total FROM movimiento WHERE operacion_clave = $1::uuid',
+      [operacionClave],
+    );
+    expect(movimientos.rows[0].total).toBe(1);
+
+    await request(app.getHttpServer())
+      .post('/api/v1/movimientos/traslado')
+      .set('Authorization', `Bearer ${tokenAdmin}`)
+      .send({ ...traslado, cantidad: 5 })
+      .expect(409);
+
+    const lote = await request(app.getHttpServer())
+      .get(`/api/v1/lotes/${loteId}`)
+      .set('Authorization', `Bearer ${tokenAdmin}`)
+      .expect(200);
+    expect(lote.body.condicion).toBe('RETENIDO');
+  });
+
+  it('permite el traslado inverso y registra el historial del lote', async () => {
+    await request(app.getHttpServer())
+      .post('/api/v1/movimientos/traslado')
+      .set('Authorization', `Bearer ${tokenAdmin}`)
+      .send({
+        operacionClave: randomUUID(),
+        loteId,
+        origenCodigo: 'VENTA_DESPACHO',
+        destinoCodigo: 'PRODUCCION_ALMACENAMIENTO',
+        cantidad: 1,
+        referencia: 'QA-RETORNO-001',
+      })
+      .expect(201);
+
+    const historial = await request(app.getHttpServer())
+      .get(`/api/v1/movimientos?loteId=${loteId}&page=1&limit=20`)
+      .set('Authorization', `Bearer ${tokenAdmin}`)
+      .expect(200);
+
+    expect(historial.body.total).toBe(3);
+    expect(historial.body.items.map((item: { tipo: string }) => item.tipo)).toContain('INGRESO');
+    expect(historial.body.items.filter((item: { tipo: string }) => item.tipo === 'TRASLADO')).toHaveLength(2);
+  });
+
+  it('rechaza saldo insuficiente sin modificar existencias ni crear movimiento', async () => {
+    const operacionClave = randomUUID();
+    const antes = await db.query(
+      `SELECT u.codigo, e.cantidad_fisica
+       FROM existencia e
+       JOIN ubicacion u ON u.id = e.ubicacion_id
+       WHERE e.lote_id = $1::uuid
+       ORDER BY u.codigo`,
+      [loteId],
+    );
+
+    await request(app.getHttpServer())
+      .post('/api/v1/movimientos/traslado')
+      .set('Authorization', `Bearer ${tokenAdmin}`)
+      .send({
+        operacionClave,
+        loteId,
+        origenCodigo: 'PRODUCCION_ALMACENAMIENTO',
+        destinoCodigo: 'VENTA_DESPACHO',
+        cantidad: 999,
+      })
+      .expect(409);
+
+    const despues = await db.query(
+      `SELECT u.codigo, e.cantidad_fisica
+       FROM existencia e
+       JOIN ubicacion u ON u.id = e.ubicacion_id
+       WHERE e.lote_id = $1::uuid
+       ORDER BY u.codigo`,
+      [loteId],
+    );
+    expect(despues.rows).toEqual(antes.rows);
+
+    const movimientos = await db.query(
+      'SELECT count(*)::int AS total FROM movimiento WHERE operacion_clave = $1::uuid',
+      [operacionClave],
+    );
+    expect(movimientos.rows[0].total).toBe(0);
+  });
+
+  it('revierte los saldos si falla el registro del movimiento de traslado', async () => {
+    const operacionClave = randomUUID();
+    const antes = await db.query(
+      `SELECT u.codigo, e.cantidad_fisica
+       FROM existencia e
+       JOIN ubicacion u ON u.id = e.ubicacion_id
+       WHERE e.lote_id = $1::uuid
+       ORDER BY u.codigo`,
+      [loteId],
+    );
+
+    await db.query(`
+      CREATE OR REPLACE FUNCTION qa_fallar_movimiento_traslado()
+      RETURNS trigger AS $$
+      BEGIN
+        IF NEW.tipo = 'TRASLADO' AND NEW.referencia = 'QA-FALLO-TRASLADO' THEN
+          RAISE EXCEPTION 'FALLO_QA_TRASLADO';
+        END IF;
+        RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql
+    `);
+    await db.query(`
+      CREATE TRIGGER qa_fallar_movimiento_traslado_trigger
+      BEFORE INSERT ON movimiento
+      FOR EACH ROW EXECUTE FUNCTION qa_fallar_movimiento_traslado()
+    `);
+
+    try {
+      await request(app.getHttpServer())
+        .post('/api/v1/movimientos/traslado')
+        .set('Authorization', `Bearer ${tokenAdmin}`)
+        .send({
+          operacionClave,
+          loteId,
+          origenCodigo: 'PRODUCCION_ALMACENAMIENTO',
+          destinoCodigo: 'VENTA_DESPACHO',
+          cantidad: 2,
+          referencia: 'QA-FALLO-TRASLADO',
+        })
+        .expect(500);
+    } finally {
+      await db.query('DROP TRIGGER IF EXISTS qa_fallar_movimiento_traslado_trigger ON movimiento');
+      await db.query('DROP FUNCTION IF EXISTS qa_fallar_movimiento_traslado()');
+    }
+
+    const despues = await db.query(
+      `SELECT u.codigo, e.cantidad_fisica
+       FROM existencia e
+       JOIN ubicacion u ON u.id = e.ubicacion_id
+       WHERE e.lote_id = $1::uuid
+       ORDER BY u.codigo`,
+      [loteId],
+    );
+    expect(despues.rows).toEqual(antes.rows);
+
+    const movimientos = await db.query(
+      'SELECT count(*)::int AS total FROM movimiento WHERE operacion_clave = $1::uuid',
+      [operacionClave],
+    );
+    expect(movimientos.rows[0].total).toBe(0);
+  });
+
 });
