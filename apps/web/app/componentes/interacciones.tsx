@@ -93,8 +93,8 @@ export function CampoContrasena() {
   const [visible, setVisible] = useState(false);
 
   return (
-    <label className="campo">
-      <span>Contraseña</span>
+    <div className="campo">
+      <label htmlFor="contrasena">Contraseña</label>
       <div className="campo-con-accion">
         <input
           id="contrasena"
@@ -108,6 +108,6 @@ export function CampoContrasena() {
           {visible ? 'Ocultar' : 'Mostrar'}
         </button>
       </div>
-    </label>
+    </div>
   );
 }
