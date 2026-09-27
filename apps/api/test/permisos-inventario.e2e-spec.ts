@@ -642,6 +642,55 @@ describe('Permisos y transacciones de inventario (e2e)', () => {
     expect(historial.body.total).toBe(0);
   });
 
+  it('impide liberar un lote de un producto inactivo', async () => {
+    const creado = await request(app.getHttpServer())
+      .post('/api/v1/lotes')
+      .set('Authorization', `Bearer ${tokenAdmin}`)
+      .send({
+        operacionClave: randomUUID(),
+        productoId,
+        codigo: 'QA-LOTE-PRODUCTO-INACTIVO',
+        elaboradoEl: '2026-09-10',
+        venceEl: '2026-12-15',
+        cantidadInicial: 2,
+        ubicacionCodigo: 'PRODUCCION_ALMACENAMIENTO',
+      })
+      .expect(201);
+
+    await db.query(
+      'UPDATE producto SET activo = FALSE WHERE id = $1::uuid',
+      [productoId],
+    );
+
+    try {
+      await request(app.getHttpServer())
+        .post(`/api/v1/lotes/${creado.body.id}/liberar`)
+        .set('Authorization', `Bearer ${tokenAdmin}`)
+        .send({
+          operacionClave: randomUUID(),
+          motivo: 'QA: no debe liberarse con producto inactivo',
+        })
+        .expect(409);
+    } finally {
+      await db.query(
+        'UPDATE producto SET activo = TRUE WHERE id = $1::uuid',
+        [productoId],
+      );
+    }
+
+    const lote = await request(app.getHttpServer())
+      .get(`/api/v1/lotes/${creado.body.id}`)
+      .set('Authorization', `Bearer ${tokenAdmin}`)
+      .expect(200);
+    expect(lote.body.condicion).toBe('RETENIDO');
+
+    const historial = await request(app.getHttpServer())
+      .get(`/api/v1/lotes/${creado.body.id}/condiciones`)
+      .set('Authorization', `Bearer ${tokenAdmin}`)
+      .expect(200);
+    expect(historial.body.total).toBe(0);
+  });
+
   it('revierte el cambio de condicion si falla la auditoria', async () => {
     const creado = await request(app.getHttpServer())
       .post('/api/v1/lotes')
