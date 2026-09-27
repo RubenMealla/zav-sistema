@@ -2,6 +2,7 @@ import * as argon2 from 'argon2';
 import pg from 'pg';
 import { DataSource } from 'typeorm';
 import { InicialZav1790208000000 } from '../migrations/1790208000000-inicial.mjs';
+import { LoteCondicionHistorial1790294400000 } from '../migrations/1790294400000-lote-condicion-historial.mjs';
 
 function requerida(nombre) {
   const valor = process.env[nombre];
@@ -56,7 +57,7 @@ export default async function prepararBaseE2E() {
     migrationsRun: false,
     migrationsTableName: 'typeorm_migraciones',
     migrationsTransactionMode: 'all',
-    migrations: [InicialZav1790208000000],
+    migrations: [InicialZav1790208000000, LoteCondicionHistorial1790294400000],
     logging: false,
   });
 

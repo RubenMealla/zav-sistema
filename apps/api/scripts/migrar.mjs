@@ -1,5 +1,6 @@
 import { DataSource } from 'typeorm';
 import { InicialZav1790208000000 } from '../migrations/1790208000000-inicial.mjs';
+import { LoteCondicionHistorial1790294400000 } from '../migrations/1790294400000-lote-condicion-historial.mjs';
 
 // Proteccion adicional: no es posible identificar la rama de Neon con SELECT.
 // Comprobar en el panel Connect que DATABASE_URL pertenece a development.
@@ -21,7 +22,7 @@ if (process.argv.slice(2).join(' ') !== '--aplicar-development') {
     migrationsRun: false,
     migrationsTableName: 'typeorm_migraciones',
     migrationsTransactionMode: 'all',
-    migrations: [InicialZav1790208000000],
+    migrations: [InicialZav1790208000000, LoteCondicionHistorial1790294400000],
     logging: false,
   });
 
