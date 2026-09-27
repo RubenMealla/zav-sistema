@@ -43,8 +43,9 @@ type EventoCondicion = {
 type Pagina<T> = { items: T[]; total: number };
 type Perfil = { nombre: string; identificador: string; rol: string };
 type Vista = 'resumen' | 'productos' | 'lotes' | 'condiciones' | 'movimientos';
+type VistaConfig = { titulo: string; descripcion: string; icono: 'inicio' | 'producto' | 'lote' | 'condicion' | 'movimiento' };
 
-const vistas: Record<Vista, { titulo: string; descripcion: string; icono: 'inicio' | 'producto' | 'lote' | 'condicion' | 'movimiento' }> = {
+const vistas: Record<Vista, VistaConfig> = {
   resumen: { titulo: 'Resumen general', descripcion: 'Estado operativo del inventario y accesos rápidos.', icono: 'inicio' },
   productos: { titulo: 'Productos terminados', descripcion: 'Presentaciones comerciales registradas en el sistema.', icono: 'producto' },
   lotes: { titulo: 'Lotes y existencias', descripcion: 'Existencia física, vencimientos y ubicación de cada lote.', icono: 'lote' },
@@ -175,7 +176,7 @@ export default async function Panel({
 
         <nav className="sidebar-nav" aria-label="Módulos del sistema">
           <span className="sidebar-seccion">PRINCIPAL</span>
-          {(Object.entries(vistas) as Array<[Vista, typeof vistas[Vista]]>).map(([clave, item]) => (
+          {(Object.entries(vistas) as Array<[Vista, VistaConfig]>).map(([clave, item]) => (
             <Link
               key={clave}
               href={`/panel?vista=${clave}`}
@@ -215,7 +216,7 @@ export default async function Panel({
         </header>
 
         <nav className="nav-movil" aria-label="Módulos">
-          {(Object.entries(vistas) as Array<[Vista, typeof vistas[Vista]]>).map(([clave, item]) => (
+          {(Object.entries(vistas) as Array<[Vista, VistaConfig]>).map(([clave, item]) => (
             <Link key={clave} href={`/panel?vista=${clave}`} className={vista === clave ? 'activo' : ''}>
               <Icono nombre={item.icono} tamano={17} /><span>{item.titulo}</span>
             </Link>
