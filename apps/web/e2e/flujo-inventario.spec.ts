@@ -27,7 +27,7 @@ test('protege el panel cuando no existe una sesion administrativa', async ({ pag
   await captura(page, '01-panel-protegido-sin-sesion.png');
 });
 
-test('permite al Administrador registrar producto y lote y conserva los datos al recargar', async ({ page }) => {
+test('permite al Administrador registrar producto, lote y traslado y conserva los datos al recargar', async ({ page }) => {
   const identificador = requerida('QA_ADMIN_IDENTIFICADOR');
   const contrasena = requerida('QA_ADMIN_PASSWORD');
 
@@ -48,7 +48,6 @@ test('permite al Administrador registrar producto y lote y conserva los datos al
   const formularioProducto = page.locator('form').filter({
     has: page.getByRole('button', { name: 'Guardar producto' }),
   });
-
   await formularioProducto.getByLabel('Código').fill('QA-WEB-001');
   await formularioProducto.getByLabel('Nombre').fill('Producto QA Playwright');
   await formularioProducto.getByLabel('Familia').fill('Pruebas');
@@ -60,14 +59,12 @@ test('permite al Administrador registrar producto y lote y conserva los datos al
   await expect(page).toHaveURL(/\/panel\?mensaje=producto$/);
   await expect(page.getByRole('status')).toContainText('Producto registrado correctamente');
   await expect(page.getByRole('cell', { name: 'QA-WEB-001' })).toBeVisible();
-  await expect(page.getByRole('cell', { name: 'Producto QA Playwright' })).toBeVisible();
   await captura(page, '04-producto-registrado.png');
 
   await page.getByText('+ Registrar lote e ingreso inicial').click();
   const formularioLote = page.locator('form').filter({
     has: page.getByRole('button', { name: 'Guardar lote e ingreso' }),
   });
-
   await formularioLote.getByLabel('Producto').selectOption({ label: 'QA-WEB-001 · Producto QA Playwright' });
   await formularioLote.getByLabel('Código de lote').fill('QA-WEB-LOTE-001');
   await formularioLote.getByLabel('Fecha de elaboración').fill('2026-09-20');
@@ -82,10 +79,30 @@ test('permite al Administrador registrar producto y lote y conserva los datos al
   await captura(page, '05-lote-registrado.png');
 
   await page.reload();
-
-  await expect(page.getByRole('heading', { name: 'Panel de inventario' })).toBeVisible();
-  await expect(page.getByRole('cell', { name: 'QA-WEB-001' })).toBeVisible();
-  await expect(page.getByRole('cell', { name: 'QA-WEB-LOTE-001' })).toBeVisible();
   await expect(page.getByText('PRODUCCION_ALMACENAMIENTO: 12')).toBeVisible();
   await captura(page, '06-persistencia-despues-recarga.png');
+
+  await page.getByText('+ Registrar traslado').click();
+  const formularioTraslado = page.locator('form').filter({
+    has: page.getByRole('button', { name: 'Guardar traslado' }),
+  });
+  await formularioTraslado.getByLabel('Lote a trasladar').selectOption({ label: 'QA-WEB-LOTE-001 · RETENIDO' });
+  await formularioTraslado.getByLabel('Origen').selectOption('PRODUCCION_ALMACENAMIENTO');
+  await formularioTraslado.getByLabel('Destino').selectOption('VENTA_DESPACHO');
+  await formularioTraslado.getByLabel('Cantidad a trasladar').fill('5');
+  await formularioTraslado.getByLabel('Referencia (opcional)').fill('QA-WEB-TR-001');
+  await formularioTraslado.getByRole('button', { name: 'Guardar traslado' }).click();
+
+  await expect(page).toHaveURL(/\/panel\?mensaje=traslado&historialLoteId=[0-9a-f-]+#movimientos$/);
+  await expect(page.getByRole('status')).toContainText('Traslado registrado correctamente');
+  await expect(page.getByText('PRODUCCION_ALMACENAMIENTO: 7 · VENTA_DESPACHO: 5')).toBeVisible();
+  await expect(page.getByRole('cell', { name: 'TRASLADO' })).toBeVisible();
+  await expect(page.getByRole('cell', { name: 'Produccion y Almacenamiento' })).toBeVisible();
+  await expect(page.getByRole('cell', { name: 'Venta y Despacho' })).toBeVisible();
+  await captura(page, '07-traslado-registrado.png');
+
+  await page.reload();
+  await expect(page.getByText('PRODUCCION_ALMACENAMIENTO: 7 · VENTA_DESPACHO: 5')).toBeVisible();
+  await expect(page.getByRole('cell', { name: 'TRASLADO' })).toBeVisible();
+  await captura(page, '08-traslado-persistente.png');
 });

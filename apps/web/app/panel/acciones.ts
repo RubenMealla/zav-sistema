@@ -49,3 +49,26 @@ export async function registrarLote(formulario: FormData) {
   if (estado === 201) { revalidatePath('/panel'); redirect('/panel?mensaje=lote'); }
   redirect(`/panel?error=${estado === 409 ? 'lote-duplicado' : estado === 'conexion' ? 'conexion' : 'lote'}`);
 }
+
+export async function registrarTraslado(formulario: FormData) {
+  const loteId = String(formulario.get('loteId') ?? '');
+  const referencia = String(formulario.get('referencia') ?? '').trim();
+  const motivo = String(formulario.get('motivo') ?? '').trim();
+  const datos: Record<string, unknown> = {
+    operacionClave: String(formulario.get('operacionClave') ?? ''),
+    loteId,
+    origenCodigo: String(formulario.get('origenCodigo') ?? ''),
+    destinoCodigo: String(formulario.get('destinoCodigo') ?? ''),
+    cantidad: Number(formulario.get('cantidad')),
+  };
+  if (referencia) datos.referencia = referencia;
+  if (motivo) datos.motivo = motivo;
+
+  const estado = await enviar('/api/v1/movimientos/traslado', datos);
+  if (estado === 401 || estado === 403) redirect('/acceso?error=sesion');
+  if (estado === 201) {
+    revalidatePath('/panel');
+    redirect(`/panel?mensaje=traslado&historialLoteId=${encodeURIComponent(loteId)}#movimientos`);
+  }
+  redirect(`/panel?error=${estado === 409 ? 'traslado-conflicto' : estado === 'conexion' ? 'conexion' : 'traslado'}#movimientos`);
+}
