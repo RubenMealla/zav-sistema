@@ -18,135 +18,140 @@ async function captura(page: Page, nombre: string) {
   });
 }
 
-test('protege el panel cuando no existe una sesion administrativa', async ({ page }) => {
+test('muestra una portada profesional y protege el panel sin sesion', async ({ page }) => {
+  await page.goto('/');
+
+  await expect(page.getByRole('heading', { name: /Control de inventario con trazabilidad clara/ })).toBeVisible();
+  await expect(page.getByRole('link', { name: /Acceso privado/ })).toBeVisible();
+  await expect(page.getByText('Inventario centralizado')).toBeVisible();
+  await captura(page, '01-inicio-redisenado.png');
+
   await page.goto('/panel');
-
   await expect(page).toHaveURL(/\/acceso\?error=sesion$/);
-  await expect(page.locator('p[role="alert"]')).toContainText('La sesión terminó o ya no es válida');
-
-  await captura(page, '01-panel-protegido-sin-sesion.png');
+  await expect(page.getByRole('heading', { name: 'Bienvenido de nuevo' })).toBeVisible();
+  await expect(page.locator('.mensaje-error[role="alert"]')).toContainText('La sesión terminó o ya no es válida');
+  await captura(page, '02-acceso-protegido-redisenado.png');
 });
 
-test('permite al Administrador gestionar producto, lote, traslado y condición con persistencia', async ({ page }, testInfo) => {
+test('permite gestionar inventario desde módulos, modales y notificaciones', async ({ page }, testInfo) => {
   const identificador = requerida('QA_ADMIN_IDENTIFICADOR');
   const contrasena = requerida('QA_ADMIN_PASSWORD');
-  const productoCodigo = `QA-WEB-001-R${testInfo.retry}`;
-  const loteCodigo = `QA-WEB-LOTE-001-R${testInfo.retry}`;
+  const productoCodigo = `QA-UI-001-R${testInfo.retry}`;
+  const loteCodigo = `QA-UI-LOTE-001-R${testInfo.retry}`;
 
   await page.goto('/acceso');
   await expect(page.getByRole('heading', { name: 'Bienvenido de nuevo' })).toBeVisible();
-  await captura(page, '02-acceso-administrativo.png');
-
   await page.getByLabel('Identificador de acceso').fill(identificador);
   await page.getByLabel('Contraseña').fill(contrasena);
   await page.getByRole('button', { name: /Iniciar sesión/ }).click();
 
   await expect(page).toHaveURL(/\/panel$/);
-  await expect(page.getByRole('heading', { name: 'Panel de inventario' })).toBeVisible();
-  await expect(page.getByText(`${identificador} · Administrador`)).toBeVisible();
-  await captura(page, '03-panel-inventario.png');
+  await expect(page.getByRole('heading', { name: 'Resumen general' })).toBeVisible();
+  await expect(page.getByText('Trabaja por módulo')).toBeVisible();
+  await expect(page.getByText('Distribución actual')).toBeVisible();
+  await captura(page, '03-dashboard-administrativo.png');
 
-  await page.getByText('+ Registrar producto').click();
-  const formularioProducto = page.locator('form').filter({
-    has: page.getByRole('button', { name: 'Guardar producto' }),
-  });
-  await formularioProducto.getByLabel('Código').fill(productoCodigo);
-  await formularioProducto.getByLabel('Nombre').fill('Producto QA Playwright');
-  await formularioProducto.getByLabel('Familia').fill('Pruebas');
-  await formularioProducto.getByLabel('Presentación').fill('Paquete de prueba');
-  await formularioProducto.getByLabel('Peso (gramos)').fill('250');
-  await formularioProducto.getByLabel('Precio (Bs)').fill('18.50');
-  await formularioProducto.getByRole('button', { name: 'Guardar producto' }).click();
+  await page.getByRole('link', { name: 'Productos terminados' }).click();
+  await expect(page).toHaveURL(/\/panel\?vista=productos$/);
+  await expect(page.getByRole('heading', { name: 'Productos terminados' })).toBeVisible();
 
-  await expect(page).toHaveURL(/\/panel\?mensaje=producto$/);
+  await page.getByRole('button', { name: 'Nuevo producto' }).click();
+  const modalProducto = page.getByRole('dialog');
+  await expect(modalProducto.getByRole('heading', { name: 'Registrar producto' })).toBeVisible();
+  await captura(page, '04-modal-producto.png');
+
+  await modalProducto.getByLabel('Código').fill(productoCodigo);
+  await modalProducto.getByLabel('Nombre').fill('Producto QA UI');
+  await modalProducto.getByLabel('Familia').fill('Pruebas');
+  await modalProducto.getByLabel('Presentación').fill('Paquete de prueba');
+  await modalProducto.getByLabel('Peso (gramos)').fill('250');
+  await modalProducto.getByLabel('Precio (Bs)').fill('18.50');
+  await modalProducto.getByRole('button', { name: 'Guardar producto' }).click();
+
+  await expect(page).toHaveURL(/\/panel\?vista=productos&mensaje=producto$/);
   await expect(page.getByRole('status')).toContainText('Producto registrado correctamente');
   await expect(page.getByRole('cell', { name: productoCodigo })).toBeVisible();
-  await captura(page, '04-producto-registrado.png');
+  await captura(page, '05-producto-registrado.png');
 
-  await page.getByText('+ Registrar lote e ingreso inicial').click();
-  const formularioLote = page.locator('form').filter({
-    has: page.getByRole('button', { name: 'Guardar lote e ingreso' }),
-  });
-  await formularioLote.getByLabel('Producto').selectOption({ label: `${productoCodigo} · Producto QA Playwright` });
-  await formularioLote.getByLabel('Código de lote').fill(loteCodigo);
-  await formularioLote.getByLabel('Fecha de elaboración').fill('2026-09-20');
-  await formularioLote.getByLabel('Fecha de vencimiento').fill('2026-12-20');
-  await formularioLote.getByLabel('Cantidad inicial (paquetes)').fill('12');
-  await formularioLote.getByRole('button', { name: 'Guardar lote e ingreso' }).click();
+  await page.getByRole('link', { name: 'Lotes y existencias' }).click();
+  await page.getByRole('button', { name: 'Nuevo lote' }).click();
+  const modalLote = page.getByRole('dialog');
+  await modalLote.getByLabel('Producto').selectOption({ label: `${productoCodigo} · Producto QA UI` });
+  await modalLote.getByLabel('Código de lote').fill(loteCodigo);
+  await modalLote.getByLabel('Fecha de elaboración').fill('2026-09-20');
+  await modalLote.getByLabel('Fecha de vencimiento').fill('2026-12-20');
+  await modalLote.getByLabel('Cantidad inicial').fill('12');
+  await modalLote.getByRole('button', { name: 'Guardar lote e ingreso' }).click();
 
-  await expect(page).toHaveURL(/\/panel\?mensaje=lote$/);
+  await expect(page).toHaveURL(/\/panel\?vista=lotes&mensaje=lote$/);
   await expect(page.getByRole('status')).toContainText('Lote e ingreso inicial registrados correctamente');
-  await expect(page.getByRole('cell', { name: loteCodigo })).toBeVisible();
-  await expect(page.getByText('PRODUCCION_ALMACENAMIENTO: 12')).toBeVisible();
-  await captura(page, '05-lote-registrado.png');
+  const filaLote = page.getByRole('row').filter({ has: page.getByRole('cell', { name: loteCodigo }) });
+  await expect(filaLote.getByText('RETENIDO')).toBeVisible();
+  await expect(filaLote.getByText('PRODUCCION_ALMACENAMIENTO')).toBeVisible();
+  await captura(page, '06-lote-registrado.png');
 
-  await page.reload();
-  await expect(page.getByText('PRODUCCION_ALMACENAMIENTO: 12')).toBeVisible();
-  await captura(page, '06-persistencia-despues-recarga.png');
+  await page.getByRole('link', { name: 'Movimientos' }).click();
+  await page.getByRole('button', { name: 'Nuevo traslado' }).click();
+  const modalTraslado = page.getByRole('dialog');
+  await modalTraslado.getByLabel('Lote a trasladar').selectOption({ label: `${loteCodigo} · RETENIDO` });
+  await modalTraslado.getByLabel('Cantidad').fill('5');
+  await modalTraslado.getByLabel('Origen').selectOption('PRODUCCION_ALMACENAMIENTO');
+  await modalTraslado.getByLabel('Destino').selectOption('VENTA_DESPACHO');
+  await modalTraslado.getByLabel(/Referencia/).fill('QA-UI-TR-001');
+  await modalTraslado.getByRole('button', { name: 'Guardar traslado' }).click();
 
-  await page.getByText('+ Registrar traslado').click();
-  const formularioTraslado = page.locator('form').filter({
-    has: page.getByRole('button', { name: 'Guardar traslado' }),
-  });
-  await formularioTraslado.getByLabel('Lote a trasladar').selectOption({ label: `${loteCodigo} · RETENIDO` });
-  await formularioTraslado.getByLabel('Origen').selectOption('PRODUCCION_ALMACENAMIENTO');
-  await formularioTraslado.getByLabel('Destino').selectOption('VENTA_DESPACHO');
-  await formularioTraslado.getByLabel('Cantidad a trasladar').fill('5');
-  await formularioTraslado.getByLabel('Referencia (opcional)').fill('QA-WEB-TR-001');
-  await formularioTraslado.getByRole('button', { name: 'Guardar traslado' }).click();
-
-  await expect(page).toHaveURL(/\/panel\?mensaje=traslado&historialLoteId=[0-9a-f-]+#movimientos$/);
+  await expect(page).toHaveURL(/\/panel\?vista=movimientos&mensaje=traslado&historialLoteId=[0-9a-f-]+$/);
   await expect(page.getByRole('status')).toContainText('Traslado registrado correctamente');
-  const filaLoteTrasladado = page.getByRole('row').filter({ has: page.getByRole('cell', { name: loteCodigo }) }).first();
-  await expect(filaLoteTrasladado.getByText('PRODUCCION_ALMACENAMIENTO: 7 · VENTA_DESPACHO: 5')).toBeVisible();
-  const filaTraslado = page.getByRole('row').filter({ has: page.getByRole('cell', { name: 'TRASLADO' }) });
+  const filaTraslado = page.getByRole('row')
+    .filter({ has: page.getByRole('cell', { name: loteCodigo }) })
+    .filter({ has: page.getByRole('cell', { name: 'TRASLADO' }) });
   await expect(filaTraslado).toBeVisible();
   await expect(filaTraslado.getByRole('cell', { name: 'Produccion y Almacenamiento' })).toBeVisible();
   await expect(filaTraslado.getByRole('cell', { name: 'Venta y Despacho' })).toBeVisible();
   await captura(page, '07-traslado-registrado.png');
 
-  await page.reload();
-  const filaLoteTrasladadoRecarga = page.getByRole('row').filter({ has: page.getByRole('cell', { name: loteCodigo }) }).first();
-  await expect(filaLoteTrasladadoRecarga.getByText('PRODUCCION_ALMACENAMIENTO: 7 · VENTA_DESPACHO: 5')).toBeVisible();
-  await expect(page.getByRole('cell', { name: 'TRASLADO' })).toBeVisible();
-  await captura(page, '08-traslado-persistente.png');
+  await page.getByRole('link', { name: 'Lotes y existencias' }).click();
+  const filaLoteTrasladado = page.getByRole('row').filter({ has: page.getByRole('cell', { name: loteCodigo }) });
+  await expect(filaLoteTrasladado.getByText('PRODUCCION_ALMACENAMIENTO')).toBeVisible();
+  await expect(filaLoteTrasladado.getByText('7', { exact: true })).toBeVisible();
+  await expect(filaLoteTrasladado.getByText('VENTA_DESPACHO')).toBeVisible();
+  await expect(filaLoteTrasladado.getByText('5', { exact: true })).toBeVisible();
 
-  await page.getByText('+ Cambiar condición del lote').click();
-  const formularioCondicion = page.locator('form').filter({
-    has: page.getByRole('button', { name: 'Guardar condición' }),
-  }).first();
-  await formularioCondicion.locator('select[name="loteId"]').selectOption({ label: `${loteCodigo} · RETENIDO` });
-  await formularioCondicion.locator('select[name="accion"]').selectOption('liberar');
-  await formularioCondicion.locator('input[name="motivo"]').fill('QA: revisión interna completada');
-  await formularioCondicion.getByRole('button', { name: 'Guardar condición' }).click();
+  await page.getByRole('link', { name: 'Condición de lotes' }).click();
+  await page.getByRole('button', { name: 'Gestionar condición' }).click();
+  const modalCondicion = page.getByRole('dialog');
+  await modalCondicion.locator('select[name="loteId"]').selectOption({ label: `${loteCodigo} · RETENIDO` });
+  await modalCondicion.locator('select[name="accion"]').selectOption('liberar');
+  await modalCondicion.locator('input[name="motivo"]').fill('QA UI: revisión completada');
+  await modalCondicion.getByRole('button', { name: 'Guardar condición' }).click();
 
-  await expect(page).toHaveURL(/\/panel\?mensaje=condicion&historialCondicionLoteId=[0-9a-f-]+#condiciones$/);
+  await expect(page).toHaveURL(/\/panel\?vista=condiciones&mensaje=condicion&historialCondicionLoteId=[0-9a-f-]+$/);
   await expect(page.getByRole('status')).toContainText('Condición del lote actualizada correctamente');
-  const filaLoteLiberado = page.getByRole('row').filter({ has: page.getByRole('cell', { name: loteCodigo }) }).first();
-  await expect(filaLoteLiberado.getByText('LIBERADO')).toBeVisible();
-  const filaLiberacion = page.getByRole('row').filter({ has: page.getByRole('cell', { name: 'QA: revisión interna completada' }) });
-  await expect(filaLiberacion.getByRole('cell', { name: 'RETENIDO' })).toBeVisible();
-  await expect(filaLiberacion.getByRole('cell', { name: 'LIBERADO' })).toBeVisible();
-  await captura(page, '09-lote-liberado.png');
+  const filaCondicion = page.locator('.condicion-fila').filter({ hasText: loteCodigo });
+  await expect(filaCondicion.getByText('LIBERADO')).toBeVisible();
+  await expect(page.getByText('QA UI: revisión completada')).toBeVisible();
+  await captura(page, '08-lote-liberado.png');
 
-  await page.getByText('+ Cambiar condición del lote').click();
-  const formularioBloqueo = page.locator('form').filter({
-    has: page.getByRole('button', { name: 'Guardar condición' }),
-  }).first();
-  await formularioBloqueo.locator('select[name="loteId"]').selectOption({ label: `${loteCodigo} · LIBERADO` });
-  await formularioBloqueo.locator('select[name="accion"]').selectOption('bloquear');
-  await formularioBloqueo.locator('input[name="motivo"]').fill('QA: observación temporal');
-  await formularioBloqueo.getByRole('button', { name: 'Guardar condición' }).click();
+  await page.getByRole('button', { name: 'Gestionar condición' }).click();
+  const modalBloqueo = page.getByRole('dialog');
+  await modalBloqueo.locator('select[name="loteId"]').selectOption({ label: `${loteCodigo} · LIBERADO` });
+  await modalBloqueo.locator('select[name="accion"]').selectOption('bloquear');
+  await modalBloqueo.locator('input[name="motivo"]').fill('QA UI: observación temporal');
+  await modalBloqueo.getByRole('button', { name: 'Guardar condición' }).click();
 
   await expect(page.getByRole('status')).toContainText('Condición del lote actualizada correctamente');
-  const filaLoteBloqueado = page.getByRole('row').filter({ has: page.getByRole('cell', { name: loteCodigo }) }).first();
-  await expect(filaLoteBloqueado.getByText('BLOQUEADO')).toBeVisible();
-  const filaBloqueo = page.getByRole('row').filter({ has: page.getByRole('cell', { name: 'QA: observación temporal' }) });
-  await expect(filaBloqueo.getByRole('cell', { name: 'LIBERADO' })).toBeVisible();
-  await expect(filaBloqueo.getByRole('cell', { name: 'BLOQUEADO' })).toBeVisible();
-  await captura(page, '10-lote-bloqueado.png');
+  await expect(page.locator('.condicion-fila').filter({ hasText: loteCodigo }).getByText('BLOQUEADO')).toBeVisible();
+  await expect(page.getByText('QA UI: observación temporal')).toBeVisible();
+  await captura(page, '09-lote-bloqueado.png');
 
   await page.reload();
-  await expect(filaLoteBloqueado.getByText('BLOQUEADO')).toBeVisible();
-  await expect(page.getByRole('cell', { name: 'QA: observación temporal' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Condición de lotes' })).toBeVisible();
+  await expect(page.locator('.condicion-fila').filter({ hasText: loteCodigo }).getByText('BLOQUEADO')).toBeVisible();
+  await expect(page.getByText('QA UI: observación temporal')).toBeVisible();
+  await captura(page, '10-condicion-persistente.png');
+
+  await page.getByRole('link', { name: 'Resumen general' }).click();
+  await expect(page.getByRole('heading', { name: 'Resumen general' })).toBeVisible();
+  await expect(page.getByText('Trabaja por módulo')).toBeVisible();
+  await captura(page, '11-dashboard-final.png');
 });

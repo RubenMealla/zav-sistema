@@ -13,7 +13,8 @@ async function enviar(ruta: string, datos: Record<string, unknown>): Promise<num
     const r = await fetch(`${API}${ruta}`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify(datos), cache: 'no-store',
+      body: JSON.stringify(datos),
+      cache: 'no-store',
     });
     return r.status;
   } catch {
@@ -31,8 +32,11 @@ export async function registrarProducto(formulario: FormData) {
     precioBob: String(formulario.get('precioBob') ?? ''),
   });
   if (estado === 401 || estado === 403) redirect('/acceso?error=sesion');
-  if (estado === 201) { revalidatePath('/panel'); redirect('/panel?mensaje=producto'); }
-  redirect(`/panel?error=${estado === 409 ? 'codigo' : estado === 'conexion' ? 'conexion' : 'producto'}`);
+  if (estado === 201) {
+    revalidatePath('/panel');
+    redirect('/panel?vista=productos&mensaje=producto');
+  }
+  redirect(`/panel?vista=productos&error=${estado === 409 ? 'codigo' : estado === 'conexion' ? 'conexion' : 'producto'}`);
 }
 
 export async function registrarLote(formulario: FormData) {
@@ -46,8 +50,11 @@ export async function registrarLote(formulario: FormData) {
     ubicacionCodigo: 'PRODUCCION_ALMACENAMIENTO',
   });
   if (estado === 401 || estado === 403) redirect('/acceso?error=sesion');
-  if (estado === 201) { revalidatePath('/panel'); redirect('/panel?mensaje=lote'); }
-  redirect(`/panel?error=${estado === 409 ? 'lote-duplicado' : estado === 'conexion' ? 'conexion' : 'lote'}`);
+  if (estado === 201) {
+    revalidatePath('/panel');
+    redirect('/panel?vista=lotes&mensaje=lote');
+  }
+  redirect(`/panel?vista=lotes&error=${estado === 409 ? 'lote-duplicado' : estado === 'conexion' ? 'conexion' : 'lote'}`);
 }
 
 export async function registrarTraslado(formulario: FormData) {
@@ -68,11 +75,10 @@ export async function registrarTraslado(formulario: FormData) {
   if (estado === 401 || estado === 403) redirect('/acceso?error=sesion');
   if (estado === 201) {
     revalidatePath('/panel');
-    redirect(`/panel?mensaje=traslado&historialLoteId=${encodeURIComponent(loteId)}#movimientos`);
+    redirect(`/panel?vista=movimientos&mensaje=traslado&historialLoteId=${encodeURIComponent(loteId)}`);
   }
-  redirect(`/panel?error=${estado === 409 ? 'traslado-conflicto' : estado === 'conexion' ? 'conexion' : 'traslado'}#movimientos`);
+  redirect(`/panel?vista=movimientos&error=${estado === 409 ? 'traslado-conflicto' : estado === 'conexion' ? 'conexion' : 'traslado'}`);
 }
-
 
 export async function cambiarCondicionLote(formulario: FormData) {
   const loteId = String(formulario.get('loteId') ?? '');
@@ -85,7 +91,7 @@ export async function cambiarCondicionLote(formulario: FormData) {
   if (estado === 401 || estado === 403) redirect('/acceso?error=sesion');
   if (estado === 201) {
     revalidatePath('/panel');
-    redirect(`/panel?mensaje=condicion&historialCondicionLoteId=${encodeURIComponent(loteId)}#condiciones`);
+    redirect(`/panel?vista=condiciones&mensaje=condicion&historialCondicionLoteId=${encodeURIComponent(loteId)}`);
   }
-  redirect(`/panel?error=${estado === 409 ? 'condicion-conflicto' : estado === 'conexion' ? 'conexion' : 'condicion'}#condiciones`);
+  redirect(`/panel?vista=condiciones&error=${estado === 409 ? 'condicion-conflicto' : estado === 'conexion' ? 'conexion' : 'condicion'}`);
 }
