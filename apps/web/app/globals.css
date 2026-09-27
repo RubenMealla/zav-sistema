@@ -338,7 +338,7 @@ td strong { color:#283931; }
 
 /* Formularios y modales */
 .modal {
-  width:min(680px,calc(100% - 28px)); max-height:calc(100vh - 34px); padding:0; border:0; border-radius:17px;
+  width:min(680px,calc(100% - 28px)); max-height:calc(100vh - 34px); margin:auto; padding:0; border:0; border-radius:17px;
   background:white; color:var(--tinta); box-shadow:0 35px 100px rgba(10,35,27,.27); overflow:auto;
 }
 .modal::backdrop { background:rgba(5,24,18,.52); backdrop-filter:blur(3px); }
