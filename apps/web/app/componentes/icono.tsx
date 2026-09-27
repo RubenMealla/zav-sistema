@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+
 type NombreIcono =
   | 'inicio'
   | 'producto'
@@ -15,7 +17,7 @@ type NombreIcono =
   | 'check'
   | 'alerta';
 
-const trazos: Record<NombreIcono, React.ReactNode> = {
+const trazos: Record<NombreIcono, ReactNode> = {
   inicio: <><path d="M3 10.5 12 3l9 7.5"/><path d="M5.5 9.5V21h13V9.5"/><path d="M9.5 21v-7h5v7"/></>,
   producto: <><path d="M4 7.5 12 3l8 4.5-8 4.5-8-4.5Z"/><path d="M4 7.5V17l8 4 8-4V7.5"/><path d="M12 12v9"/></>,
   lote: <><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></>,
