@@ -102,7 +102,6 @@ test('permite gestionar inventario desde módulos, modales y notificaciones', as
 
   await expect(page).toHaveURL(/\/panel\?vista=movimientos&mensaje=traslado&historialLoteId=[0-9a-f-]+$/);
   await expect(page.getByRole('status')).toContainText('Traslado registrado correctamente');
-  const filaTraslado = page.getByRole('row').filter({ has: page.getByText('QA-UI-TR-001') });
   await expect(page.getByRole('cell', { name: 'TRASLADO' })).toBeVisible();
   await expect(page.getByRole('cell', { name: 'Produccion y Almacenamiento' })).toBeVisible();
   await expect(page.getByRole('cell', { name: 'Venta y Despacho' })).toBeVisible();
