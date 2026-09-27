@@ -97,7 +97,8 @@ test('permite al Administrador gestionar producto, lote, traslado y condición c
 
   await expect(page).toHaveURL(/\/panel\?mensaje=traslado&historialLoteId=[0-9a-f-]+#movimientos$/);
   await expect(page.getByRole('status')).toContainText('Traslado registrado correctamente');
-  await expect(page.getByText('PRODUCCION_ALMACENAMIENTO: 7 · VENTA_DESPACHO: 5')).toBeVisible();
+  const filaLoteTrasladado = page.getByRole('row').filter({ has: page.getByRole('cell', { name: loteCodigo }) }).first();
+  await expect(filaLoteTrasladado.getByText('PRODUCCION_ALMACENAMIENTO: 7 · VENTA_DESPACHO: 5')).toBeVisible();
   const filaTraslado = page.getByRole('row').filter({ has: page.getByRole('cell', { name: 'TRASLADO' }) });
   await expect(filaTraslado).toBeVisible();
   await expect(filaTraslado.getByRole('cell', { name: 'Produccion y Almacenamiento' })).toBeVisible();
@@ -105,14 +106,15 @@ test('permite al Administrador gestionar producto, lote, traslado y condición c
   await captura(page, '07-traslado-registrado.png');
 
   await page.reload();
-  await expect(page.getByText('PRODUCCION_ALMACENAMIENTO: 7 · VENTA_DESPACHO: 5')).toBeVisible();
+  const filaLoteTrasladadoRecarga = page.getByRole('row').filter({ has: page.getByRole('cell', { name: loteCodigo }) }).first();
+  await expect(filaLoteTrasladadoRecarga.getByText('PRODUCCION_ALMACENAMIENTO: 7 · VENTA_DESPACHO: 5')).toBeVisible();
   await expect(page.getByRole('cell', { name: 'TRASLADO' })).toBeVisible();
   await captura(page, '08-traslado-persistente.png');
 
   await page.getByText('+ Cambiar condición del lote').click();
   const formularioCondicion = page.locator('form').filter({
     has: page.getByRole('button', { name: 'Guardar condición' }),
-  });
+  }).first();
   await formularioCondicion.getByLabel('Lote').selectOption({ label: `${loteCodigo} · RETENIDO` });
   await formularioCondicion.getByLabel('Acción').selectOption('liberar');
   await formularioCondicion.getByLabel('Motivo').fill('QA: revisión interna completada');
@@ -130,7 +132,7 @@ test('permite al Administrador gestionar producto, lote, traslado y condición c
   await page.getByText('+ Cambiar condición del lote').click();
   const formularioBloqueo = page.locator('form').filter({
     has: page.getByRole('button', { name: 'Guardar condición' }),
-  });
+  }).first();
   await formularioBloqueo.getByLabel('Lote').selectOption({ label: `${loteCodigo} · LIBERADO` });
   await formularioBloqueo.getByLabel('Acción').selectOption('bloquear');
   await formularioBloqueo.getByLabel('Motivo').fill('QA: observación temporal');
