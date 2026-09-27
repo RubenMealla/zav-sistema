@@ -115,9 +115,9 @@ test('permite al Administrador gestionar producto, lote, traslado y condición c
   const formularioCondicion = page.locator('form').filter({
     has: page.getByRole('button', { name: 'Guardar condición' }),
   }).first();
-  await formularioCondicion.getByLabel('Lote').selectOption({ label: `${loteCodigo} · RETENIDO` });
-  await formularioCondicion.getByLabel('Acción').selectOption('liberar');
-  await formularioCondicion.getByLabel('Motivo').fill('QA: revisión interna completada');
+  await formularioCondicion.getByLabel('Lote', { exact: true }).selectOption({ label: `${loteCodigo} · RETENIDO` });
+  await formularioCondicion.getByLabel('Acción', { exact: true }).selectOption('liberar');
+  await formularioCondicion.getByLabel('Motivo', { exact: true }).fill('QA: revisión interna completada');
   await formularioCondicion.getByRole('button', { name: 'Guardar condición' }).click();
 
   await expect(page).toHaveURL(/\/panel\?mensaje=condicion&historialCondicionLoteId=[0-9a-f-]+#condiciones$/);
@@ -133,9 +133,9 @@ test('permite al Administrador gestionar producto, lote, traslado y condición c
   const formularioBloqueo = page.locator('form').filter({
     has: page.getByRole('button', { name: 'Guardar condición' }),
   }).first();
-  await formularioBloqueo.getByLabel('Lote').selectOption({ label: `${loteCodigo} · LIBERADO` });
-  await formularioBloqueo.getByLabel('Acción').selectOption('bloquear');
-  await formularioBloqueo.getByLabel('Motivo').fill('QA: observación temporal');
+  await formularioBloqueo.getByLabel('Lote', { exact: true }).selectOption({ label: `${loteCodigo} · LIBERADO` });
+  await formularioBloqueo.getByLabel('Acción', { exact: true }).selectOption('bloquear');
+  await formularioBloqueo.getByLabel('Motivo', { exact: true }).fill('QA: observación temporal');
   await formularioBloqueo.getByRole('button', { name: 'Guardar condición' }).click();
 
   await expect(page.getByRole('status')).toContainText('Condición del lote actualizada correctamente');
