@@ -29,7 +29,7 @@ test('muestra una portada profesional y protege el panel sin sesion', async ({ p
   await page.goto('/panel');
   await expect(page).toHaveURL(/\/acceso\?error=sesion$/);
   await expect(page.getByRole('heading', { name: 'Bienvenido de nuevo' })).toBeVisible();
-  await expect(page.locator('[role="alert"]')).toContainText('La sesión terminó o ya no es válida');
+  await expect(page.locator('.mensaje-error[role="alert"]')).toContainText('La sesión terminó o ya no es válida');
   await captura(page, '02-acceso-protegido-redisenado.png');
 });
 
@@ -102,9 +102,12 @@ test('permite gestionar inventario desde módulos, modales y notificaciones', as
 
   await expect(page).toHaveURL(/\/panel\?vista=movimientos&mensaje=traslado&historialLoteId=[0-9a-f-]+$/);
   await expect(page.getByRole('status')).toContainText('Traslado registrado correctamente');
-  await expect(page.getByRole('cell', { name: 'TRASLADO' })).toBeVisible();
-  await expect(page.getByRole('cell', { name: 'Produccion y Almacenamiento' })).toBeVisible();
-  await expect(page.getByRole('cell', { name: 'Venta y Despacho' })).toBeVisible();
+  const filaTraslado = page.getByRole('row')
+    .filter({ has: page.getByRole('cell', { name: loteCodigo }) })
+    .filter({ has: page.getByRole('cell', { name: 'TRASLADO' }) });
+  await expect(filaTraslado).toBeVisible();
+  await expect(filaTraslado.getByRole('cell', { name: 'Produccion y Almacenamiento' })).toBeVisible();
+  await expect(filaTraslado.getByRole('cell', { name: 'Venta y Despacho' })).toBeVisible();
   await captura(page, '07-traslado-registrado.png');
 
   await page.getByRole('link', { name: 'Lotes y existencias' }).click();
