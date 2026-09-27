@@ -1,6 +1,6 @@
 # ZAV 2026 — Condición comercial de lotes
 
-**Estado:** IMPLEMENTADO EN RAMA / PENDIENTE DE VALIDAR mediante QA.  
+**Estado:** CONFIRMADO EN RAMA mediante QA automático; pendiente de integración a `main` mediante Pull Request.  
 **Issue:** #21.  
 **Rama:** `desarrollo/liberacion-lotes`.
 
@@ -64,10 +64,29 @@ Registra el cambio a `BLOQUEADO` con motivo obligatorio.
 
 Devuelve el historial paginado de cambios de condición.
 
-## Salidas comerciales
+## Disponibilidad comercial y salidas
+
+En esta iteración no se crea todavía un endpoint general de disponibilidad comercial ni se implementa FEFO.
+
+La regla que utilizará el módulo de pedidos queda definida para la siguiente iteración: un lote solo podrá participar en disponibilidad comercial cuando esté `LIBERADO`, no vencido, pertenezca a un producto activo y tenga saldo disponible en una ubicación habilitada para venta.
 
 No se implementa una salida manual genérica. Las salidas se generarán desde pedidos/distribución para conservar la relación entre compromiso, retiro, entrega y retorno.
 
 ## Nota normativa
 
 Esta liberación es una decisión de control del software. No se documentará como una obligación específica impuesta por SENASAG. Se adopta para mejorar trazabilidad y separar existencia física de disponibilidad comercial.
+
+
+## QA confirmado en la rama
+
+GitHub Actions sobre el commit `d8fd924ef45445e6c29b2e68e1dab6a71f3417ed`:
+
+- backend: lint y build aprobados;
+- pruebas unitarias: **11/11**;
+- pruebas E2E: **20/20**;
+- Playwright: **2/2**;
+- artifact backend: `qa-backend-25`;
+- artifact web: `qa-web-playwright-20`;
+- diez capturas PNG generadas, incluidas `09-lote-liberado.png` y `10-lote-bloqueado.png`.
+
+La evidencia detallada se registra en `docs/pruebas/verificacion-condicion-lotes.md`.
