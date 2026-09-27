@@ -1,6 +1,6 @@
 # ZAV 2026 — Contrato mínimo API REST para E2
 
-**Estado:** diseño; aún no implementado. **Versión:** `/api/v1`. **Formato:** JSON (`Content-Type: application/json`); errores uniformes con `statusCode`, `message`, `error`, `path` y `timestamp` cuando se implemente el filtro de excepciones. No exponer hash de contraseña ni secretos.
+**Estado:** rutas E2 y traslados implementados y comprobados; contratos posteriores permanecen pendientes. **Versión:** `/api/v1`. **Formato:** JSON (`Content-Type: application/json`); errores uniformes con `statusCode`, `message`, `error`, `path` y `timestamp` cuando se implemente el filtro de excepciones. No exponer hash de contraseña ni secretos.
 
 ## 1. Autorización y validación
 
@@ -21,6 +21,8 @@
 | GET | `/api/v1/lotes` | Administrador | `productoId`, `vigencia`, `page`, `limit` opcionales | 200 lotes y saldos por área | 400, 401, 403 |
 | POST | `/api/v1/lotes` | Administrador | `operacionClave`, `productoId`, `codigo`, `elaboradoEl`, `venceEl`, `cantidadInicial`, `ubicacionCodigo` | 201 lote `RETENIDO`, ingreso y saldo físico persistidos juntos | 400, 401, 403, 404, 409 |
 | GET | `/api/v1/lotes/:id` | Administrador | UUID de lote | 200 lote, producto y existencias | 400, 401, 403, 404 |
+| POST | `/api/v1/movimientos/traslado` | Administrador | `operacionClave`, `loteId`, `origenCodigo`, `destinoCodigo`, `cantidad`; `referencia` y `motivo` opcionales | 201 movimiento y saldos resultantes | 400, 401, 403, 404, 409 |
+| GET | `/api/v1/movimientos` | Administrador | `loteId` obligatorio; `page`, `limit` opcionales | 200 historial paginado del lote | 400, 401, 403, 404 |
 
 `POST /lotes` es un **comando de registro de lote con ingreso inicial**, no dos operaciones independientes; protege la unicidad mediante `operacionClave`, un UUID generado al iniciar la acción de guardar (y reutilizado solo en sus reintentos). El servidor debe devolver el mismo resultado ante reenvío del mismo comando; si un comando con esa clave cambia de contenido, responder `409`. El lote creado queda en condición `RETENIDO`, aunque su existencia física se registre; esto impide considerarlo apto para compromisos comerciales antes de una liberación autorizada. Nunca incluir la clave de conexión a Neon en solicitudes de frontend.
 
@@ -43,7 +45,6 @@ Ejemplo únicamente estructural de entrada para `POST /api/v1/lotes` (los valore
 - `PATCH /api/v1/productos/:id`: modificación de campos comerciales sin alterar lotes históricos.
 - `POST /api/v1/lotes/:id/liberacion`: el Administrador registra revisión y autoriza el cambio de condición `RETENIDO` a `LIBERADO`, conservando responsable, fecha y constancia. No genera nuevo ingreso ni incrementa saldos. **Operación posterior al flujo mínimo del E2**; hasta entonces los lotes nuevos no son aptos para confirmar pedidos.
 - `GET /api/v1/inventario`: saldos por lote/área, disponibilidad comercial y vencimiento; vendedor solo consulta lo autorizado de Venta y Despacho.
-- `POST /api/v1/movimientos/traslado`: origen, destino, lote, cantidad y clave idempotente; transacción atómica.
 - `POST /api/v1/clientes`, `GET /api/v1/clientes` y `POST /api/v1/pedidos`: cliente, líneas comerciales, confirmación y asignación FEFO separadas.
 - `POST /api/v1/pedidos/:id/retiro`, `POST /api/v1/pedidos/:id/entrega`, `POST /api/v1/pedidos/:id/no-entregado` y `POST /api/v1/pedidos/:id/retorno`: conservar custodia y no descontar dos veces.
 - `GET /api/v1/pedidos`: filtros por estado/fecha y visibilidad por rol; `GET /api/v1/usuarios` y otras rutas administrativas de cuentas cuando se implementen.
@@ -57,6 +58,11 @@ Ejemplo únicamente estructural de entrada para `POST /api/v1/lotes` (los valore
 | Producto duplicado o datos comerciales inválidos | `409` o `400`, respectivamente. |
 | Lote con vencimiento inválido o sin cantidad | `400`, sin ingreso parcial. |
 | Reenvío del ingreso inicial | No se duplica el movimiento ni la existencia. |
+| Traslado correcto | Descuenta origen, incrementa destino y registra un único movimiento `TRASLADO`. |
+| Reenvío del traslado | La misma `operacionClave` con los mismos datos no duplica saldos ni movimientos; con datos distintos responde `409`. |
+| Saldo insuficiente | Responde `409`, sin modificar existencias ni crear movimiento. |
+| Rollback del traslado | Un fallo forzado al registrar el movimiento revierte los cambios de ambas existencias. |
+| Vendedor intenta traslado | `403`, sin crear movimiento. |
 | Registro inicial de lote | Respuesta y persistencia con condición `RETENIDO`, sin autorizar su venta por defecto. |
 | Liberación posterior | Requiere autorización y no modifica cantidades; prueba pendiente hasta implementar la operación. |
 | Consulta después de reiniciar el servidor | Producto, lote e ingreso persisten en PostgreSQL. |

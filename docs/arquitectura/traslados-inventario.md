@@ -1,6 +1,6 @@
 # ZAV 2026 — Traslados de inventario
 
-**Estado:** IMPLEMENTADO EN RAMA / PENDIENTE DE VALIDAR mediante QA automático.  
+**Estado:** CONFIRMADO mediante QA automático en PostgreSQL 18 aislado y Playwright.  
 **Issue:** #19.  
 **Rama:** `desarrollo/traslados-inventario`.
 
@@ -72,18 +72,30 @@ Para reducir conflictos concurrentes:
 
 Si cualquiera de los pasos falla, la transacción debe revertir todos los cambios.
 
-## Pendiente de validar
+## Verificación realizada
 
-Antes de declarar este bloque CONFIRMADO se deben ejecutar pruebas reales de:
+Comprobé mediante GitHub Actions:
 
 - traslado correcto;
-- reintento idempotente;
-- clave reutilizada con otros datos;
-- saldo insuficiente;
-- rol Vendedor sin permiso;
+- reintento idempotente sin duplicados;
+- clave reutilizada con otros datos → `409`;
+- saldo insuficiente → `409` y sin cambios parciales;
+- rol Vendedor intentando trasladar → `403`;
 - traslado inverso;
-- historial;
+- historial con ingreso y traslados;
 - rollback forzado después de modificar existencias;
-- regresión de las pruebas anteriores.
+- regresión de las pruebas anteriores;
+- flujo web completo con Playwright;
+- persistencia visible después de recargar la interfaz.
+
+Resultados registrados:
+
+- pruebas unitarias backend: **11/11**;
+- pruebas E2E backend: **14/14**;
+- Playwright web: **2/2**;
+- artifact backend: `qa-backend-15`;
+- artifact web: `qa-web-playwright-10`.
+
+La evidencia detallada está en `docs/pruebas/verificacion-traslados-inventario.md`.
 
 No se declara implementada en este documento una regla de liberación de lotes ni una salida comercial.
