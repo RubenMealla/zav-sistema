@@ -120,9 +120,9 @@ test('permite gestionar inventario desde módulos, modales y notificaciones', as
   await page.getByRole('link', { name: 'Condición de lotes' }).click();
   await page.getByRole('button', { name: 'Gestionar condición' }).click();
   const modalCondicion = page.getByRole('dialog');
-  await modalCondicion.getByLabel('Lote').selectOption({ label: `${loteCodigo} · RETENIDO` });
-  await modalCondicion.getByLabel('Acción').selectOption('liberar');
-  await modalCondicion.getByLabel('Motivo').fill('QA UI: revisión completada');
+  await modalCondicion.locator('select[name="loteId"]').selectOption({ label: `${loteCodigo} · RETENIDO` });
+  await modalCondicion.locator('select[name="accion"]').selectOption('liberar');
+  await modalCondicion.locator('input[name="motivo"]').fill('QA UI: revisión completada');
   await modalCondicion.getByRole('button', { name: 'Guardar condición' }).click();
 
   await expect(page).toHaveURL(/\/panel\?vista=condiciones&mensaje=condicion&historialCondicionLoteId=[0-9a-f-]+$/);
@@ -134,9 +134,9 @@ test('permite gestionar inventario desde módulos, modales y notificaciones', as
 
   await page.getByRole('button', { name: 'Gestionar condición' }).click();
   const modalBloqueo = page.getByRole('dialog');
-  await modalBloqueo.getByLabel('Lote').selectOption({ label: `${loteCodigo} · LIBERADO` });
-  await modalBloqueo.getByLabel('Acción').selectOption('bloquear');
-  await modalBloqueo.getByLabel('Motivo').fill('QA UI: observación temporal');
+  await modalBloqueo.locator('select[name="loteId"]').selectOption({ label: `${loteCodigo} · LIBERADO` });
+  await modalBloqueo.locator('select[name="accion"]').selectOption('bloquear');
+  await modalBloqueo.locator('input[name="motivo"]').fill('QA UI: observación temporal');
   await modalBloqueo.getByRole('button', { name: 'Guardar condición' }).click();
 
   await expect(page.getByRole('status')).toContainText('Condición del lote actualizada correctamente');
