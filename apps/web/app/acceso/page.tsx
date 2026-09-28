@@ -20,7 +20,7 @@ export default async function Acceso({ searchParams }: { searchParams: Promise<{
         <div className="acceso-identificador"><span>FIAMBRES &amp; EMBUTIDOS</span><span>2026</span></div>
         <div className="acceso-presentacion-contenido">
           <Link href="/" aria-label="ZAV, inicio"><Marca etiqueta grande /></Link>
-          <h1>Productos terminados.<br />Información en orden.</h1>
+          <h2>Productos terminados.<br />Información en orden.</h2>
           <p>Inventario, condición de lotes y movimientos en un mismo lugar.</p>
         </div>
         <p className="acceso-presentacion-pie">ZAV · Tarija, Bolivia</p>
@@ -31,7 +31,7 @@ export default async function Acceso({ searchParams }: { searchParams: Promise<{
           <Link href="/" className="volver"><span aria-hidden="true">←</span> Volver al inicio</Link>
           <div className="acceso-titulo">
             <span className="eyebrow">ACCESO ADMINISTRATIVO</span>
-            <h2 id="acceso-titulo">Ingresa a tu espacio de trabajo</h2>
+            <h1 id="acceso-titulo">Ingresa a tu espacio de trabajo</h1>
             <p>Utiliza tu cuenta de Administrador para continuar.</p>
           </div>
           {error && (
