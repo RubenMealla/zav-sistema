@@ -4,12 +4,6 @@
 }
 
 @media (max-width:820px) {
-  .acceso-layout { grid-template-columns:1fr; }
-  .acceso-presentacion { min-height:auto; padding:28px 28px 38px; }
-  .acceso-presentacion-contenido { margin:70px 0 35px; }
-  .acceso-presentacion-contenido h1 { font-size:39px; }
-  .acceso-beneficios { display:none; }
-  .acceso-panel { padding:45px 28px; }
   .sidebar { display:none; }
   .contenido { margin-left:0; }
   .topbar { position:relative; min-height:100px; padding:20px 20px; }
@@ -25,9 +19,6 @@
 }
 
 @media (max-width:600px) {
-  .acceso-presentacion { display:none; }
-  .acceso-panel { min-height:100vh; padding:30px 20px; }
-  .volver { margin-bottom:40px; }
   .topbar { align-items:flex-start; }
   .topbar p { display:none; }
   .topbar-titulo h1 { font-size:22px; }
