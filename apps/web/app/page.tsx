@@ -4,8 +4,8 @@ import { Icono } from './componentes/icono';
 
 const operaciones = [
   { numero: '01', titulo: 'Productos y lotes', texto: 'Presentaciones, fechas de vencimiento y existencias de productos terminados.' },
-  { numero: '02', titulo: 'Condici?n comercial', texto: 'Liberaci?n y bloqueo de lotes, con el motivo y el responsable de cada decisi?n.' },
-  { numero: '03', titulo: 'Movimientos', texto: 'Ingresos y traslados entre Producci?n y Almacenamiento y Venta y Despacho.' },
+  { numero: '02', titulo: 'Condición comercial', texto: 'Liberación y bloqueo de lotes, con el motivo y el responsable de cada decisión.' },
+  { numero: '03', titulo: 'Movimientos', texto: 'Ingresos y traslados entre Producción y Almacenamiento y Venta y Despacho.' },
 ];
 
 export default function Inicio() {
@@ -14,15 +14,15 @@ export default function Inicio() {
       <a className="saltar-contenido" href="#principal">Saltar al contenido</a>
       <header className="publico-header contenedor-publico">
         <Link href="/" aria-label="ZAV, inicio"><Marca /></Link>
-        <span className="publico-descriptor">Fiambres &amp; embutidos <span>Tarija ? Bolivia</span></span>
+        <span className="publico-descriptor">Fiambres &amp; embutidos <span>Tarija · Bolivia</span></span>
         <Link className="boton boton-secundario" href="/acceso">Acceso privado <Icono nombre="flecha" tamano={16} /></Link>
       </header>
       <main id="principal" tabIndex={-1}>
         <section className="publico-portada contenedor-publico">
           <div className="publico-editorial">
-            <span className="eyebrow">ZAV / SISTEMA DE GESTI?N</span>
+            <span className="eyebrow">ZAV / SISTEMA DE GESTIÓN</span>
             <h1>Fiambres y embutidos.<br /><em>Control en cada lote.</em></h1>
-            <p>La informaci?n de nuestros productos terminados, desde el ingreso al inventario hasta su traslado entre ubicaciones.</p>
+            <p>La información de nuestros productos terminados, desde el ingreso al inventario hasta su traslado entre ubicaciones.</p>
             <Link className="boton boton-primario boton-grande" href="/acceso">Ingresar al sistema <Icono nombre="flecha" /></Link>
             <span className="publico-nota"><Icono nombre="escudo" tamano={16} /> Uso exclusivo del personal autorizado</span>
           </div>
@@ -45,7 +45,7 @@ export default function Inicio() {
           </div>
         </section>
       </main>
-      <footer className="publico-footer contenedor-publico"><span>ZAV ? Gesti?n de productos terminados</span><span>Tarija, Bolivia ? 2026</span></footer>
+      <footer className="publico-footer contenedor-publico"><span>ZAV · Gestión de productos terminados</span><span>Tarija, Bolivia · 2026</span></footer>
     </div>
   );
 }
