@@ -1,3 +1,4 @@
+import { Marca } from '../componentes/marca';
 import Link from 'next/link';
 import { iniciarSesion } from '../acciones';
 import { CampoContrasena } from '../componentes/interacciones';
@@ -18,8 +19,7 @@ export default async function Acceso({ searchParams }: { searchParams: Promise<{
     <main className="acceso-layout">
       <section className="acceso-presentacion">
         <Link className="logo logo-invertido" href="/" aria-label="ZAV, inicio">
-          <span className="logo-marca">Z</span>
-          <span>ZAV <small>Administración</small></span>
+          <Marca />
         </Link>
 
         <div className="acceso-presentacion-contenido">

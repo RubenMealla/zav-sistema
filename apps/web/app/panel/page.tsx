@@ -1,3 +1,4 @@
+import { Marca } from '../componentes/marca';
 import Link from 'next/link';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
@@ -168,8 +169,7 @@ export default async function Panel({
       <aside className="sidebar">
         <div className="sidebar-superior">
           <Link href="/" className="logo logo-sidebar">
-            <span className="logo-marca">Z</span>
-            <span>ZAV <small>Administración</small></span>
+            <Marca />
           </Link>
           <span className="sidebar-entorno"><span /> Entorno de desarrollo</span>
         </div>

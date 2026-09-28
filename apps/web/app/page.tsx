@@ -1,3 +1,4 @@
+import { Marca } from './componentes/marca';
 import Link from 'next/link';
 import { Icono } from './componentes/icono';
 
@@ -24,8 +25,7 @@ export default function Inicio() {
     <div className="sitio-publico">
       <header className="publico-header contenedor-publico">
         <Link className="logo" href="/" aria-label="ZAV, inicio">
-          <span className="logo-marca">Z</span>
-          <span>ZAV <small>Fiambres y embutidos</small></span>
+          <Marca />
         </Link>
         <div className="publico-acciones">
           <span className="estado-sistema"><span /> Sistema administrativo</span>
