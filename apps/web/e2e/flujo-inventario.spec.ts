@@ -12,6 +12,7 @@ const evidencias = path.join(process.cwd(), 'test-results', 'evidencias');
 
 async function captura(page: Page, nombre: string) {
   await mkdir(evidencias, { recursive: true });
+  await expect.poll(() => page.locator('img:visible').evaluateAll((imgs) => imgs.every((img) => img instanceof HTMLImageElement && img.complete && img.naturalWidth > 0))).toBeTruthy();
   await page.screenshot({
     path: path.join(evidencias, nombre),
     fullPage: true,
@@ -21,43 +22,52 @@ async function captura(page: Page, nombre: string) {
 test('muestra una portada profesional y protege el panel sin sesion', async ({ page }) => {
   await page.goto('/');
 
-  await expect(page.getByRole('heading', { name: /Control de inventario con trazabilidad clara/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Fiambres y embutidos.*Control en cada lote/ })).toBeVisible();
   await expect(page.getByRole('link', { name: /Acceso privado/ })).toBeVisible();
-  await expect(page.getByText('Inventario centralizado')).toBeVisible();
+  await expect(page.getByText('Productos y lotes')).toBeVisible();
   await captura(page, '01-inicio-redisenado.png');
 
   await page.goto('/panel');
   await expect(page).toHaveURL(/\/acceso\?error=sesion$/);
-  await expect(page.getByRole('heading', { name: 'Bienvenido de nuevo' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Ingresa a tu espacio de trabajo' })).toBeVisible();
   await expect(page.locator('.mensaje-error[role="alert"]')).toContainText('La sesión terminó o ya no es válida');
   await captura(page, '02-acceso-protegido-redisenado.png');
 });
 
 test('permite gestionar inventario desde módulos, modales y notificaciones', async ({ page }, testInfo) => {
+  test.setTimeout(90_000);
   const identificador = requerida('QA_ADMIN_IDENTIFICADOR');
   const contrasena = requerida('QA_ADMIN_PASSWORD');
-  const productoCodigo = `QA-UI-001-R${testInfo.retry}`;
-  const loteCodigo = `QA-UI-LOTE-001-R${testInfo.retry}`;
+  const ejecucion = `${Date.now()}-${testInfo.retry}`;
+  const productoCodigo = `QA-UI-${ejecucion}`;
+  const loteCodigo = `QA-LOTE-${ejecucion}`;
 
   await page.goto('/acceso');
-  await expect(page.getByRole('heading', { name: 'Bienvenido de nuevo' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Ingresa a tu espacio de trabajo' })).toBeVisible();
   await page.getByLabel('Identificador de acceso').fill(identificador);
-  await page.getByLabel('Contraseña').fill(contrasena);
+  await page.getByLabel('Contraseña', { exact: true }).fill(contrasena);
   await page.getByRole('button', { name: /Iniciar sesión/ }).click();
 
   await expect(page).toHaveURL(/\/panel$/);
   await expect(page.getByRole('heading', { name: 'Resumen general' })).toBeVisible();
   await expect(page.getByText('Trabaja por módulo')).toBeVisible();
-  await expect(page.getByText('Distribución actual')).toBeVisible();
+  await expect(page.getByText('Condición actual')).toBeVisible();
   await captura(page, '03-dashboard-administrativo.png');
+  await expect(page.getByText(/calculadas sobre los/)).toBeVisible();
 
   await page.getByRole('link', { name: 'Productos terminados' }).click();
   await expect(page).toHaveURL(/\/panel\?vista=productos$/);
   await expect(page.getByRole('heading', { name: 'Productos terminados' })).toBeVisible();
+  await expect(page.getByText('Todavía no hay productos registrados.')).toBeVisible();
+  await captura(page, 'identidad-productos-vacio.png');
 
   await page.getByRole('button', { name: 'Nuevo producto' }).click();
   const modalProducto = page.getByRole('dialog');
   await expect(modalProducto.getByRole('heading', { name: 'Registrar producto' })).toBeVisible();
+  await expect(modalProducto).toHaveAccessibleName('Registrar producto');
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('button', { name: 'Nuevo producto' })).toBeFocused();
+  await page.getByRole('button', { name: 'Nuevo producto' }).click();
   await captura(page, '04-modal-producto.png');
 
   await modalProducto.getByLabel('Código').fill(productoCodigo);
@@ -72,14 +82,16 @@ test('permite gestionar inventario desde módulos, modales y notificaciones', as
   await expect(page.getByRole('status')).toContainText('Producto registrado correctamente');
   await expect(page.getByRole('cell', { name: productoCodigo })).toBeVisible();
   await captura(page, '05-producto-registrado.png');
+  await page.getByRole('button', { name: 'Cerrar notificación' }).click();
+  await expect(page.getByRole('status')).toHaveCount(0);
 
   await page.getByRole('link', { name: 'Lotes y existencias' }).click();
   await page.getByRole('button', { name: 'Nuevo lote' }).click();
   const modalLote = page.getByRole('dialog');
   await modalLote.getByLabel('Producto').selectOption({ label: `${productoCodigo} · Producto QA UI` });
   await modalLote.getByLabel('Código de lote').fill(loteCodigo);
-  await modalLote.getByLabel('Fecha de elaboración').fill('2026-09-20');
-  await modalLote.getByLabel('Fecha de vencimiento').fill('2026-12-20');
+  await modalLote.getByLabel('Fecha de elaboración').fill(new Date().toISOString().slice(0, 10));
+  await modalLote.getByLabel('Fecha de vencimiento').fill(new Date(Date.now() + 90 * 86400000).toISOString().slice(0, 10));
   await modalLote.getByLabel('Cantidad inicial').fill('12');
   await modalLote.getByRole('button', { name: 'Guardar lote e ingreso' }).click();
 
@@ -87,7 +99,7 @@ test('permite gestionar inventario desde módulos, modales y notificaciones', as
   await expect(page.getByRole('status')).toContainText('Lote e ingreso inicial registrados correctamente');
   const filaLote = page.getByRole('row').filter({ has: page.getByRole('cell', { name: loteCodigo }) });
   await expect(filaLote.getByText('RETENIDO')).toBeVisible();
-  await expect(filaLote.getByText('PRODUCCION_ALMACENAMIENTO')).toBeVisible();
+  await expect(filaLote.getByText('Producción y Almacenamiento')).toBeVisible();
   await captura(page, '06-lote-registrado.png');
 
   await page.getByRole('link', { name: 'Movimientos' }).click();
@@ -112,9 +124,9 @@ test('permite gestionar inventario desde módulos, modales y notificaciones', as
 
   await page.getByRole('link', { name: 'Lotes y existencias' }).click();
   const filaLoteTrasladado = page.getByRole('row').filter({ has: page.getByRole('cell', { name: loteCodigo }) });
-  await expect(filaLoteTrasladado.getByText('PRODUCCION_ALMACENAMIENTO')).toBeVisible();
+  await expect(filaLoteTrasladado.getByText('Producción y Almacenamiento')).toBeVisible();
   await expect(filaLoteTrasladado.getByText('7', { exact: true })).toBeVisible();
-  await expect(filaLoteTrasladado.getByText('VENTA_DESPACHO')).toBeVisible();
+  await expect(filaLoteTrasladado.getByText('Venta y Despacho')).toBeVisible();
   await expect(filaLoteTrasladado.getByText('5', { exact: true })).toBeVisible();
 
   await page.getByRole('link', { name: 'Condición de lotes' }).click();
