@@ -1,15 +1,9 @@
 @media (max-width:1100px) {
-  .hero { grid-template-columns:1fr; gap:45px; }
-  .hero-contenido { max-width:760px; }
-  .hero-demo { max-width:700px; }
   .metricas-grid { grid-template-columns:1fr 1fr; }
   .dashboard-grid,.modulo-dos-columnas { grid-template-columns:1fr; }
 }
 
 @media (max-width:820px) {
-  .publico-acciones .estado-sistema { display:none; }
-  .capacidades-grid { grid-template-columns:1fr; }
-  .publico-cta { align-items:flex-start; flex-direction:column; }
   .acceso-layout { grid-template-columns:1fr; }
   .acceso-presentacion { min-height:auto; padding:28px 28px 38px; }
   .acceso-presentacion-contenido { margin:70px 0 35px; }
@@ -31,28 +25,6 @@
 }
 
 @media (max-width:600px) {
-  .contenedor-publico { width:min(100% - 32px,1180px); }
-  .publico-header { height:74px; }
-  .publico-header .boton { min-height:38px; padding:0 12px; font-size:10px; }
-  .publico-header .boton .icono { display:none; }
-  .logo { font-size:16px; }
-  .logo-marca { width:35px; height:35px; font-size:20px; }
-  .hero { min-height:auto; padding-top:50px; padding-bottom:55px; }
-  .hero-contenido h1 { font-size:39px; }
-  .hero-contenido>p { font-size:14px; }
-  .hero-nota { width:100%; }
-  .hero-demo { border-radius:16px; }
-  .demo-cuerpo { grid-template-columns:45px 1fr; min-height:270px; }
-  .demo-principal { padding:19px 14px; }
-  .demo-metricas { gap:6px; }
-  .demo-metricas span { height:50px; }
-  .demo-fila { grid-template-columns:1.4fr 1fr .8fr; }
-  .demo-fila span:nth-child(3) { display:none; }
-  .capacidades { padding-top:55px; padding-bottom:65px; }
-  .seccion-titulo-publica h2 { font-size:28px; }
-  .publico-cta { padding:28px; }
-  .publico-cta h2 { font-size:22px; }
-  .publico-footer { align-items:flex-start; flex-direction:column; justify-content:center; }
   .acceso-presentacion { display:none; }
   .acceso-panel { min-height:100vh; padding:30px 20px; }
   .volver { margin-bottom:40px; }

@@ -1,117 +1,51 @@
-import { Marca } from './componentes/marca';
 import Link from 'next/link';
+import { Marca } from './componentes/marca';
 import { Icono } from './componentes/icono';
 
-const capacidades = [
-  {
-    icono: 'producto' as const,
-    titulo: 'Inventario centralizado',
-    texto: 'Productos terminados, lotes y existencias organizados en un solo lugar.',
-  },
-  {
-    icono: 'ubicacion' as const,
-    titulo: 'Control por ubicación',
-    texto: 'Seguimiento de cantidades entre Producción y Almacenamiento y Venta y Despacho.',
-  },
-  {
-    icono: 'historial' as const,
-    titulo: 'Trazabilidad',
-    texto: 'Movimientos y cambios de condición conservan fecha, responsable y motivo.',
-  },
+const operaciones = [
+  { numero: '01', titulo: 'Productos y lotes', texto: 'Presentaciones, fechas de vencimiento y existencias de productos terminados.' },
+  { numero: '02', titulo: 'Condici?n comercial', texto: 'Liberaci?n y bloqueo de lotes, con el motivo y el responsable de cada decisi?n.' },
+  { numero: '03', titulo: 'Movimientos', texto: 'Ingresos y traslados entre Producci?n y Almacenamiento y Venta y Despacho.' },
 ];
 
 export default function Inicio() {
   return (
     <div className="sitio-publico">
+      <a className="saltar-contenido" href="#principal">Saltar al contenido</a>
       <header className="publico-header contenedor-publico">
-        <Link className="logo" href="/" aria-label="ZAV, inicio">
-          <Marca />
-        </Link>
-        <div className="publico-acciones">
-          <span className="estado-sistema"><span /> Sistema administrativo</span>
-          <Link className="boton boton-primario" href="/acceso">
-            Acceso privado <Icono nombre="flecha" tamano={16} />
-          </Link>
-        </div>
+        <Link href="/" aria-label="ZAV, inicio"><Marca /></Link>
+        <span className="publico-descriptor">Fiambres &amp; embutidos <span>Tarija ? Bolivia</span></span>
+        <Link className="boton boton-secundario" href="/acceso">Acceso privado <Icono nombre="flecha" tamano={16} /></Link>
       </header>
-
-      <main>
-        <section className="hero contenedor-publico">
-          <div className="hero-contenido">
-            <span className="eyebrow">ZAV · TARIJA · 2026</span>
-            <h1>Control de inventario con trazabilidad clara y decisiones seguras.</h1>
-            <p>
-              Plataforma administrativa para organizar productos terminados, lotes, existencias,
-              movimientos y condición comercial sin mezclar los procesos.
-            </p>
-            <div className="hero-acciones">
-              <Link className="boton boton-primario boton-grande" href="/acceso">
-                Ingresar al sistema <Icono nombre="flecha" />
-              </Link>
-              <span className="hero-nota"><Icono nombre="escudo" tamano={16} /> Acceso exclusivo para personal autorizado</span>
-            </div>
+      <main id="principal" tabIndex={-1}>
+        <section className="publico-portada contenedor-publico">
+          <div className="publico-editorial">
+            <span className="eyebrow">ZAV / SISTEMA DE GESTI?N</span>
+            <h1>Fiambres y embutidos.<br /><em>Control en cada lote.</em></h1>
+            <p>La informaci?n de nuestros productos terminados, desde el ingreso al inventario hasta su traslado entre ubicaciones.</p>
+            <Link className="boton boton-primario boton-grande" href="/acceso">Ingresar al sistema <Icono nombre="flecha" /></Link>
+            <span className="publico-nota"><Icono nombre="escudo" tamano={16} /> Uso exclusivo del personal autorizado</span>
           </div>
-
-          <div className="hero-demo" aria-label="Resumen conceptual del sistema">
-            <div className="demo-barra">
-              <div className="demo-puntos"><span /><span /><span /></div>
-              <span>Panel administrativo</span>
-              <span className="demo-en-linea">● Operativo</span>
-            </div>
-            <div className="demo-cuerpo">
-              <aside className="demo-lateral">
-                <span className="demo-logo">Z</span>
-                <span className="activo" />
-                <span />
-                <span />
-                <span />
-              </aside>
-              <div className="demo-principal">
-                <div className="demo-titulo"><span /><span /></div>
-                <div className="demo-metricas"><span /><span /><span /></div>
-                <div className="demo-tabla">
-                  <div className="demo-fila demo-encabezado"><span /><span /><span /><span /></div>
-                  <div className="demo-fila"><span /><span /><span /><span className="chip-verde" /></div>
-                  <div className="demo-fila"><span /><span /><span /><span className="chip-ambar" /></div>
-                  <div className="demo-fila"><span /><span /><span /><span className="chip-verde" /></div>
-                </div>
-              </div>
-            </div>
-            <div className="demo-etiqueta"><Icono nombre="check" tamano={15} /> Flujo organizado por módulos</div>
-          </div>
+          <figure className="publico-etiqueta">
+            <span className="etiqueta-sobretitulo">NUESTRA IDENTIDAD</span>
+            <Marca etiqueta grande />
+            <figcaption><span>Fiambres &amp; embutidos</span><span>Tarija, Bolivia</span></figcaption>
+          </figure>
         </section>
-
-        <section className="capacidades contenedor-publico">
-          <div className="seccion-titulo-publica">
-            <span className="eyebrow">CONTROL OPERATIVO</span>
-            <h2>La información importante, sin perder el contexto.</h2>
-          </div>
-          <div className="capacidades-grid">
-            {capacidades.map((capacidad) => (
-              <article className="capacidad" key={capacidad.titulo}>
-                <span className="capacidad-icono"><Icono nombre={capacidad.icono} /></span>
-                <h3>{capacidad.titulo}</h3>
-                <p>{capacidad.texto}</p>
+        <section className="publico-operaciones contenedor-publico" aria-labelledby="operaciones-titulo">
+          <div className="publico-seccion-titulo"><span className="eyebrow">CONTROL INTERNO</span><h2 id="operaciones-titulo">Cada registro tiene su lugar.</h2></div>
+          <div className="publico-registros">
+            {operaciones.map((operacion) => (
+              <article key={operacion.numero}>
+                <span className="publico-numero">{operacion.numero}</span>
+                <h3>{operacion.titulo}</h3>
+                <p>{operacion.texto}</p>
               </article>
             ))}
           </div>
         </section>
-
-        <section className="publico-cta contenedor-publico">
-          <div>
-            <span className="eyebrow">ENTORNO ADMINISTRATIVO</span>
-            <h2>Un sistema pensado para trabajar rápido y dejar evidencia de cada operación.</h2>
-          </div>
-          <Link className="boton boton-claro boton-grande" href="/acceso">
-            Abrir acceso <Icono nombre="flecha" />
-          </Link>
-        </section>
       </main>
-
-      <footer className="publico-footer contenedor-publico">
-        <span>ZAV · Sistema de gestión de productos terminados</span>
-        <span>Trabajo Final · UAJMS · 2026</span>
-      </footer>
+      <footer className="publico-footer contenedor-publico"><span>ZAV ? Gesti?n de productos terminados</span><span>Tarija, Bolivia ? 2026</span></footer>
     </div>
   );
 }
