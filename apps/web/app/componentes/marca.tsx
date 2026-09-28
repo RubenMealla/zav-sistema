@@ -8,6 +8,8 @@ export function Marca({ etiqueta = false, grande = false }: { etiqueta?: boolean
       <Image
         src={etiqueta ? '/marca/etiqueta-zav.png' : '/marca/logo-zav.jpg'}
         alt="ZAV · Fiambres y embutidos"
+        loading="eager"
+        fetchPriority={grande ? 'high' : undefined}
         width={etiqueta ? 1254 : 1080}
         height={etiqueta ? 1254 : 1080}
         sizes={grande ? '(max-width: 600px) 280px, 440px' : '144px'}

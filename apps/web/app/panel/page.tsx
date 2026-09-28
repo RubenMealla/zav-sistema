@@ -422,13 +422,13 @@ export default async function Panel({
                         <tr><td colSpan={7}><div className="tabla-vacia">El lote no tiene movimientos.</div></td></tr>
                       ) : itemsMovimientos.map((movimiento) => (
                         <tr key={movimiento.id}>
-                          <td>{fechaBolivia(movimiento.creadoEn)}</td>
+                          <td className="dato-nowrap"><time dateTime={movimiento.creadoEn}>{fechaBolivia(movimiento.creadoEn)}</time></td>
                           <td><span className="codigo">{loteHistorial?.codigo ?? '—'}</span></td>
                           <td><span className="badge badge-azul">{movimiento.tipo}</span></td>
                           <td>{movimiento.origen?.nombre ?? '—'}</td>
                           <td>{movimiento.destino?.nombre ?? '—'}</td>
-                          <td><strong>{movimiento.cantidad}</strong></td>
-                          <td>{movimiento.usuario.identificador}</td>
+                          <td className="numero"><strong>{movimiento.cantidad}</strong></td>
+                          <td className="dato-nowrap">{movimiento.usuario.identificador}</td>
                         </tr>
                       ))}
                     </tbody>

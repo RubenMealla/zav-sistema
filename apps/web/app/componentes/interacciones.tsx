@@ -44,6 +44,21 @@ export function Modal({
         className="modal"
         aria-labelledby={`${id}-titulo`}
         aria-describedby={descripcion ? `${id}-descripcion` : undefined}
+        onKeyDown={(evento) => {
+          if (evento.key !== 'Tab') return;
+          const controles = Array.from(evento.currentTarget.querySelectorAll<HTMLElement>(
+            'button, a[href], input:not([type="hidden"]), select, textarea, [tabindex]',
+          )).filter((control) => control.tabIndex >= 0 && !control.matches(':disabled') && control.getClientRects().length > 0);
+          const primero = controles[0];
+          const ultimo = controles.at(-1);
+          if (evento.shiftKey && document.activeElement === primero) {
+            evento.preventDefault();
+            ultimo?.focus();
+          } else if (!evento.shiftKey && document.activeElement === ultimo) {
+            evento.preventDefault();
+            primero?.focus();
+          }
+        }}
         onClick={(evento) => {
           if (evento.target === referencia.current) cerrar();
         }}
