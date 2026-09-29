@@ -1,7 +1,13 @@
 'use client';
 
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useId, useRef, useState, type ReactNode } from 'react';
+import { useFormStatus } from 'react-dom';
 import { Icono } from './icono';
+
+export function BotonEnviar({ children, pendiente = 'Guardando…', className = 'boton boton-primario', disabled = false }: { children: ReactNode; pendiente?: string; className?: string; disabled?: boolean }) {
+  const { pending } = useFormStatus();
+  return <button type="submit" className={className} disabled={disabled || pending} aria-busy={pending}>{pending ? pendiente : children}</button>;
+}
 
 export function Modal({
   boton,
@@ -17,6 +23,7 @@ export function Modal({
   variante?: 'principal' | 'secundaria';
 }) {
   const referencia = useRef<HTMLDialogElement>(null);
+  const id = useId();
 
   function cerrar() {
     referencia.current?.close();
@@ -35,6 +42,23 @@ export function Modal({
       <dialog
         ref={referencia}
         className="modal"
+        aria-labelledby={`${id}-titulo`}
+        aria-describedby={descripcion ? `${id}-descripcion` : undefined}
+        onKeyDown={(evento) => {
+          if (evento.key !== 'Tab') return;
+          const controles = Array.from(evento.currentTarget.querySelectorAll<HTMLElement>(
+            'button, a[href], input:not([type="hidden"]), select, textarea, [tabindex]',
+          )).filter((control) => control.tabIndex >= 0 && !control.matches(':disabled') && control.getClientRects().length > 0);
+          const primero = controles[0];
+          const ultimo = controles.at(-1);
+          if (evento.shiftKey && document.activeElement === primero) {
+            evento.preventDefault();
+            ultimo?.focus();
+          } else if (!evento.shiftKey && document.activeElement === ultimo) {
+            evento.preventDefault();
+            primero?.focus();
+          }
+        }}
         onClick={(evento) => {
           if (evento.target === referencia.current) cerrar();
         }}
@@ -43,8 +67,8 @@ export function Modal({
           <header className="modal-cabecera">
             <div>
               <span className="eyebrow">OPERACIÓN</span>
-              <h2>{titulo}</h2>
-              {descripcion && <p>{descripcion}</p>}
+              <h2 id={`${id}-titulo`}>{titulo}</h2>
+              {descripcion && <p id={`${id}-descripcion`}>{descripcion}</p>}
             </div>
             <button type="button" className="boton-icono" aria-label="Cerrar ventana" onClick={cerrar}>
               <Icono nombre="cerrar" />
@@ -65,11 +89,6 @@ export function Notificacion({
   mensaje: string;
 }) {
   const [visible, setVisible] = useState(true);
-
-  useEffect(() => {
-    const temporizador = window.setTimeout(() => setVisible(false), 5200);
-    return () => window.clearTimeout(temporizador);
-  }, []);
 
   if (!visible) return null;
 
@@ -104,7 +123,7 @@ export function CampoContrasena() {
           required
           placeholder="Ingresa tu contraseña"
         />
-        <button type="button" onClick={() => setVisible((valor) => !valor)}>
+        <button type="button" aria-controls="contrasena" aria-pressed={visible} aria-label={visible ? 'Ocultar contraseña' : 'Mostrar contraseña'} onClick={() => setVisible((valor) => !valor)}>
           {visible ? 'Ocultar' : 'Mostrar'}
         </button>
       </div>

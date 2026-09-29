@@ -33,7 +33,8 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: 'NODE_ENV=test PORT=3001 pnpm --dir ../api start:prod',
+      command: 'pnpm --dir ../api start:prod',
+      env: { NODE_ENV: 'test', PORT: '3001' },
       url: 'http://127.0.0.1:3001',
       reuseExistingServer: !esCI,
       timeout: 120_000,
@@ -41,7 +42,8 @@ export default defineConfig({
       stderr: 'pipe',
     },
     {
-      command: 'NODE_ENV=production PORT=3000 pnpm start',
+      command: 'pnpm start',
+      env: { NODE_ENV: 'production', PORT: '3000' },
       url: 'http://127.0.0.1:3000/acceso',
       reuseExistingServer: !esCI,
       timeout: 120_000,

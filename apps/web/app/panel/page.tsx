@@ -1,10 +1,10 @@
+import { MarcoPanel, vistas, type Vista } from './marco-panel';
 import Link from 'next/link';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { randomUUID } from 'node:crypto';
-import { cerrarSesion } from '../acciones';
 import { Icono } from '../componentes/icono';
-import { Modal, Notificacion } from '../componentes/interacciones';
+import { BotonEnviar, Modal, Notificacion } from '../componentes/interacciones';
 import { cambiarCondicionLote, registrarLote, registrarProducto, registrarTraslado } from './acciones';
 
 const API = process.env.API_BASE_URL ?? 'http://localhost:3001';
@@ -42,17 +42,6 @@ type EventoCondicion = {
 };
 type Pagina<T> = { items: T[]; total: number };
 type Perfil = { nombre: string; identificador: string; rol: string };
-type Vista = 'resumen' | 'productos' | 'lotes' | 'condiciones' | 'movimientos';
-type VistaConfig = { titulo: string; descripcion: string; icono: 'inicio' | 'producto' | 'lote' | 'condicion' | 'movimiento' };
-
-const vistas: Record<Vista, VistaConfig> = {
-  resumen: { titulo: 'Resumen general', descripcion: 'Estado operativo del inventario y accesos rápidos.', icono: 'inicio' },
-  productos: { titulo: 'Productos terminados', descripcion: 'Presentaciones comerciales registradas en el sistema.', icono: 'producto' },
-  lotes: { titulo: 'Lotes y existencias', descripcion: 'Existencia física, vencimientos y ubicación de cada lote.', icono: 'lote' },
-  condiciones: { titulo: 'Condición de lotes', descripcion: 'Liberación, bloqueo y auditoría de decisiones comerciales.', icono: 'condicion' },
-  movimientos: { titulo: 'Movimientos', descripcion: 'Traslados entre ubicaciones e historial de inventario.', icono: 'movimiento' },
-};
-
 const mensajes: Record<string, string> = {
   codigo: 'Ya existe un producto con ese código.',
   'lote-duplicado': 'El código de lote o la clave de operación ya está registrado.',
@@ -161,84 +150,21 @@ export default async function Panel({
     (total, lote) => total + (lote.existencias ?? []).reduce((subtotal, saldo) => subtotal + saldo.cantidad_fisica, 0),
     0,
   );
-  const inicial = perfil.datos?.nombre?.trim().charAt(0).toUpperCase() || 'A';
 
   return (
-    <div className="app-shell">
-      <aside className="sidebar">
-        <div className="sidebar-superior">
-          <Link href="/" className="logo logo-sidebar">
-            <span className="logo-marca">Z</span>
-            <span>ZAV <small>Administración</small></span>
-          </Link>
-          <span className="sidebar-entorno"><span /> Entorno de desarrollo</span>
-        </div>
-
-        <nav className="sidebar-nav" aria-label="Módulos del sistema">
-          <span className="sidebar-seccion">PRINCIPAL</span>
-          {(Object.entries(vistas) as Array<[Vista, VistaConfig]>).map(([clave, item]) => (
-            <Link
-              key={clave}
-              href={`/panel?vista=${clave}`}
-              className={vista === clave ? 'nav-item nav-item-activo' : 'nav-item'}
-              aria-current={vista === clave ? 'page' : undefined}
-            >
-              <span className="nav-icono"><Icono nombre={item.icono} /></span>
-              <span>{item.titulo}</span>
-            </Link>
-          ))}
-        </nav>
-
-        <div className="sidebar-pie">
-          <div className="perfil-mini">
-            <span className="avatar">{inicial}</span>
-            <div><strong>{perfil.datos?.nombre}</strong><span>{perfil.datos?.identificador}</span></div>
-          </div>
-          <form action={cerrarSesion}>
-            <button type="submit" className="boton-cerrar-sesion">
-              Cerrar sesión <span>↗</span>
-            </button>
-          </form>
-        </div>
-      </aside>
-
-      <main className="contenido">
-        <header className="topbar">
-          <div className="topbar-titulo">
-            <div className="breadcrumb"><span>ZAV</span><span>/</span><strong>{vistas[vista].titulo}</strong></div>
-            <h1>{vistas[vista].titulo}</h1>
-            <p>{vistas[vista].descripcion}</p>
-          </div>
-          <div className="topbar-derecha">
-            <span className="topbar-fecha">Gestión 2026</span>
-            <div className="avatar avatar-claro">{inicial}</div>
-          </div>
-        </header>
-
-        <nav className="nav-movil" aria-label="Módulos">
-          {(Object.entries(vistas) as Array<[Vista, VistaConfig]>).map(([clave, item]) => (
-            <Link key={clave} href={`/panel?vista=${clave}`} className={vista === clave ? 'activo' : ''}>
-              <Icono nombre={item.icono} tamano={17} /><span>{item.titulo}</span>
-            </Link>
-          ))}
-        </nav>
-
-        {parametros.mensaje && <Notificacion tipo="exito" mensaje={mensajesOk[parametros.mensaje] ?? 'Operación registrada correctamente.'} />}
-        {parametros.error && <Notificacion tipo="error" mensaje={mensajes[parametros.error] ?? 'No se pudo completar la operación.'} />}
+    <MarcoPanel vista={vista} perfil={perfil.datos}>
+        {parametros.mensaje && <Notificacion key={`${parametros.mensaje ?? parametros.error}-${randomUUID()}`} tipo="exito" mensaje={mensajesOk[parametros.mensaje] ?? 'Operación registrada correctamente.'} />}
+        {parametros.error && <Notificacion key={`${parametros.mensaje ?? parametros.error}-${randomUUID()}`} tipo="error" mensaje={mensajes[parametros.error] ?? 'No se pudo completar la operación.'} />}
 
         <div className="vista-contenido">
           {vista === 'resumen' && (
             <>
               <section className="bienvenida">
-                <div>
-                  <span className="eyebrow">RESUMEN OPERATIVO</span>
-                  <h2>Hola, {perfil.datos?.nombre?.split(' ')[0]}.</h2>
-                  <p>Consulta el estado actual y entra directamente al módulo que necesitas.</p>
-                </div>
-                <span className="bienvenida-icono"><Icono nombre="escudo" tamano={28} /></span>
+                <div><span className="eyebrow">CONTROL INTERNO / ZAV</span><h2>Inventario bajo seguimiento</h2><p>Hola, {perfil.datos.nombre.split(' ')[0]}. Consulta las existencias y continúa con tu trabajo.</p></div>
+                <span className="bienvenida-sello">PRODUCTOS<br />TERMINADOS</span>
               </section>
 
-              <section className="metricas-grid">
+              <section className="metricas-grid" aria-label="Resumen del inventario">
                 <article className="metrica-card">
                   <span className="metrica-icono"><Icono nombre="producto" /></span>
                   <div><span>Productos</span><strong>{productos.datos?.total ?? '—'}</strong><small>Registrados</small></div>
@@ -249,14 +175,15 @@ export default async function Panel({
                 </article>
                 <article className="metrica-card">
                   <span className="metrica-icono metrica-verde"><Icono nombre="condicion" /></span>
-                  <div><span>Liberados</span><strong>{lotesLiberados}</strong><small>Condición comercial</small></div>
+                  <div><span>Liberados</span><strong>{lotes.estado === 200 ? lotesLiberados : "—"}</strong><small>En los lotes consultados</small></div>
                 </article>
                 <article className="metrica-card">
                   <span className="metrica-icono"><Icono nombre="ubicacion" /></span>
-                  <div><span>Existencia física</span><strong>{totalFisico}</strong><small>Unidades registradas</small></div>
+                  <div><span>Existencia física</span><strong>{lotes.estado === 200 ? totalFisico : "—"}</strong><small>En los lotes consultados</small></div>
                 </article>
               </section>
 
+              <p className="alcance-datos">Lotes consultados: {itemsLotes.length} (máximo 30), base del cálculo de condiciones y existencia física. Los totales de productos y lotes corresponden al registro completo.</p>
               <div className="dashboard-grid">
                 <section className="card">
                   <div className="card-cabecera">
@@ -271,11 +198,11 @@ export default async function Panel({
                 </section>
 
                 <section className="card estado-card">
-                  <div className="card-cabecera"><div><span className="eyebrow">CONDICIÓN DE LOTES</span><h2>Distribución actual</h2></div></div>
+                  <div className="card-cabecera"><div><span className="eyebrow">CONDICIÓN DE LOTES</span><h2>Condición actual</h2></div></div>
                   <div className="estado-resumen">
-                    <div><span className="punto-estado punto-verde" /><span>Liberados</span><strong>{lotesLiberados}</strong></div>
-                    <div><span className="punto-estado punto-ambar" /><span>Retenidos</span><strong>{lotesRetenidos}</strong></div>
-                    <div><span className="punto-estado punto-rojo" /><span>Bloqueados</span><strong>{lotesBloqueados}</strong></div>
+                    <div><span className="punto-estado punto-verde" /><span>Liberados</span><strong>{lotes.estado === 200 ? lotesLiberados : "—"}</strong></div>
+                    <div><span className="punto-estado punto-ambar" /><span>Retenidos</span><strong>{lotes.estado === 200 ? lotesRetenidos : "—"}</strong></div>
+                    <div><span className="punto-estado punto-rojo" /><span>Bloqueados</span><strong>{lotes.estado === 200 ? lotesBloqueados : "—"}</strong></div>
                   </div>
                   <p className="nota-card"><Icono nombre="escudo" tamano={15} /> La condición comercial es independiente de la ubicación física.</p>
                 </section>
@@ -289,7 +216,7 @@ export default async function Panel({
                 <div>
                   <span className="eyebrow">CATÁLOGO INTERNO</span>
                   <h2>Productos registrados</h2>
-                  <p>{productos.datos?.total ?? 0} productos disponibles para consulta administrativa.</p>
+                  <p>Registros disponibles para consulta administrativa: {productos.datos?.total ?? '—'}.</p>
                 </div>
                 <Modal boton="Nuevo producto" titulo="Registrar producto" descripcion="Agrega una presentación comercial al catálogo interno.">
                   <form action={registrarProducto} className="formulario formulario-modal">
@@ -301,7 +228,7 @@ export default async function Panel({
                       <label className="campo">Peso (gramos)<input name="pesoGramos" type="number" min={1} step={1} required /></label>
                       <label className="campo">Precio (Bs)<input name="precioBob" type="number" min={0} step="0.01" required /></label>
                     </div>
-                    <div className="modal-acciones"><button type="submit" className="boton boton-primario">Guardar producto</button></div>
+                    <div className="modal-acciones"><BotonEnviar>Guardar producto</BotonEnviar></div>
                   </form>
                 </Modal>
               </div>
@@ -309,20 +236,20 @@ export default async function Panel({
               {productos.estado !== 200 ? (
                 <div className="estado-vacio estado-error"><Icono nombre="alerta" /><p>No se pudo consultar la lista de productos (HTTP {productos.estado}).</p></div>
               ) : (
-                <div className="tabla-contenedor">
-                  <table>
-                    <thead><tr><th>Código</th><th>Producto</th><th>Familia</th><th>Presentación</th><th>Peso</th><th>Precio</th><th>Estado</th></tr></thead>
+                <div className="tabla-contenedor" role="region" tabIndex={0} aria-label="Productos registrados; tabla desplazable">
+                  <table><caption className="solo-lectores">Productos registrados</caption>
+                    <thead><tr><th scope="col">Código</th><th scope="col">Producto</th><th scope="col">Familia</th><th scope="col">Presentación</th><th scope="col">Peso</th><th scope="col">Precio</th><th scope="col">Estado</th></tr></thead>
                     <tbody>
                       {itemsProductos.length === 0 ? (
-                        <tr><td colSpan={7}><div className="tabla-vacia">Todavía no hay productos registrados.</div></td></tr>
+                        <tr><td colSpan={7}><div className="tabla-vacia"><strong>Todavía no hay productos registrados.</strong><span>Usa «Nuevo producto» para registrar la primera presentación.</span></div></td></tr>
                       ) : itemsProductos.map((producto) => (
                         <tr key={producto.id}>
                           <td><span className="codigo">{producto.codigo}</span></td>
                           <td><strong>{producto.nombre}</strong></td>
                           <td>{producto.familia}</td>
                           <td>{producto.presentacion}</td>
-                          <td>{producto.pesoGramos} g</td>
-                          <td><strong>Bs {producto.precioBob}</strong></td>
+                          <td className="numero">{producto.pesoGramos} g</td>
+                          <td className="numero"><strong>Bs {producto.precioBob}</strong></td>
                           <td><span className={producto.activo ? 'badge badge-verde' : 'badge badge-neutro'}>{producto.activo ? 'ACTIVO' : 'INACTIVO'}</span></td>
                         </tr>
                       ))}
@@ -352,7 +279,7 @@ export default async function Panel({
                       <label className="campo">Cantidad inicial<input name="cantidadInicial" type="number" min={1} step={1} required /></label>
                       <label className="campo">Ubicación inicial<input value="Producción y Almacenamiento" readOnly aria-label="Ubicación inicial" /></label>
                     </div>
-                    <div className="modal-acciones"><button type="submit" className="boton boton-primario" disabled={itemsProductos.length === 0}>Guardar lote e ingreso</button></div>
+                    <div className="modal-acciones"><BotonEnviar disabled={itemsProductos.length === 0}>Guardar lote e ingreso</BotonEnviar></div>
                   </form>
                 </Modal>
               </div>
@@ -360,12 +287,12 @@ export default async function Panel({
               {lotes.estado !== 200 ? (
                 <div className="estado-vacio estado-error"><Icono nombre="alerta" /><p>No se pudo consultar la lista de lotes (HTTP {lotes.estado}).</p></div>
               ) : (
-                <div className="tabla-contenedor">
-                  <table>
-                    <thead><tr><th>Lote</th><th>Condición</th><th>Vencimiento</th><th>Existencia por ubicación</th></tr></thead>
+                <div className="tabla-contenedor" role="region" tabIndex={0} aria-label="Lotes y existencias; tabla desplazable">
+                  <table><caption className="solo-lectores">Lotes y existencias</caption>
+                    <thead><tr><th scope="col">Lote</th><th scope="col">Condición</th><th scope="col">Vencimiento</th><th scope="col">Existencia por ubicación</th></tr></thead>
                     <tbody>
                       {itemsLotes.length === 0 ? (
-                        <tr><td colSpan={4}><div className="tabla-vacia">Todavía no hay lotes registrados.</div></td></tr>
+                        <tr><td colSpan={4}><div className="tabla-vacia"><strong>Todavía no hay lotes registrados.</strong><span>Registra un producto y luego su lote e ingreso inicial.</span></div></td></tr>
                       ) : itemsLotes.map((lote) => (
                         <tr key={lote.id}>
                           <td><span className="codigo">{lote.codigo}</span></td>
@@ -374,7 +301,7 @@ export default async function Panel({
                           <td>
                             <div className="saldos-inline">
                               {lote.existencias?.length ? lote.existencias.map((saldo) => (
-                                <span key={saldo.codigo}><b>{saldo.codigo}</b><strong>{saldo.cantidad_fisica}</strong></span>
+                                <span key={saldo.codigo}><b>{saldo.codigo === "PRODUCCION_ALMACENAMIENTO" ? "Producción y Almacenamiento" : saldo.codigo === "VENTA_DESPACHO" ? "Venta y Despacho" : saldo.codigo}</b><strong>{saldo.cantidad_fisica}</strong></span>
                               )) : <span>Sin existencias</span>}
                             </div>
                           </td>
@@ -400,7 +327,7 @@ export default async function Panel({
                         <label className="campo">Acción<select name="accion" required defaultValue="liberar"><option value="liberar">Liberar para disponibilidad comercial</option><option value="bloquear">Bloquear lote</option></select></label>
                         <label className="campo">Motivo<input name="motivo" maxLength={250} required placeholder="Motivo de la decisión" /></label>
                       </div>
-                      <div className="modal-acciones"><button type="submit" className="boton boton-primario" disabled={itemsLotes.length === 0}>Guardar condición</button></div>
+                      <div className="modal-acciones"><BotonEnviar disabled={itemsLotes.length === 0}>Guardar condición</BotonEnviar></div>
                     </form>
                   </Modal>
                 </div>
@@ -465,7 +392,7 @@ export default async function Panel({
                       <label className="campo">Referencia <span className="opcional">Opcional</span><input name="referencia" maxLength={80} placeholder="Ej. TR-001" /></label>
                       <label className="campo">Motivo <span className="opcional">Opcional</span><input name="motivo" maxLength={250} placeholder="Motivo del movimiento" /></label>
                     </div>
-                    <div className="modal-acciones"><button type="submit" className="boton boton-primario" disabled={itemsLotes.length === 0}>Guardar traslado</button></div>
+                    <div className="modal-acciones"><BotonEnviar disabled={itemsLotes.length === 0}>Guardar traslado</BotonEnviar></div>
                   </form>
                 </Modal>
               </div>
@@ -487,21 +414,21 @@ export default async function Panel({
               ) : movimientos?.estado !== 200 ? (
                 <div className="estado-vacio estado-error"><Icono nombre="alerta" /><p>No se pudo consultar el historial (HTTP {movimientos?.estado ?? '—'}).</p></div>
               ) : (
-                <div className="tabla-contenedor">
-                  <table>
-                    <thead><tr><th>Fecha</th><th>Lote</th><th>Movimiento</th><th>Origen</th><th>Destino</th><th>Cantidad</th><th>Usuario</th></tr></thead>
+                <div className="tabla-contenedor" role="region" tabIndex={0} aria-label="Movimientos del lote; tabla desplazable">
+                  <table><caption className="solo-lectores">Movimientos del lote</caption>
+                    <thead><tr><th scope="col">Fecha</th><th scope="col">Lote</th><th scope="col">Movimiento</th><th scope="col">Origen</th><th scope="col">Destino</th><th scope="col">Cantidad</th><th scope="col">Usuario</th></tr></thead>
                     <tbody>
                       {itemsMovimientos.length === 0 ? (
                         <tr><td colSpan={7}><div className="tabla-vacia">El lote no tiene movimientos.</div></td></tr>
                       ) : itemsMovimientos.map((movimiento) => (
                         <tr key={movimiento.id}>
-                          <td>{fechaBolivia(movimiento.creadoEn)}</td>
+                          <td className="dato-nowrap"><time dateTime={movimiento.creadoEn}>{fechaBolivia(movimiento.creadoEn)}</time></td>
                           <td><span className="codigo">{loteHistorial?.codigo ?? '—'}</span></td>
                           <td><span className="badge badge-azul">{movimiento.tipo}</span></td>
                           <td>{movimiento.origen?.nombre ?? '—'}</td>
                           <td>{movimiento.destino?.nombre ?? '—'}</td>
-                          <td><strong>{movimiento.cantidad}</strong></td>
-                          <td>{movimiento.usuario.identificador}</td>
+                          <td className="numero"><strong>{movimiento.cantidad}</strong></td>
+                          <td className="dato-nowrap">{movimiento.usuario.identificador}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -511,7 +438,6 @@ export default async function Panel({
             </section>
           )}
         </div>
-      </main>
-    </div>
+    </MarcoPanel>
   );
 }
