@@ -97,32 +97,48 @@ export default async function Panel({
   const parametros = await searchParams;
   const vista: Vista = parametros.vista && parametros.vista in vistas ? parametros.vista as Vista : 'resumen';
 
+  const vacia = <T,>(): { estado: number; datos?: Pagina<T> } => ({
+    estado: 200,
+    datos: { items: [], total: 0 },
+  });
   let perfil: { estado: number; datos?: Perfil };
-  let productos: { estado: number; datos?: Pagina<Producto> };
-  let lotes: { estado: number; datos?: Pagina<Lote> };
+  let productos = vacia<Producto>();
+  let lotes = vacia<Lote>();
   let movimientos: { estado: number; datos?: Pagina<Movimiento> } | undefined;
   let condiciones: { estado: number; datos?: Pagina<EventoCondicion> } | undefined;
 
   try {
-    perfil = await consultar<Perfil>('/api/v1/auth/me', token);
-    [productos, lotes] = await Promise.all([
-      consultar<Pagina<Producto>>('/api/v1/productos?limit=30', token),
-      consultar<Pagina<Lote>>('/api/v1/lotes?limit=30', token),
-    ]);
+    const necesitaProductos = vista === 'resumen' || vista === 'productos' || vista === 'lotes';
+    const necesitaLotes = vista !== 'productos';
 
-    if (vista === 'movimientos' && parametros.historialLoteId) {
-      movimientos = await consultar<Pagina<Movimiento>>(
-        `/api/v1/movimientos?loteId=${encodeURIComponent(parametros.historialLoteId)}&limit=30`,
-        token,
-      );
-    }
+    const [respuestaPerfil, respuestaProductos, respuestaLotes, respuestaMovimientos, respuestaCondiciones] =
+      await Promise.all([
+        consultar<Perfil>('/api/v1/auth/me', token),
+        necesitaProductos
+          ? consultar<Pagina<Producto>>('/api/v1/productos?limit=30', token)
+          : Promise.resolve(vacia<Producto>()),
+        necesitaLotes
+          ? consultar<Pagina<Lote>>('/api/v1/lotes?limit=30', token)
+          : Promise.resolve(vacia<Lote>()),
+        vista === 'movimientos' && parametros.historialLoteId
+          ? consultar<Pagina<Movimiento>>(
+              `/api/v1/movimientos?loteId=${encodeURIComponent(parametros.historialLoteId)}&limit=30`,
+              token,
+            )
+          : Promise.resolve(undefined),
+        vista === 'condiciones' && parametros.historialCondicionLoteId
+          ? consultar<Pagina<EventoCondicion>>(
+              `/api/v1/lotes/${encodeURIComponent(parametros.historialCondicionLoteId)}/condiciones?limit=30`,
+              token,
+            )
+          : Promise.resolve(undefined),
+      ]);
 
-    if (vista === 'condiciones' && parametros.historialCondicionLoteId) {
-      condiciones = await consultar<Pagina<EventoCondicion>>(
-        `/api/v1/lotes/${encodeURIComponent(parametros.historialCondicionLoteId)}/condiciones?limit=30`,
-        token,
-      );
-    }
+    perfil = respuestaPerfil;
+    productos = respuestaProductos;
+    lotes = respuestaLotes;
+    movimientos = respuestaMovimientos;
+    condiciones = respuestaCondiciones;
   } catch {
     return (
       <main className="error-pagina">
