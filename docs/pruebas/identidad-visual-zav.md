@@ -1,6 +1,6 @@
 # QA de identidad visual ZAV — Issue #25
 
-Fecha: 28/09/2026, America/La_Paz. Repositorio: `RubenMealla/zav-sistema`. Rama: `desarrollo/identidad-visual-zav`. Trabajo exclusivamente local, sin push, PR ni reescritura de historial.
+Fecha: 28/09/2026, America/La_Paz. Repositorio: `RubenMealla/zav-sistema`. Rama: `desarrollo/identidad-visual-zav`. La validación descrita se realizó localmente antes de publicar la rama.
 
 ## Entorno real
 
@@ -34,7 +34,7 @@ El build genera `/` y `/icon.jpg` estáticos; `/acceso` y `/panel` dinámicos; a
 7. La revisión final de capturas detectó redacción inadecuada con conteos de un solo registro. Se ajustaron los rótulos del catálogo y el alcance del resumen, y se repitieron lint, build y la suite completa para que las evidencias correspondan al texto final.
 8. Ejecución final: **7 aprobadas, 0 fallidas, 41.8 s**, código 0. `test-results/.last-run.json` registra `status: passed` y `failedTests: []`.
 
-Los avisos de Node sobre `NO_COLOR` y `FORCE_COLOR` son de formato de consola; no son errores de la aplicación ni de ESLint. No se declara ejecutado GitHub Actions en esta rama: la validación fue local y no se hizo push.
+Los avisos de Node sobre `NO_COLOR` y `FORCE_COLOR` son de formato de consola; no son errores de la aplicación ni de ESLint. GitHub Actions no formó parte de esta ejecución local. Las ejecuciones remotas posteriores constituyen evidencia separada; este documento no informa ni califica sus resultados.
 
 ## Cobertura de las siete pruebas
 
@@ -87,4 +87,4 @@ Se comprobó al terminar que los puertos 3000, 3001 y 55432 no conservan proceso
 - Validar la marca contra un original vectorial o manual corporativo cuando exista. Los PNG/JPG actuales son referencias provisionales.
 - Probar Safari/WebKit, Firefox, lector de pantalla y dispositivos táctiles reales. Esta ejecución automatizada utilizó Chromium; no constituye una auditoría WCAG completa.
 - Revisar tablas con los códigos y nombres reales más largos y con el volumen habitual de trabajo. El límite existente de 30 registros se conserva y se declara en el resumen; no se agregó paginación nueva.
-- El script de API y las cinco referencias que ya estaban sin seguimiento al inicio siguen fuera de estos commits.
+- El script local de API permanece sin seguimiento y fuera de estos commits. Las cinco referencias están versionadas en `docs/referencias/identidad-zav` como evidencia de diseño.

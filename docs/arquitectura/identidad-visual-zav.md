@@ -10,17 +10,17 @@ En administración se priorizan superficies claras, tablas legibles, controles d
 
 ## Uso de las cinco referencias
 
-Los archivos entregados tienen doble extensión en el directorio local `docs/referencias/identidad-zav`. Se conservaron sus nombres y contenido.
+Las cinco imágenes originales/de referencia se conservan versionadas en `docs/referencias/identidad-zav` como evidencia de diseño. Sus nombres usan extensiones simples y su contenido se mantiene intacto.
 
 | Referencia | Uso y decisión |
 | --- | --- |
-| `01-logo-original-zav.jpg.jpg` | Fuente del componente de marca compacto y del icono del sitio. Se conserva el cerdo naranja, el lettering ZAV y la denominación original. Copia íntegra en `public/marca/logo-zav.jpg`; no se redibujó. |
-| `02-etiqueta-empaque-original-zav.jpg.jpg` | Referencia de composición: cinta negra, borde blanco y contraste. La madera es el entorno del empaque, no el color de la cinta. No se usa la fotografía como fondo de la aplicación. |
-| `03-publicacion-productos-colores-zav.jpg.jpg` | Confirma el contexto de productos envasados y la presencia del naranja. Se conserva esa relación de color sin trasladar el amarillo promocional, el teléfono, el saludo ni la textura a una pantalla operativa. |
-| `04-logo-limpio-referencia-zav.png.png` | Se comparó con el original. Presenta artefactos visibles en el lettering y no se eligió como asset de producción. Sirve para comprobar proporciones y disposición, sin corregir ni inventar una nueva marca. |
-| `05-etiqueta-limpia-referencia-zav.png.png` | Copia íntegra en `public/marca/etiqueta-zav.png`, usada en la portada y acceso. Su marco blanco da identidad a la composición. Se trata como material provisional de referencia, no como vector corporativo certificado. |
+| `01-logo-original-zav.jpg` | Fuente del componente de marca compacto y del icono del sitio. Se conserva el cerdo naranja, el lettering ZAV y la denominación original. Copia íntegra en `apps/web/public/marca/logo-zav.jpg`; no se redibujó. |
+| `02-etiqueta-empaque-original-zav.jpg` | Referencia de composición: cinta negra, borde blanco y contraste. La madera es el entorno del empaque, no el color de la cinta. No se usa la fotografía como fondo de la aplicación. |
+| `03-publicacion-productos-colores-zav.jpg` | Confirma el contexto de productos envasados y la presencia del naranja. Se conserva esa relación de color sin trasladar el amarillo promocional, el teléfono, el saludo ni la textura a una pantalla operativa. |
+| `04-logo-limpio-referencia-zav.png` | Se comparó con el original. Presenta artefactos visibles en el lettering y no se eligió como asset de producción. Sirve para comprobar proporciones y disposición, sin corregir ni inventar una nueva marca. |
+| `05-etiqueta-limpia-referencia-zav.png` | Copia íntegra en `apps/web/public/marca/etiqueta-zav.png`, usada en la portada y acceso. Su marco blanco da identidad a la composición. Se trata como material provisional de referencia, no como vector corporativo certificado. |
 
-Las copias necesarias están versionadas con el frontend. Las cinco fuentes aportadas por el usuario, que ya estaban sin seguimiento al iniciar el trabajo, no se añadieron al historial. `next/image` sirve versiones ajustadas al tamaño de visualización. El encuadre CSS elimina margen negro sobrante sin modificar los archivos originales.
+Los assets que utiliza directamente la aplicación están en `apps/web/public/marca`, versionados con el frontend. Los JPG/PNG siguen siendo materiales provisionales y no sustituyen un manual de marca o un vector corporativo oficial. `next/image` sirve versiones ajustadas al tamaño de visualización. El encuadre CSS elimina margen negro sobrante sin modificar los archivos originales.
 
 ## Sistema visual
 
