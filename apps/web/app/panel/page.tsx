@@ -183,7 +183,7 @@ export default async function Panel({
                 </article>
               </section>
 
-              <p className="alcance-datos">Condiciones y existencia física calculadas sobre los {itemsLotes.length} lotes consultados (máximo 30). Los totales de productos y lotes corresponden al registro completo.</p>
+              <p className="alcance-datos">Lotes consultados: {itemsLotes.length} (máximo 30), base del cálculo de condiciones y existencia física. Los totales de productos y lotes corresponden al registro completo.</p>
               <div className="dashboard-grid">
                 <section className="card">
                   <div className="card-cabecera">
@@ -216,7 +216,7 @@ export default async function Panel({
                 <div>
                   <span className="eyebrow">CATÁLOGO INTERNO</span>
                   <h2>Productos registrados</h2>
-                  <p>{productos.datos?.total ?? 0} productos disponibles para consulta administrativa.</p>
+                  <p>Registros disponibles para consulta administrativa: {productos.datos?.total ?? '—'}.</p>
                 </div>
                 <Modal boton="Nuevo producto" titulo="Registrar producto" descripcion="Agrega una presentación comercial al catálogo interno.">
                   <form action={registrarProducto} className="formulario formulario-modal">

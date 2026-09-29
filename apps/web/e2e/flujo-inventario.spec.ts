@@ -53,7 +53,7 @@ test('permite gestionar inventario desde módulos, modales y notificaciones', as
   await expect(page.getByText('Trabaja por módulo')).toBeVisible();
   await expect(page.getByText('Condición actual')).toBeVisible();
   await captura(page, '03-dashboard-administrativo.png');
-  await expect(page.getByText(/calculadas sobre los/)).toBeVisible();
+  await expect(page.getByText(/Lotes consultados:/)).toBeVisible();
 
   await page.getByRole('link', { name: 'Productos terminados' }).click();
   await expect(page).toHaveURL(/\/panel\?vista=productos$/);
