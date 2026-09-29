@@ -55,4 +55,3 @@ export function MarcoPanel({ vista, perfil, children }: {
     </div>
   );
 }
-
