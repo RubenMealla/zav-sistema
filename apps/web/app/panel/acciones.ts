@@ -1,7 +1,6 @@
 'use server';
 
 import { cookies } from 'next/headers';
-import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 
 const API = process.env.API_BASE_URL ?? 'http://localhost:3001';
@@ -33,7 +32,6 @@ export async function registrarProducto(formulario: FormData) {
   });
   if (estado === 401 || estado === 403) redirect('/acceso?error=sesion');
   if (estado === 201) {
-    revalidatePath('/panel');
     redirect('/panel?vista=productos&mensaje=producto');
   }
   redirect(`/panel?vista=productos&error=${estado === 409 ? 'codigo' : estado === 'conexion' ? 'conexion' : 'producto'}`);
@@ -51,7 +49,6 @@ export async function registrarLote(formulario: FormData) {
   });
   if (estado === 401 || estado === 403) redirect('/acceso?error=sesion');
   if (estado === 201) {
-    revalidatePath('/panel');
     redirect('/panel?vista=lotes&mensaje=lote');
   }
   redirect(`/panel?vista=lotes&error=${estado === 409 ? 'lote-duplicado' : estado === 'conexion' ? 'conexion' : 'lote'}`);
@@ -74,7 +71,6 @@ export async function registrarTraslado(formulario: FormData) {
   const estado = await enviar('/api/v1/movimientos/traslado', datos);
   if (estado === 401 || estado === 403) redirect('/acceso?error=sesion');
   if (estado === 201) {
-    revalidatePath('/panel');
     redirect(`/panel?vista=movimientos&mensaje=traslado&historialLoteId=${encodeURIComponent(loteId)}`);
   }
   redirect(`/panel?vista=movimientos&error=${estado === 409 ? 'traslado-conflicto' : estado === 'conexion' ? 'conexion' : 'traslado'}`);
@@ -90,7 +86,6 @@ export async function cambiarCondicionLote(formulario: FormData) {
   });
   if (estado === 401 || estado === 403) redirect('/acceso?error=sesion');
   if (estado === 201) {
-    revalidatePath('/panel');
     redirect(`/panel?vista=condiciones&mensaje=condicion&historialCondicionLoteId=${encodeURIComponent(loteId)}`);
   }
   redirect(`/panel?vista=condiciones&error=${estado === 409 ? 'condicion-conflicto' : estado === 'conexion' ? 'conexion' : 'condicion'}`);
