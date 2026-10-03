@@ -88,7 +88,10 @@ describe('Pedidos y distribucion E3 (e2e)', () => {
     return { productoId: producto.body.id as string, loteId: lote.body.id as string };
   }
 
-  async function crearCliente(sufijo: string) {
+  async function crearCliente(
+    sufijo: string,
+    ubicacion?: { latitud: number; longitud: number },
+  ) {
     const respuesta = await request(app.getHttpServer())
       .post('/api/v1/clientes')
       .set('Authorization', `Bearer ${tokenVendedor}`)
@@ -96,6 +99,7 @@ describe('Pedidos y distribucion E3 (e2e)', () => {
         nombre: `Cliente QA ${sufijo}`,
         telefono: '70000000',
         direccion: `Calle de prueba ${sufijo}, Tarija`,
+        ...(ubicacion ?? {}),
       })
       .expect(201);
     return respuesta.body.id as string;
@@ -219,6 +223,75 @@ describe('Pedidos y distribucion E3 (e2e)', () => {
     expect(segundo.body.statusCode).toBe(409);
   });
 
+  it('georreferencia Cliente y sugiere una secuencia reproducible por proximidad', async () => {
+    const despacho = await request(app.getHttpServer())
+      .get('/api/v1/ubicaciones/venta-despacho')
+      .set('Authorization', `Bearer ${tokenAdmin}`)
+      .expect(200);
+
+    expect(despacho.body.codigo).toBe('VENTA_DESPACHO');
+
+    await request(app.getHttpServer())
+      .patch(`/api/v1/ubicaciones/${despacho.body.id}/georreferencia`)
+      .set('Authorization', `Bearer ${tokenVendedor}`)
+      .send({ latitud: -21.535, longitud: -64.73 })
+      .expect(403);
+
+    await request(app.getHttpServer())
+      .patch(`/api/v1/ubicaciones/${despacho.body.id}/georreferencia`)
+      .set('Authorization', `Bearer ${tokenAdmin}`)
+      .send({ latitud: -21.535, longitud: -64.73 })
+      .expect(200);
+
+    const clienteCercano = await crearCliente('GEO-CERCA', {
+      latitud: -21.5355,
+      longitud: -64.7302,
+    });
+    const clienteLejano = await crearCliente('GEO-LEJOS', {
+      latitud: -21.55,
+      longitud: -64.75,
+    });
+
+    const cerca = await crearPedido(clienteCercano, productoPrincipalId, 1);
+    const lejos = await crearPedido(clienteLejano, productoPrincipalId, 1);
+    expect(cerca.status).toBe(201);
+    expect(lejos.status).toBe(201);
+
+    expect(cerca.body.destinoGps).toEqual({
+      latitud: -21.5355,
+      longitud: -64.7302,
+    });
+
+    const plan = await request(app.getHttpServer())
+      .post('/api/v1/pedidos/planificacion')
+      .set('Authorization', `Bearer ${tokenVendedor}`)
+      .send({
+        pedidoIds: [lejos.body.id, cerca.body.id],
+        origenTipo: 'DESPACHO',
+      })
+      .expect(201);
+
+    expect(plan.body.naturaleza).toBe('SECUENCIA_GEOGRAFICA_SUGERIDA');
+    expect(plan.body.paradas).toHaveLength(2);
+    expect(plan.body.paradas[0].pedidoId).toBe(cerca.body.id);
+    expect(plan.body.distanciaTotalAproximadaMetros).toBeGreaterThan(0);
+
+    const remoto = await crearCliente('GEO-CORREGIR');
+    const corregido = await request(app.getHttpServer())
+      .patch(`/api/v1/clientes/${remoto}/ubicacion`)
+      .set('Authorization', `Bearer ${tokenVendedor}`)
+      .send({
+        direccion: 'Direccion sintetica corregida, Tarija',
+        latitud: -21.54,
+        longitud: -64.74,
+      })
+      .expect(200);
+
+    expect(corregido.body.ubicacion).toEqual(
+      expect.objectContaining({ latitud: -21.54, longitud: -64.74 }),
+    );
+  });
+
   it('rechaza entrega antes del retiro y coordenadas fuera de rango', async () => {
     const clienteId = await crearCliente('TRANSICION');
     const creado = await crearPedido(clienteId, productoPrincipalId, 1);
@@ -263,7 +336,10 @@ describe('Pedidos y distribucion E3 (e2e)', () => {
   });
 
   it('completa Pedido → Retiro → Entrega GPS sin duplicar reintentos', async () => {
-    const clienteId = await crearCliente('FLUJO');
+    const clienteId = await crearCliente('FLUJO', {
+      latitud: -21.535,
+      longitud: -64.73,
+    });
     const creado = await crearPedido(clienteId, productoPrincipalId, 6);
     expect(creado.status).toBe(201);
     const pedidoId = creado.body.id as string;
@@ -293,19 +369,29 @@ describe('Pedidos y distribucion E3 (e2e)', () => {
     const entrega = await request(app.getHttpServer())
       .post(`/api/v1/pedidos/${pedidoId}/entrega`)
       .set('Authorization', `Bearer ${tokenVendedor}`)
-      .send({ operacionClave: entregaClave, latitud: -21.53549, longitud: -64.72956 })
+      .send({
+        operacionClave: entregaClave,
+        latitud: -21.53549,
+        longitud: -64.72956,
+        precisionMetros: 8.5,
+      })
       .expect(201);
 
     expect(entrega.body.estado).toBe('ENTREGADO');
-    expect(entrega.body.entregaGps).toEqual({
-      latitud: -21.53549,
-      longitud: -64.72956,
-    });
+    expect(entrega.body.entregaGps.latitud).toBe(-21.53549);
+    expect(entrega.body.entregaGps.longitud).toBe(-64.72956);
+    expect(entrega.body.entregaGps.precisionMetros).toBe(8.5);
+    expect(entrega.body.entregaGps.distanciaDestinoMetros).toBeGreaterThan(0);
 
     await request(app.getHttpServer())
       .post(`/api/v1/pedidos/${pedidoId}/entrega`)
       .set('Authorization', `Bearer ${tokenVendedor}`)
-      .send({ operacionClave: entregaClave, latitud: -21.53549, longitud: -64.72956 })
+      .send({
+        operacionClave: entregaClave,
+        latitud: -21.53549,
+        longitud: -64.72956,
+        precisionMetros: 8.5,
+      })
       .expect(201);
 
     const entregas = await db.query(
