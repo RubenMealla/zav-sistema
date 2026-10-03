@@ -24,6 +24,7 @@ import {
   obtenerDisponibilidad,
   planificarReparto,
   retirarPedido,
+  retirarPedidosSeleccionados,
 } from '@/lib/api';
 import type {
   Cliente,
@@ -129,6 +130,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
   const [pedidosSeleccionados, setPedidosSeleccionados] = useState<string[]>([]);
   const [planificacion, setPlanificacion] = useState<PlanificacionReparto | null>(null);
   const [planificando, setPlanificando] = useState(false);
+  const [retirandoSeleccionados, setRetirandoSeleccionados] = useState(false);
 
   const token = sesion.accessToken;
 
@@ -533,6 +535,73 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
     }
   }
 
+  async function ejecutarRetiroSeleccionados() {
+    const registrados = pedidos.filter(
+      (pedido) =>
+        pedidosSeleccionados.includes(pedido.id) &&
+        pedido.estado === 'REGISTRADO',
+    );
+
+    if (!registrados.length) {
+      setError('Los pedidos seleccionados ya están en distribución o fueron entregados.');
+      return;
+    }
+
+    setRetirandoSeleccionados(true);
+    setError('');
+    try {
+      const resultado = await retirarPedidosSeleccionados(
+        token,
+        registrados.map((pedido) => ({
+          pedidoId: pedido.id,
+          operacionClave: uuidV4(),
+        })),
+      );
+
+      await cargar(false);
+      setPlanificacion(null);
+      setPedidosSeleccionados([]);
+
+      const detalle =
+        resultado.fallidos === 0
+          ? `${resultado.exitosos} pedido(s) pasaron a reparto.`
+          : `${resultado.exitosos} retiro(s) correctos y ${resultado.fallidos} con observaciones.`;
+
+      Alert.alert('Retiro para reparto', detalle);
+    } catch (e) {
+      await manejarError(e);
+    } finally {
+      setRetirandoSeleccionados(false);
+    }
+  }
+
+  function confirmarRetiroSeleccionados() {
+    const cantidad = pedidos.filter(
+      (pedido) =>
+        pedidosSeleccionados.includes(pedido.id) &&
+        pedido.estado === 'REGISTRADO',
+    ).length;
+
+    if (!cantidad) {
+      setError('Selecciona al menos un pedido registrado.');
+      return;
+    }
+
+    Alert.alert(
+      'Retirar seleccionados para reparto',
+      `Confirma que ya recibiste físicamente los productos de ${cantidad} pedido(s).`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Confirmar retiro',
+          onPress: () => {
+            void ejecutarRetiroSeleccionados();
+          },
+        },
+      ],
+    );
+  }
+
   function moverParada(indice: number, direccion: -1 | 1) {
     setPlanificacion((actual) => {
       if (!actual) return actual;
@@ -647,9 +716,11 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
             seleccionados={pedidosSeleccionados}
             planificacion={planificacion}
             planificando={planificando}
+            retirando={retirandoSeleccionados}
             onAlternar={alternarPedidoPlanificacion}
             onPlanificarDespacho={() => void generarPlanificacion('DESPACHO')}
             onPlanificarActual={() => void generarPlanificacion('ACTUAL')}
+            onRetirarSeleccionados={confirmarRetiroSeleccionados}
             onMover={moverParada}
           />
         ) : null}
@@ -889,18 +960,22 @@ function Reparto({
   seleccionados,
   planificacion,
   planificando,
+  retirando,
   onAlternar,
   onPlanificarDespacho,
   onPlanificarActual,
+  onRetirarSeleccionados,
   onMover,
 }: {
   pedidos: PedidoResumen[];
   seleccionados: string[];
   planificacion: PlanificacionReparto | null;
   planificando: boolean;
+  retirando: boolean;
   onAlternar: (id: string) => void;
   onPlanificarDespacho: () => void;
   onPlanificarActual: () => void;
+  onRetirarSeleccionados: () => void;
   onMover: (indice: number, direccion: -1 | 1) => void;
 }) {
   const disponibles = pedidos.filter(
