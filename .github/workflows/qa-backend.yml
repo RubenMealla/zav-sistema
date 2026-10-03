@@ -39,9 +39,9 @@ jobs:
       NODE_ENV: test
       DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/zav_test
       JWT_SECRET: zav-qa-jwt-secret-solo-pruebas-2026-0123456789abcdef
-      QA_ADMIN_IDENTIFICADOR: admin.qa
+      QA_ADMIN_IDENTIFICADOR: admin@zav.test
       QA_ADMIN_PASSWORD: Admin-QA-2026-Pruebas!
-      QA_VENDEDOR_IDENTIFICADOR: vendedor.qa
+      QA_VENDEDOR_IDENTIFICADOR: vendedor@zav.test
       QA_VENDEDOR_PASSWORD: Vendedor-QA-2026-Pruebas!
 
     steps:
