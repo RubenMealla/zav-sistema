@@ -59,7 +59,7 @@ export type PedidoDetalle = {
   entregaGps: { latitud: number; longitud: number } | null;
   cliente: { id: string; nombre: string; telefono: string | null };
   vendedor: { id: string; nombre: string };
-  detalles: Array<{
+  detalles: {
     id: string;
     productoId: string;
     codigo: string;
@@ -67,7 +67,7 @@ export type PedidoDetalle = {
     cantidad: number;
     precioUnitarioBob: string;
     subtotalBob: string;
-  }>;
+  }[];
   totalBob: string;
 };
 
