@@ -25,6 +25,15 @@ export class ClienteEntity {
   @Column({ type: 'varchar', length: 240 })
   direccion!: string;
 
+  @Column({ type: 'numeric', precision: 9, scale: 6, nullable: true })
+  latitud!: string | null;
+
+  @Column({ type: 'numeric', precision: 9, scale: 6, nullable: true })
+  longitud!: string | null;
+
+  @Column({ name: 'ubicacion_confirmada_en', type: 'timestamptz', nullable: true })
+  ubicacionConfirmadaEn!: Date | null;
+
   @Column({ type: 'boolean', default: true })
   activo!: boolean;
 
