@@ -272,6 +272,7 @@ export default async function Panel({
                           <td className="numero">{producto.pesoGramos} g</td>
                           <td className="numero"><strong>Bs {producto.precioBob}</strong></td>
                           <td><span className={producto.activo ? 'badge badge-verde' : 'badge badge-neutro'}>{producto.activo ? 'ACTIVO' : 'INACTIVO'}</span></td>
+                          <td><AccionesProducto producto={producto} /></td>
                         </tr>
                       ))}
                     </tbody>
