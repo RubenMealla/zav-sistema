@@ -44,6 +44,14 @@ jobs:
       - name: Instalar dependencias
         run: pnpm install --frozen-lockfile
 
+      - name: Verificar configuración de Maps SDK
+        shell: bash
+        run: |
+          if [ -z "${GOOGLE_MAPS_ANDROID_API_KEY:-}" ]; then
+            echo "::error::Falta el secreto GOOGLE_MAPS_ANDROID_API_KEY. No se publicará un APK con mapa inutilizable."
+            exit 1
+          fi
+
       - name: Generar proyecto Android
         run: pnpm --filter @zav/mobile exec expo prebuild --platform android --no-install --clean
 
