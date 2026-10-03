@@ -1,6 +1,6 @@
 import * as Location from 'expo-location';
 import { GoogleMaps } from 'expo-maps';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Modal,
@@ -58,15 +58,6 @@ export function SelectorUbicacionMapa({
   const [versionMapa, setVersionMapa] = useState(0);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState('');
-
-  useEffect(() => {
-    if (!visible) return;
-    setDireccion(direccionInicial);
-    setPunto(puntoInicial);
-    setError('');
-    setCargando(false);
-    setVersionMapa((actual) => actual + 1);
-  }, [visible, direccionInicial, puntoInicial]);
 
   async function buscarDireccion() {
     if (!direccion.trim()) {
