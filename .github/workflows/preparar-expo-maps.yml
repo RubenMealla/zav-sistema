@@ -1,6 +1,9 @@
 name: Preparar dependencia Expo Maps
 
 on:
+  push:
+    branches:
+      - "desarrollo/e3-app-movil-vendedor"
   pull_request:
     branches:
       - main
