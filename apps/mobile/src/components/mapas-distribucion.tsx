@@ -302,7 +302,7 @@ export function MapaReparto({ origen, paradas }: MapaRepartoProps) {
         polylines={[
           {
             id: 'secuencia',
-            coordinates,
+            coordinates: coordenadas,
             geodesic: true,
             width: 5,
           },
