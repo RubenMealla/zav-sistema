@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ApiError, perfil } from '@/lib/api';
@@ -13,31 +13,37 @@ export default function Inicio() {
   const [cargando, setCargando] = useState(true);
 
   useEffect(() => {
-    void restaurar();
-  }, []);
+    let activa = true;
 
-  async function restaurar() {
-    try {
-      const guardada = await leerSesion();
-      if (!guardada) return;
+    async function cargarSesionGuardada() {
+      try {
+        const guardada = await leerSesion();
+        if (!guardada) return;
 
-      const usuario = await perfil(guardada.accessToken);
-      if (usuario.rol !== 'VENDEDOR') {
-        await borrarSesion();
-        return;
+        const usuario = await perfil(guardada.accessToken);
+        if (usuario.rol !== 'VENDEDOR') {
+          await borrarSesion();
+          return;
+        }
+
+        if (activa) setSesion({ ...guardada, usuario });
+      } catch (error) {
+        if (error instanceof ApiError && error.status !== 401 && error.status !== 403) {
+          const guardada = await leerSesion();
+          if (activa) setSesion(guardada);
+        } else {
+          await borrarSesion();
+        }
+      } finally {
+        if (activa) setCargando(false);
       }
-
-      setSesion({ ...guardada, usuario });
-    } catch (error) {
-      if (error instanceof ApiError && error.status !== 401 && error.status !== 403) {
-        setSesion(await leerSesion());
-      } else {
-        await borrarSesion();
-      }
-    } finally {
-      setCargando(false);
     }
-  }
+
+    void cargarSesionGuardada();
+    return () => {
+      activa = false;
+    };
+  }, []);
 
   async function iniciar(nueva: Sesion) {
     await guardarSesion(nueva);
