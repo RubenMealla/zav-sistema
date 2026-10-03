@@ -5,7 +5,13 @@ import { redirect } from 'next/navigation';
 import { randomUUID } from 'node:crypto';
 import { Icono } from '../componentes/icono';
 import { BotonEnviar, Modal, Notificacion } from '../componentes/interacciones';
-import { cambiarCondicionLote, registrarLote, registrarProducto, registrarTraslado } from './acciones';
+import {
+  cambiarCondicionLote,
+  configurarGeorreferenciaDespacho,
+  registrarLote,
+  registrarProducto,
+  registrarTraslado,
+} from './acciones';
 import { AccionesProducto } from './acciones-producto';
 
 const API = process.env.API_BASE_URL ?? 'http://localhost:3001';
@@ -43,6 +49,13 @@ type EventoCondicion = {
 };
 type Pagina<T> = { items: T[]; total: number };
 type Perfil = { nombre: string; identificador: string; rol: string };
+type VentaDespacho = {
+  id: string;
+  codigo: string;
+  nombre: string;
+  clase: string;
+  ubicacion: { latitud: number; longitud: number } | null;
+};
 const mensajes: Record<string, string> = {
   codigo: 'Ya existe un producto con ese código.',
   'lote-duplicado': 'El código de lote o la clave de operación ya está registrado.',
@@ -55,6 +68,7 @@ const mensajes: Record<string, string> = {
   lote: 'No se registró el lote. Comprueba fechas, ubicación y cantidad.',
   traslado: 'No se registró el traslado. Revisa lote, ubicaciones y cantidad.',
   condicion: 'No se cambió la condición del lote. Revisa los datos.',
+  'despacho-geo': 'No se pudo guardar la ubicación geográfica de Venta y Despacho.',
 };
 
 const mensajesOk: Record<string, string> = {
@@ -64,6 +78,7 @@ const mensajesOk: Record<string, string> = {
   lote: 'Lote e ingreso inicial registrados correctamente.',
   traslado: 'Traslado registrado correctamente.',
   condicion: 'Condición del lote actualizada correctamente.',
+  'despacho-geo': 'Ubicación geográfica de Venta y Despacho actualizada.',
 };
 
 async function consultar<T>(ruta: string, token: string): Promise<{ estado: number; datos?: T }> {
@@ -111,13 +126,20 @@ export default async function Panel({
   let lotes = vacia<Lote>();
   let movimientos: { estado: number; datos?: Pagina<Movimiento> } | undefined;
   let condiciones: { estado: number; datos?: Pagina<EventoCondicion> } | undefined;
+  let ventaDespacho: { estado: number; datos?: VentaDespacho } | undefined;
 
   try {
     const necesitaProductos = vista === 'resumen' || vista === 'productos' || vista === 'lotes';
     const necesitaLotes = vista !== 'productos';
 
-    const [respuestaPerfil, respuestaProductos, respuestaLotes, respuestaMovimientos, respuestaCondiciones] =
-      await Promise.all([
+    const [
+      respuestaPerfil,
+      respuestaProductos,
+      respuestaLotes,
+      respuestaMovimientos,
+      respuestaCondiciones,
+      respuestaVentaDespacho,
+    ] = await Promise.all([
         consultar<Perfil>('/api/v1/auth/me', token),
         necesitaProductos
           ? consultar<Pagina<Producto>>('/api/v1/productos?limit=30', token)
@@ -137,6 +159,9 @@ export default async function Panel({
               token,
             )
           : Promise.resolve(undefined),
+        vista === 'resumen'
+          ? consultar<VentaDespacho>('/api/v1/ubicaciones/venta-despacho', token)
+          : Promise.resolve(undefined),
       ]);
 
     perfil = respuestaPerfil;
@@ -144,6 +169,7 @@ export default async function Panel({
     lotes = respuestaLotes;
     movimientos = respuestaMovimientos;
     condiciones = respuestaCondiciones;
+    ventaDespacho = respuestaVentaDespacho;
   } catch {
     return (
       <main className="error-pagina">
@@ -228,6 +254,67 @@ export default async function Panel({
                   <p className="nota-card"><Icono nombre="escudo" tamano={15} /> La condición comercial es independiente de la ubicación física.</p>
                 </section>
               </div>
+
+              <section className="card card-modulo">
+                <div className="card-cabecera">
+                  <div>
+                    <span className="eyebrow">DISTRIBUCIÓN / ORIGEN</span>
+                    <h2>Punto de Venta y Despacho</h2>
+                    <p>
+                      Este punto se usa como origen cuando el Vendedor solicita una secuencia
+                      geográfica de reparto.
+                    </p>
+                  </div>
+                </div>
+
+                {ventaDespacho?.estado !== 200 || !ventaDespacho.datos ? (
+                  <div className="estado-vacio estado-error">
+                    <Icono nombre="alerta" />
+                    <p>No se pudo consultar la ubicación de Venta y Despacho.</p>
+                  </div>
+                ) : (
+                  <form action={configurarGeorreferenciaDespacho} className="formulario">
+                    <input type="hidden" name="ubicacionId" value={ventaDespacho.datos.id} />
+                    <div className="form-grid">
+                      <label className="campo">
+                        Latitud
+                        <input
+                          name="latitud"
+                          type="number"
+                          min={-90}
+                          max={90}
+                          step="0.000001"
+                          required
+                          defaultValue={ventaDespacho.datos.ubicacion?.latitud ?? ''}
+                          placeholder="-21.000000"
+                        />
+                      </label>
+                      <label className="campo">
+                        Longitud
+                        <input
+                          name="longitud"
+                          type="number"
+                          min={-180}
+                          max={180}
+                          step="0.000001"
+                          required
+                          defaultValue={ventaDespacho.datos.ubicacion?.longitud ?? ''}
+                          placeholder="-64.000000"
+                        />
+                      </label>
+                    </div>
+                    <p className="nota-card">
+                      <Icono nombre="ubicacion" tamano={15} />
+                      {ventaDespacho.datos.ubicacion
+                        ? `Configurado: ${ventaDespacho.datos.ubicacion.latitud.toFixed(6)}, ${ventaDespacho.datos.ubicacion.longitud.toFixed(6)}`
+                        : 'Pendiente de configurar con la ubicación real de ZAV. No se ha inventado ninguna coordenada.'}
+                    </p>
+                    <div className="modal-acciones">
+                      <BotonEnviar>Guardar punto de despacho</BotonEnviar>
+                    </div>
+                  </form>
+                )}
+              </section>
             </>
           )}
 
