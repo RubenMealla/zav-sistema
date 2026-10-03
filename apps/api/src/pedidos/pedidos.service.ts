@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  HttpException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -11,6 +12,8 @@ import { distanciaHaversine } from './geografia.service.js';
 const CAMPOS_PEDIDO = ['clienteId', 'direccionEntrega', 'observacion', 'detalles'] as const;
 const CAMPOS_DETALLE = ['productoId', 'cantidad'] as const;
 const CAMPOS_RETIRO = ['operacionClave'] as const;
+const CAMPOS_RETIROS = ['retiros'] as const;
+const CAMPOS_RETIRO_ITEM = ['pedidoId', 'operacionClave'] as const;
 const CAMPOS_ENTREGA = ['operacionClave', 'latitud', 'longitud', 'precisionMetros', 'observacionDistancia'] as const;
 
 type EstadoPedido = 'REGISTRADO' | 'EN_DISTRIBUCION' | 'ENTREGADO';
@@ -387,6 +390,86 @@ export class PedidosService {
         subtotalBob: d.subtotal_bob,
       })),
       totalBob: total.toFixed(2),
+    };
+  }
+
+  async retirarVarios(entrada: unknown, vendedorId: string) {
+    const datos = objeto(entrada, CAMPOS_RETIROS);
+    if (!Array.isArray(datos.retiros) || datos.retiros.length < 1 || datos.retiros.length > 20) {
+      throw new BadRequestException('retiros debe contener entre 1 y 20 pedidos.');
+    }
+
+    const retiros = datos.retiros.map((elemento, indice) => {
+      const item = objeto(elemento, CAMPOS_RETIRO_ITEM);
+      return {
+        pedidoId: uuid(item.pedidoId, `retiros[${indice}].pedidoId`),
+        operacionClave: uuid(item.operacionClave, `retiros[${indice}].operacionClave`),
+      };
+    });
+
+    if (new Set(retiros.map((r) => r.pedidoId)).size !== retiros.length) {
+      throw new BadRequestException('Un pedido no puede repetirse en el mismo retiro múltiple.');
+    }
+    if (new Set(retiros.map((r) => r.operacionClave)).size !== retiros.length) {
+      throw new BadRequestException('Cada retiro debe utilizar una operacionClave diferente.');
+    }
+
+    const resultados: Array<{
+      pedidoId: string;
+      ok: boolean;
+      estado?: EstadoPedido;
+      statusCode?: number;
+      message?: string;
+    }> = [];
+
+    for (const retiro of retiros) {
+      try {
+        const pedido = await this.retirar(
+          retiro.pedidoId,
+          { operacionClave: retiro.operacionClave },
+          vendedorId,
+        );
+        resultados.push({
+          pedidoId: retiro.pedidoId,
+          ok: true,
+          estado: pedido.estado as EstadoPedido,
+        });
+      } catch (error) {
+        if (!(error instanceof HttpException)) throw error;
+        const respuesta = error.getResponse();
+        let message = error.message;
+        if (typeof respuesta === 'string') {
+          message = respuesta;
+        } else if (
+          respuesta &&
+          typeof respuesta === 'object' &&
+          'message' in respuesta
+        ) {
+          const valor = (respuesta as { message?: unknown }).message;
+          message = Array.isArray(valor)
+            ? valor.map(String).join(' ')
+            : typeof valor === 'string'
+              ? valor
+              : error.message;
+        }
+        resultados.push({
+          pedidoId: retiro.pedidoId,
+          ok: false,
+          statusCode: error.getStatus(),
+          message,
+        });
+      }
+    }
+
+    const exitosos = resultados.filter((r) => r.ok).length;
+    const fallidos = resultados.length - exitosos;
+
+    return {
+      resultado:
+        fallidos === 0 ? 'COMPLETO' : exitosos === 0 ? 'SIN_CAMBIOS' : 'PARCIAL',
+      exitosos,
+      fallidos,
+      items: resultados,
     };
   }
 
