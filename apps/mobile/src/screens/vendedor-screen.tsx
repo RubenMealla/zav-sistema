@@ -670,23 +670,25 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
         ) : null}
       </ScrollView>
 
-      <SelectorUbicacionMapa
-        visible={selectorUbicacionVisible}
-        direccionInicial={clienteEditandoUbicacion?.direccion ?? clienteDireccion}
-        puntoInicial={
-          clienteEditandoUbicacion?.ubicacion
-            ? {
-                latitud: clienteEditandoUbicacion.ubicacion.latitud,
-                longitud: clienteEditandoUbicacion.ubicacion.longitud,
-              }
-            : clienteUbicacion
-        }
-        onCancelar={() => {
-          setSelectorUbicacionVisible(false);
-          setClienteEditandoUbicacion(null);
-        }}
-        onConfirmar={(valor) => void confirmarUbicacionMapa(valor)}
-      />
+      {selectorUbicacionVisible ? (
+        <SelectorUbicacionMapa
+          visible
+          direccionInicial={clienteEditandoUbicacion?.direccion ?? clienteDireccion}
+          puntoInicial={
+            clienteEditandoUbicacion?.ubicacion
+              ? {
+                  latitud: clienteEditandoUbicacion.ubicacion.latitud,
+                  longitud: clienteEditandoUbicacion.ubicacion.longitud,
+                }
+              : clienteUbicacion
+          }
+          onCancelar={() => {
+            setSelectorUbicacionVisible(false);
+            setClienteEditandoUbicacion(null);
+          }}
+          onConfirmar={(valor) => void confirmarUbicacionMapa(valor)}
+        />
+      ) : null}
     </View>
   );
 }
