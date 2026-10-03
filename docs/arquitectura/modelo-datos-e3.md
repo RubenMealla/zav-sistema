@@ -1,49 +1,82 @@
 # ZAV 2026 — Modelo de datos para E3
 
-**Estado:** diseño vigente de la iteración E3.
+**Estado:** implementación backend verificada en la rama `desarrollo/e3-pedidos-distribucion`; despliegue de esta iteración todavía pendiente.
 
 ## Decisión de alcance
 
-El modelo principal queda limitado a ocho entidades de negocio: Usuario, Cliente, Producto, Lote, Ubicacion, Movimiento, Pedido y DetallePedido.
+El modelo principal se limita a ocho entidades de negocio:
 
-Publicacion queda fuera del núcleo porque corresponde al alcance Could. Existencia deja de persistirse como entidad: el saldo físico se deriva del historial de Movimiento para evitar dos fuentes de verdad.
+1. Usuario
+2. Cliente
+3. Producto
+4. Lote
+5. Ubicacion
+6. Movimiento
+7. Pedido
+8. DetallePedido
 
-La tabla lote_condicion_historial se conserva como estructura técnica de auditoría y no constituye una entidad principal. La vista saldo_inventario es una proyección calculada, no una tabla de negocio.
+`Publicacion` queda fuera del núcleo porque corresponde al alcance Could. `Existencia` dejó de persistirse como entidad: el saldo físico se deriva del historial de `Movimiento`, evitando dos fuentes de verdad.
 
-## Justificación del saldo derivado
+`lote_condicion_historial` se conserva como estructura técnica de auditoría y no constituye una entidad principal. `saldo_inventario` es una vista calculada, no una tabla de negocio.
 
-Un destino suma cantidad y un origen resta cantidad. INGRESO tiene destino sin origen y TRASLADO resta en origen y suma en destino. La migración se aplica en dos etapas para evitar incompatibilidad entre la API desplegada y el esquema. `1790380800000-saldos-derivados.mjs` valida la equivalencia y crea la vista `saldo_inventario` sin eliminar la tabla anterior. Después de desplegar y verificar la API que lee la vista, `1790384400000-retirar-existencia.mjs` repite la validación y recién entonces elimina `existencia`. Si cualquiera de las validaciones falla, el cambio se detiene.
+## Inventario y disponibilidad
+
+`Movimiento` es la fuente de verdad del inventario físico. Un destino suma cantidad y un origen resta cantidad:
+
+- `INGRESO`: sin origen y con destino;
+- `TRASLADO`: origen y destino;
+- `RETIRO`: Venta y Despacho → En distribución;
+- `ENTREGA`: En distribución → salida del sistema.
+
+La disponibilidad comercial no se guarda como otra existencia. Para un Producto se calcula como:
+
+**stock físico liberado y vigente en Venta y Despacho − cantidades de DetallePedido pertenecientes a pedidos REGISTRADO**.
+
+Esta regla permite reservar pedidos sin duplicar el saldo físico. Cuando un pedido pasa a `EN_DISTRIBUCION`, el retiro ya movió físicamente la cantidad fuera de Venta y Despacho y deja de formar parte del compromiso pendiente.
+
+## Pedido y distribución
+
+`Pedido` usa estados cerrados:
+
+`REGISTRADO → EN_DISTRIBUCION → ENTREGADO`.
+
+No se permiten saltos directos a Entregado. El retiro y la entrega usan claves de operación persistidas para impedir duplicar la transición ante reintentos.
+
+El retiro asigna lotes con criterio FEFO entre lotes `LIBERADO`, vigentes y con saldo en `VENTA_DESPACHO`. La entrega registra una captura GPS puntual; no existe seguimiento continuo.
+
+`DetallePedido` conserva la cantidad solicitada y el precio unitario aplicado al momento del pedido. El total se deriva de sus detalles y no se persiste como una segunda fuente.
 
 ## Estado de implementación
 
 | Elemento | Estado |
 |---|---|
-| Usuario | IMPLEMENTADO |
-| Producto | IMPLEMENTADO |
-| Lote | IMPLEMENTADO |
-| Ubicacion | IMPLEMENTADO |
-| Movimiento | IMPLEMENTADO |
-| Cliente | PENDIENTE DE IMPLEMENTAR |
-| Pedido | PENDIENTE DE IMPLEMENTAR |
-| DetallePedido | PENDIENTE DE IMPLEMENTAR |
+| Usuario | IMPLEMENTADO Y DESPLEGADO |
+| Producto | IMPLEMENTADO Y DESPLEGADO |
+| Lote | IMPLEMENTADO Y DESPLEGADO |
+| Ubicacion | IMPLEMENTADO Y DESPLEGADO |
+| Movimiento | IMPLEMENTADO; extensión RETIRO/ENTREGA verificada en rama |
+| Cliente | IMPLEMENTADO EN RAMA + E2E |
+| Pedido | IMPLEMENTADO EN RAMA + E2E |
+| DetallePedido | IMPLEMENTADO EN RAMA + E2E |
 | lote_condicion_historial | IMPLEMENTADO como auditoría técnica |
-| saldo_inventario | IMPLEMENTADO como vista derivada en la rama E3 |
-| Existencia persistida | RETIRADA DEL MODELO ACTIVO en la rama E3 |
+| saldo_inventario | IMPLEMENTADO Y DESPLEGADO |
+| Existencia persistida | RETIRADA del esquema activo |
 
-Los tres elementos pendientes pertenecen a los Must restantes de E3 y no se declararán implementados hasta contar con migración, API, pruebas y evidencia.
+Cliente, Pedido y DetallePedido no se declararán en producción hasta aplicar la migración y desplegar la API de esta rama.
 
 ## Reglas de integridad
 
-- Los saldos no se sobrescriben mediante un endpoint general.
-- Cada movimiento tiene cantidad positiva.
-- operacion_clave es única y protege la idempotencia.
-- Los reintentos idénticos no duplican movimientos.
-- Un traslado se serializa por lote y verifica saldo suficiente antes de registrar el movimiento.
-- Un lote nuevo inicia RETENIDO.
-- Solo el Administrador puede liberar, bloquear, ingresar o trasladar inventario administrativo.
+- Los saldos físicos no se sobrescriben mediante un endpoint general.
+- Cada movimiento tiene cantidad positiva y una estructura válida para su tipo.
+- `operacion_clave` de Movimiento es única.
+- Los retiros y entregas son idempotentes por pedido.
+- Un Pedido no puede reservar más disponibilidad que la existente.
+- Los movimientos administrativos desde Venta y Despacho no pueden consumir stock comprometido por pedidos registrados.
+- Un lote liberado con stock comprometido no puede bloquearse si dejaría pedidos sin cobertura.
+- Un lote nuevo inicia `RETENIDO`.
 - La baja de Producto es lógica.
-- Ubicacion se mantiene parametrizable para permitir nuevas áreas o equipos sin modificar el código.
+- Ubicacion permanece parametrizable para permitir nuevas áreas o custodias.
 
 ## Evidencia de regresión
 
-Durante la migración, una ejecución real de QA falló porque pruebas E2E heredadas todavía consultaban la tabla Existencia retirada. La suite fue adaptada al saldo derivado y una ejecución posterior completó lint, compilación, pruebas unitarias y E2E correctamente. Esta secuencia se conservará como evidencia del apartado 2.8.
+Durante la primera ejecución de QA de esta iteración, NestJS no pudo construir `PedidosModule` porque `JwtAuthGuard` requería `UsuarioEntityRepository` en el contexto del módulo. La ejecución falló antes de los casos E2E. Se corrigió importando `TypeOrmModule.forFeature([UsuarioEntity])` y la regresión posterior obtuvo 11/11 pruebas unitarias y 18/18 E2E. Este fallo real se conserva como evidencia del apartado 2.8.

@@ -126,15 +126,17 @@ Nunca se versionan archivos `.env`, cadenas de conexión reales, tokens, contras
 - Los errores internos no deben exponer trazas, contraseñas ni secretos.
 - La baja de Producto es lógica y preserva trazabilidad histórica.
 
-## API base de inventario
+## API E3
 
 | Método | Ruta | Rol |
 |---|---|---|
 | GET | `/api/v1/salud` | Público |
 | POST | `/api/v1/auth/login` | Público |
 | GET | `/api/v1/auth/me` | Autenticado |
-| GET/POST | `/api/v1/productos` | Administrador |
-| GET/PATCH | `/api/v1/productos/:id` | Administrador |
+| GET | `/api/v1/productos` | Administrador / Vendedor |
+| POST | `/api/v1/productos` | Administrador |
+| GET | `/api/v1/productos/:id` | Administrador / Vendedor |
+| PATCH | `/api/v1/productos/:id` | Administrador |
 | PATCH | `/api/v1/productos/:id/baja` | Administrador |
 | GET/POST | `/api/v1/lotes` | Administrador |
 | POST | `/api/v1/movimientos/traslado` | Administrador |
@@ -142,6 +144,13 @@ Nunca se versionan archivos `.env`, cadenas de conexión reales, tokens, contras
 | POST | `/api/v1/lotes/:id/liberar` | Administrador |
 | POST | `/api/v1/lotes/:id/bloquear` | Administrador |
 | GET | `/api/v1/lotes/:id/condiciones` | Administrador |
+| GET/POST | `/api/v1/clientes` | Vendedor |
+| GET | `/api/v1/clientes/:id` | Vendedor |
+| GET | `/api/v1/pedidos/disponibilidad` | Vendedor |
+| GET/POST | `/api/v1/pedidos` | Vendedor |
+| GET | `/api/v1/pedidos/:id` | Vendedor |
+| POST | `/api/v1/pedidos/:id/retiro` | Vendedor |
+| POST | `/api/v1/pedidos/:id/entrega` | Vendedor |
 
 Los comandos de inventario usan `operacionClave` para idempotencia. Repetir la misma operación con los mismos datos no duplica movimientos; reutilizar la misma clave para una operación diferente se rechaza.
 
@@ -189,26 +198,28 @@ Tablero: https://trello.com/b/Tn5elZCY/zav-2026-desarrollo-del-sistema-kanban
 
 ## Estado de E3
 
-**Implementado y bajo verificación en la rama de corrección T3/E3:**
+**Desplegado desde la corrección T3:**
 
 - autenticación JWT y roles en servidor;
-- CRUD de Producto, incluida edición y baja lógica;
-- lotes e ingreso inicial idempotente;
-- liberación/bloqueo auditado de lotes;
-- traslados;
-- saldo derivado de Movimiento;
-- ruta pública de salud;
-- formato uniforme de errores;
-- pruebas de 401 y 403;
-- QA backend y Playwright.
+- CRUD de Producto;
+- lotes, condición comercial y traslados;
+- Movimiento como fuente de verdad y `saldo_inventario`;
+- `/api/v1/salud`;
+- formato uniforme de errores y controles 401/403.
 
-**Pendiente de implementar para completar todos los Must de E3:**
+**Implementado en backend y verificado por QA en `desarrollo/e3-pedidos-distribucion`:**
 
 - Cliente;
 - Pedido y DetallePedido;
-- retiro de pedido;
-- entrega con GPS puntual desde la aplicación móvil;
-- evidencia final en producción de todos los Must.
+- disponibilidad que descuenta compromisos de pedidos registrados;
+- Retiro FEFO hacia `EN_DISTRIBUCION`;
+- Entrega con coordenadas GPS puntuales;
+- idempotencia de Retiro/Entrega;
+- protección de stock reservado frente a traslados y bloqueos administrativos.
+
+La última regresión backend de esta iteración obtuvo **11/11 unitarias y 18/18 E2E**. El reporte versionado está en `docs/pruebas/verificacion-pedidos-distribucion-e3.md`.
+
+**Pendiente para completar E3:** integrar/desplegar este backend y sustituir el starter Expo por la aplicación móvil exclusiva del Vendedor. La captura GPS se declarará implementada en el cliente únicamente después de probarla en un dispositivo o APK.
 
 No se considera una funcionalidad implementada únicamente porque aparezca diseñada o documentada.
 

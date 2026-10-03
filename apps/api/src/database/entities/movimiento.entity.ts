@@ -12,8 +12,15 @@ import {
 @Unique('uq_movimiento_operacion_clave', ['operacionClave'])
 @Index('idx_movimiento_lote_id', ['loteId'])
 @Index('idx_movimiento_usuario_id', ['usuarioId'])
+@Index('idx_movimiento_tipo_referencia', ['tipo', 'referencia'])
 @Check('chk_movimiento_cantidad', '"cantidad" > 0')
-@Check('chk_movimiento_ingreso', '"tipo" <> \'INGRESO\' OR ("origen_id" IS NULL AND "destino_id" IS NOT NULL)')
+@Check('chk_movimiento_tipo', '"tipo" IN (\'INGRESO\', \'TRASLADO\', \'RETIRO\', \'ENTREGA\')')
+@Check(
+  'chk_movimiento_estructura',
+  '("tipo" = \'INGRESO\' AND "origen_id" IS NULL AND "destino_id" IS NOT NULL) OR ' +
+    '("tipo" IN (\'TRASLADO\', \'RETIRO\') AND "origen_id" IS NOT NULL AND "destino_id" IS NOT NULL AND "origen_id" <> "destino_id") OR ' +
+    '("tipo" = \'ENTREGA\' AND "origen_id" IS NOT NULL AND "destino_id" IS NULL)',
+)
 export class MovimientoEntity {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
