@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import { Roles } from '../auth/roles.decorator.js';
 import { RolesGuard } from '../auth/roles.guard.js';
@@ -18,6 +18,16 @@ export class ProductosController {
   @Get()
   listar(@Query() consulta: Record<string, unknown>) {
     return this.productos.listar(consulta);
+  }
+
+  @Patch(':id/baja')
+  darBaja(@Param('id') id: string) {
+    return this.productos.darBaja(id);
+  }
+
+  @Patch(':id')
+  editar(@Param('id') id: string, @Body() datos: unknown) {
+    return this.productos.editar(id, datos);
   }
 
   @Get(':id')
