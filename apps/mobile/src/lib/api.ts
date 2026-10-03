@@ -116,7 +116,7 @@ export function crearPedido(
     clienteId: string;
     direccionEntrega?: string;
     observacion?: string;
-    detalles: Array<{ productoId: string; cantidad: number }>;
+    detalles: { productoId: string; cantidad: number }[];
   },
 ) {
   return solicitud<PedidoDetalle>(
