@@ -3,6 +3,10 @@ module.exports = ({ config }) => {
 
   return {
     ...config,
+    extra: {
+      ...(config.extra ?? {}),
+      mapsConfigured: Boolean(mapsKey),
+    },
     android: {
       ...config.android,
       ...(mapsKey
