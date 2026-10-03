@@ -42,13 +42,6 @@ type FilaUbicacion = {
   nombre: string;
 };
 
-type FilaExistencia = {
-  id: string;
-  ubicacion_id: string;
-  cantidad_fisica: number;
-  cantidad_comprometida: number;
-};
-
 function textoOpcional(valor: unknown, campo: string, maximo: number): string | null {
   if (valor === undefined || valor === null) return null;
   return texto(valor, campo, maximo);
@@ -60,10 +53,10 @@ export class MovimientosService {
 
   private async saldosLote(loteId: string) {
     return this.db.query(
-      `SELECT u.codigo, u.nombre, e.cantidad_fisica, e.cantidad_comprometida
-       FROM existencia e
-       JOIN ubicacion u ON u.id = e.ubicacion_id
-       WHERE e.lote_id = $1::uuid
+      `SELECT u.codigo, u.nombre, s.cantidad_fisica, s.cantidad_comprometida
+       FROM saldo_inventario s
+       JOIN ubicacion u ON u.id = s.ubicacion_id
+       WHERE s.lote_id = $1::uuid
        ORDER BY u.codigo`,
       [loteId],
     ) as Promise<Array<{
@@ -174,6 +167,7 @@ export class MovimientosService {
         return previo.id;
       }
 
+      // Todas las mutaciones físicas de un lote se serializan con la misma llave.
       await manager.query('SELECT pg_advisory_xact_lock(hashtext($1::text))', [`lote:${loteId}`]);
 
       const lotes = await manager.query(
@@ -196,48 +190,20 @@ export class MovimientosService {
         throw new NotFoundException('Ubicacion de origen o destino no disponible.');
       }
 
-      const existencias = await manager.query(
-        `SELECT id, ubicacion_id, cantidad_fisica, cantidad_comprometida
-         FROM existencia
-         WHERE lote_id = $1::uuid AND ubicacion_id = ANY($2::uuid[])
-         ORDER BY ubicacion_id
-         FOR UPDATE`,
-        [loteId, [origen.id, destino.id]],
-      ) as FilaExistencia[];
+      const saldosOrigen = await manager.query(
+        `SELECT cantidad_fisica, cantidad_comprometida
+         FROM saldo_inventario
+         WHERE lote_id = $1::uuid AND ubicacion_id = $2::uuid`,
+        [loteId, origen.id],
+      ) as Array<{ cantidad_fisica: number; cantidad_comprometida: number }>;
 
-      const existenciaOrigen = existencias.find((fila) => fila.ubicacion_id === origen.id);
-      const existenciaDestino = existencias.find((fila) => fila.ubicacion_id === destino.id);
-      const disponible = existenciaOrigen
-        ? existenciaOrigen.cantidad_fisica - existenciaOrigen.cantidad_comprometida
+      const saldoOrigen = saldosOrigen[0];
+      const disponible = saldoOrigen
+        ? saldoOrigen.cantidad_fisica - saldoOrigen.cantidad_comprometida
         : 0;
 
-      if (!existenciaOrigen || disponible < cantidad) {
+      if (!saldoOrigen || disponible < cantidad) {
         throw new ConflictException('Saldo disponible insuficiente en la ubicacion de origen.');
-      }
-
-      await manager.query(
-        `UPDATE existencia
-         SET cantidad_fisica = cantidad_fisica - $3,
-             actualizado_en = now()
-         WHERE lote_id = $1::uuid AND ubicacion_id = $2::uuid`,
-        [loteId, origen.id, cantidad],
-      );
-
-      if (existenciaDestino) {
-        await manager.query(
-          `UPDATE existencia
-           SET cantidad_fisica = cantidad_fisica + $3,
-               actualizado_en = now()
-           WHERE lote_id = $1::uuid AND ubicacion_id = $2::uuid`,
-          [loteId, destino.id, cantidad],
-        );
-      } else {
-        await manager.query(
-          `INSERT INTO existencia
-             (lote_id, ubicacion_id, cantidad_fisica, cantidad_comprometida)
-           VALUES ($1::uuid, $2::uuid, $3, 0)`,
-          [loteId, destino.id, cantidad],
-        );
       }
 
       const nuevos = await manager.query(
