@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   construir-apk:
-    name: Construir APK Android
+    name: Construir APK Android autónomo
     runs-on: ubuntu-latest
     env:
       CI: 1
@@ -46,16 +46,25 @@ jobs:
       - name: Generar proyecto Android
         run: pnpm --filter @zav/mobile exec expo prebuild --platform android --no-install --clean
 
-      - name: Compilar APK de revisión
+      - name: Compilar APK autónomo de revisión
         working-directory: apps/mobile/android
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
+          ./gradlew assembleRelease --no-daemon
 
-      - name: Guardar APK
+      - name: Verificar bundle JavaScript embebido
+        working-directory: apps/mobile/android
+        run: |
+          test -f app/build/outputs/apk/release/app-release.apk
+          unzip -l app/build/outputs/apk/release/app-release.apk | grep -q "assets/index.android.bundle"
+          sha256sum app/build/outputs/apk/release/app-release.apk | tee app/build/outputs/apk/release/app-release.apk.sha256
+
+      - name: Guardar APK autónomo
         uses: actions/upload-artifact@v4
         with:
-          name: zav-vendedor-e3-apk
-          path: apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
+          name: zav-vendedor-e3-apk-standalone
+          path: |
+            apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+            apps/mobile/android/app/build/outputs/apk/release/app-release.apk.sha256
           if-no-files-found: error
           retention-days: 14
