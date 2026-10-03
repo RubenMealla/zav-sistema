@@ -1,0 +1,61 @@
+name: APK móvil E3
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: apk-mobile-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  construir-apk:
+    name: Construir APK Android
+    runs-on: ubuntu-latest
+    env:
+      CI: 1
+      EXPO_PUBLIC_API_BASE_URL: https://zav-api-2026.onrender.com
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.4.2
+          run_install: false
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Configurar Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+
+      - name: Generar proyecto Android
+        run: pnpm --filter @zav/mobile exec expo prebuild --platform android --no-install --clean
+
+      - name: Compilar APK de revisión
+        working-directory: apps/mobile/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Guardar APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: zav-vendedor-e3-apk
+          path: apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
