@@ -5,7 +5,10 @@ import type {
   Lista,
   PedidoDetalle,
   PedidoResumen,
+  PlanificacionReparto,
+  PuntoGeografico,
   Sesion,
+  VentaDespacho,
 } from './tipos';
 
 export const API_BASE_URL =
@@ -78,7 +81,13 @@ export function listarClientes(token: string, q = '') {
 
 export function crearCliente(
   token: string,
-  datos: { nombre: string; telefono?: string; direccion: string },
+  datos: {
+    nombre: string;
+    telefono?: string;
+    direccion: string;
+    latitud?: number;
+    longitud?: number;
+  },
 ) {
   return solicitud<Cliente>(
     '/api/v1/clientes',
@@ -138,6 +147,59 @@ export function entregarPedido(
   token: string,
   id: string,
   datos: { operacionClave: string; latitud: number; longitud: number },
+) {
+  return solicitud<PedidoDetalle>(
+    `/api/v1/pedidos/${id}/entrega`,
+    { method: 'POST', body: JSON.stringify(datos) },
+    token,
+  );
+}
+
+
+export function actualizarUbicacionCliente(
+  token: string,
+  id: string,
+  datos: PuntoGeografico & { direccion?: string },
+) {
+  return solicitud<Cliente>(
+    `/api/v1/clientes/${id}/ubicacion`,
+    { method: 'PATCH', body: JSON.stringify(datos) },
+    token,
+  );
+}
+
+export function obtenerVentaDespacho(token: string) {
+  return solicitud<VentaDespacho>('/api/v1/ubicaciones/venta-despacho', {}, token);
+}
+
+export function planificarReparto(
+  token: string,
+  datos:
+    | { pedidoIds: string[]; origenTipo: 'DESPACHO' }
+    | {
+        pedidoIds: string[];
+        origenTipo: 'ACTUAL';
+        origenLatitud: number;
+        origenLongitud: number;
+      },
+) {
+  return solicitud<PlanificacionReparto>(
+    '/api/v1/pedidos/planificacion',
+    { method: 'POST', body: JSON.stringify(datos) },
+    token,
+  );
+}
+
+export function entregarPedidoConComprobacion(
+  token: string,
+  id: string,
+  datos: {
+    operacionClave: string;
+    latitud: number;
+    longitud: number;
+    precisionMetros?: number;
+    observacionDistancia?: string;
+  },
 ) {
   return solicitud<PedidoDetalle>(
     `/api/v1/pedidos/${id}/entrega`,
