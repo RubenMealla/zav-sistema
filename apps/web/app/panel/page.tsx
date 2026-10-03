@@ -262,7 +262,7 @@ export default async function Panel({
                     <thead><tr><th scope="col">Código</th><th scope="col">Producto</th><th scope="col">Familia</th><th scope="col">Presentación</th><th scope="col">Peso</th><th scope="col">Precio</th><th scope="col">Estado</th><th scope="col">Acciones</th></tr></thead>
                     <tbody>
                       {itemsProductos.length === 0 ? (
-                        <tr><td colSpan={7}><div className="tabla-vacia"><strong>Todavía no hay productos registrados.</strong><span>Usa «Nuevo producto» para registrar la primera presentación.</span></div></td></tr>
+                        <tr><td colSpan={8}><div className="tabla-vacia"><strong>Todavía no hay productos registrados.</strong><span>Usa «Nuevo producto» para registrar la primera presentación.</span></div></td></tr>
                       ) : itemsProductos.map((producto) => (
                         <tr key={producto.id}>
                           <td><span className="codigo">{producto.codigo}</span></td>
