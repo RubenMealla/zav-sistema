@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation';
 
 const API = process.env.API_BASE_URL ?? 'http://localhost:3001';
 
-async function enviar(ruta: string, datos: Record<string, unknown>): Promise<number | 'conexion'> {
+export async function enviar(ruta: string, datos: Record<string, unknown>): Promise<number | 'conexion'> {
   const token = (await cookies()).get('zav_acceso')?.value;
   if (!token) redirect('/acceso?error=sesion');
   try {
