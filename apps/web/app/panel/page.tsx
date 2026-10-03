@@ -259,7 +259,7 @@ export default async function Panel({
               ) : (
                 <div className="tabla-contenedor" role="region" tabIndex={0} aria-label="Productos registrados; tabla desplazable">
                   <table><caption className="solo-lectores">Productos registrados</caption>
-                    <thead><tr><th scope="col">Código</th><th scope="col">Producto</th><th scope="col">Familia</th><th scope="col">Presentación</th><th scope="col">Peso</th><th scope="col">Precio</th><th scope="col">Estado</th></tr></thead>
+                    <thead><tr><th scope="col">Código</th><th scope="col">Producto</th><th scope="col">Familia</th><th scope="col">Presentación</th><th scope="col">Peso</th><th scope="col">Precio</th><th scope="col">Estado</th><th scope="col">Acciones</th></tr></thead>
                     <tbody>
                       {itemsProductos.length === 0 ? (
                         <tr><td colSpan={7}><div className="tabla-vacia"><strong>Todavía no hay productos registrados.</strong><span>Usa «Nuevo producto» para registrar la primera presentación.</span></div></td></tr>
