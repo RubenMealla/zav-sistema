@@ -1,12 +1,33 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { consultaTexto, objeto, paginacion, texto, uuid } from '../inventario/validacion.js';
 
-const CAMPOS_CLIENTE = ['nombre', 'telefono', 'direccion'] as const;
+const CAMPOS_CLIENTE = ['nombre', 'telefono', 'direccion', 'latitud', 'longitud'] as const;
+const CAMPOS_UBICACION = ['direccion', 'latitud', 'longitud'] as const;
 
 function telefonoOpcional(valor: unknown): string | null {
   if (valor === undefined || valor === null || valor === '') return null;
   return texto(valor, 'telefono', 30);
+}
+
+function coordenada(valor: unknown, campo: string, minimo: number, maximo: number): number {
+  if (typeof valor !== 'number' || !Number.isFinite(valor) || valor < minimo || valor > maximo) {
+    throw new BadRequestException(`${campo} debe estar entre ${minimo} y ${maximo}.`);
+  }
+  return valor;
+}
+
+function coordenadasOpcionales(datos: Record<string, unknown>) {
+  const tieneLat = datos.latitud !== undefined && datos.latitud !== null;
+  const tieneLon = datos.longitud !== undefined && datos.longitud !== null;
+  if (tieneLat !== tieneLon) {
+    throw new BadRequestException('latitud y longitud deben enviarse juntas.');
+  }
+  if (!tieneLat) return { latitud: null, longitud: null };
+  return {
+    latitud: coordenada(datos.latitud, 'latitud', -90, 90),
+    longitud: coordenada(datos.longitud, 'longitud', -180, 180),
+  };
 }
 
 @Injectable()
@@ -18,14 +39,45 @@ export class ClientesService {
     const nombre = texto(datos.nombre, 'nombre', 140);
     const telefono = telefonoOpcional(datos.telefono);
     const direccion = texto(datos.direccion, 'direccion', 240);
+    const { latitud, longitud } = coordenadasOpcionales(datos);
 
     const filas = await this.db.query(
-      `INSERT INTO cliente (nombre, telefono, direccion)
-       VALUES ($1, $2, $3)
-       RETURNING id, nombre, telefono, direccion, activo, creado_en, actualizado_en`,
-      [nombre, telefono, direccion],
+      `INSERT INTO cliente
+         (nombre, telefono, direccion, latitud, longitud, ubicacion_confirmada_en)
+       VALUES ($1, $2, $3, $4, $5, CASE WHEN $4::numeric IS NULL THEN NULL ELSE now() END)
+       RETURNING id, nombre, telefono, direccion, latitud, longitud,
+                 ubicacion_confirmada_en, activo, creado_en, actualizado_en`,
+      [nombre, telefono, direccion, latitud, longitud],
     ) as Array<Record<string, unknown>>;
 
+    return this.respuesta(filas[0]);
+  }
+
+  async actualizarUbicacion(idEntrada: string, entrada: unknown) {
+    const id = uuid(idEntrada, 'id');
+    const datos = objeto(entrada, CAMPOS_UBICACION);
+    const { latitud, longitud } = coordenadasOpcionales(datos);
+    if (latitud === null || longitud === null) {
+      throw new BadRequestException('La ubicacion confirmada requiere latitud y longitud.');
+    }
+
+    const direccion =
+      datos.direccion === undefined ? null : texto(datos.direccion, 'direccion', 240);
+
+    const filas = await this.db.query(
+      `UPDATE cliente
+       SET direccion = COALESCE($2, direccion),
+           latitud = $3,
+           longitud = $4,
+           ubicacion_confirmada_en = now(),
+           actualizado_en = now()
+       WHERE id = $1::uuid AND activo = TRUE
+       RETURNING id, nombre, telefono, direccion, latitud, longitud,
+                 ubicacion_confirmada_en, activo, creado_en, actualizado_en`,
+      [id, direccion, latitud, longitud],
+    ) as Array<Record<string, unknown>>;
+
+    if (!filas.length) throw new NotFoundException('Cliente activo no encontrado.');
     return this.respuesta(filas[0]);
   }
 
@@ -47,7 +99,8 @@ export class ClientesService {
     const where = condiciones.join(' AND ');
     const [items, total] = await Promise.all([
       this.db.query(
-        `SELECT id, nombre, telefono, direccion, activo, creado_en, actualizado_en
+        `SELECT id, nombre, telefono, direccion, latitud, longitud,
+                ubicacion_confirmada_en, activo, creado_en, actualizado_en
          FROM cliente
          WHERE ${where}
          ORDER BY nombre, id
@@ -71,7 +124,8 @@ export class ClientesService {
   async obtener(idEntrada: string) {
     const id = uuid(idEntrada, 'id');
     const filas = await this.db.query(
-      `SELECT id, nombre, telefono, direccion, activo, creado_en, actualizado_en
+      `SELECT id, nombre, telefono, direccion, latitud, longitud,
+              ubicacion_confirmada_en, activo, creado_en, actualizado_en
        FROM cliente WHERE id = $1::uuid AND activo = TRUE`,
       [id],
     ) as Array<Record<string, unknown>>;
@@ -86,6 +140,14 @@ export class ClientesService {
       nombre: fila.nombre,
       telefono: fila.telefono,
       direccion: fila.direccion,
+      ubicacion:
+        fila.latitud === null || fila.latitud === undefined
+          ? null
+          : {
+              latitud: Number(fila.latitud),
+              longitud: Number(fila.longitud),
+              confirmadaEn: fila.ubicacion_confirmada_en,
+            },
       activo: fila.activo,
       creadoEn: fila.creado_en,
       actualizadoEn: fila.actualizado_en,
