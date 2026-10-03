@@ -78,7 +78,14 @@ export class ClientesService {
     ) as Array<Record<string, unknown>>;
 
     if (!filas.length) throw new NotFoundException('Cliente activo no encontrado.');
-    return this.respuesta(filas[0]);
+    return {
+      ...this.respuesta(filas[0]),
+      ubicacion: {
+        latitud,
+        longitud,
+        confirmadaEn: filas[0].ubicacion_confirmada_en,
+      },
+    };
   }
 
   async listar(consulta: Record<string, unknown>) {
