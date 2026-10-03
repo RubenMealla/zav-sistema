@@ -1,6 +1,12 @@
+import {
+  Camera,
+  GeoJSONSource,
+  Layer,
+  Map,
+  Marker,
+} from '@maplibre/maplibre-react-native';
 import Constants from 'expo-constants';
 import * as Location from 'expo-location';
-import { GoogleMaps } from 'expo-maps';
 import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -18,7 +24,9 @@ import type {
   PuntoGeografico,
 } from '@/lib/tipos';
 
-const MAPS_CONFIGURED = Constants.expoConfig?.extra?.mapsConfigured === true;
+const MAP_STYLE_URL =
+  (Constants.expoConfig?.extra?.mapStyleUrl as string | undefined) ??
+  'https://tiles.openfreemap.org/styles/liberty';
 
 type SelectorProps = {
   visible: boolean;
@@ -71,7 +79,7 @@ export function SelectorUbicacionMapa({
     setError('');
     try {
       if (Platform.OS === 'android' && !(await permisoForeground())) {
-        setError('Android requiere permiso de ubicación para buscar direcciones.');
+        setError('Android requiere permiso de ubicación para buscar direcciones con el proveedor local.');
         return;
       }
       const resultados = await Location.geocodeAsync(direccion.trim());
@@ -190,40 +198,29 @@ export function SelectorUbicacionMapa({
           </View>
         ) : null}
 
-        {punto && MAPS_CONFIGURED ? (
+        {punto ? (
           <View style={styles.mapaContenedor}>
-            <GoogleMaps.View
+            <Map
               key={versionMapa}
               style={styles.mapa}
-              cameraPosition={{
-                coordinates: {
-                  latitude: punto.latitud,
-                  longitude: punto.longitud,
-                },
-                zoom: 17,
-              }}
-              onCameraMove={(evento) => {
-                if (
-                  typeof evento.coordinates.latitude === 'number' &&
-                  typeof evento.coordinates.longitude === 'number'
-                ) {
-                  setPunto({
-                    latitud: evento.coordinates.latitude,
-                    longitud: evento.coordinates.longitude,
-                  });
+              mapStyle={MAP_STYLE_URL}
+              attribution
+              touchRotate={false}
+              touchPitch={false}
+              onRegionDidChange={(evento) => {
+                const [longitud, latitud] = evento.nativeEvent.center;
+                if (Number.isFinite(latitud) && Number.isFinite(longitud)) {
+                  setPunto({ latitud, longitud });
                 }
               }}
-              uiSettings={{
-                compassEnabled: true,
-                zoomControlsEnabled: true,
-                zoomGesturesEnabled: true,
-                scrollGesturesEnabled: true,
-                rotationGesturesEnabled: false,
-                tiltGesturesEnabled: false,
-                mapToolbarEnabled: false,
-                myLocationButtonEnabled: false,
-              }}
-            />
+            >
+              <Camera
+                initialViewState={{
+                  center: [punto.longitud, punto.latitud],
+                  zoom: 17,
+                }}
+              />
+            </Map>
             <View pointerEvents="none" style={styles.cruz}>
               <View style={styles.pin} />
               <View style={styles.pinPunta} />
@@ -232,15 +229,15 @@ export function SelectorUbicacionMapa({
               <Text style={styles.coordenadasTexto}>
                 {punto.latitud.toFixed(6)}, {punto.longitud.toFixed(6)}
               </Text>
-              <Text style={styles.ayuda}>Mueve el mapa hasta dejar el marcador sobre el destino.</Text>
+              <Text style={styles.ayuda}>
+                Mueve el mapa hasta dejar el marcador sobre el destino.
+              </Text>
             </View>
           </View>
         ) : (
           <View style={styles.sinMapa}>
             <Text style={styles.ayuda}>
-              {punto && !MAPS_CONFIGURED
-                ? 'El punto fue obtenido, pero Maps SDK no está configurado en este APK. No lo uses como evidencia final.'
-                : 'Busca una dirección o usa tu ubicación actual para abrir el mapa. Nada se guarda hasta confirmar.'}
+              Busca una dirección o usa tu ubicación actual para abrir el mapa. Nada se guarda hasta confirmar.
             </Text>
           </View>
         )}
@@ -265,72 +262,85 @@ type MapaRepartoProps = {
 
 export function MapaReparto({ origen, paradas }: MapaRepartoProps) {
   const coordenadas = useMemo(
-    () => [
-      { latitude: origen.latitud, longitude: origen.longitud },
-      ...paradas.map((p) => ({ latitude: p.latitud, longitude: p.longitud })),
-    ],
+    () =>
+      [
+        [origen.longitud, origen.latitud],
+        ...paradas.map((p) => [p.longitud, p.latitud]),
+      ] as [number, number][],
     [origen, paradas],
   );
 
-  if (!paradas.length) return null;
-  if (!MAPS_CONFIGURED) {
-    return (
-      <View style={styles.sinMapa}>
-        <Text style={styles.ayuda}>
-          Maps SDK no está configurado en este APK; la secuencia textual sigue disponible.
-        </Text>
-      </View>
-    );
-  }
+  const linea = useMemo(
+    () => ({
+      type: 'Feature' as const,
+      properties: {},
+      geometry: {
+        type: 'LineString' as const,
+        coordinates: coordenadas,
+      },
+    }),
+    [coordenadas],
+  );
 
-  const centro = {
-    latitud:
-      coordenadas.reduce((suma, p) => suma + (p.latitude ?? 0), 0) / coordenadas.length,
-    longitud:
-      coordenadas.reduce((suma, p) => suma + (p.longitude ?? 0), 0) / coordenadas.length,
-  };
+  const limites = useMemo(() => {
+    const longitudes = coordenadas.map(([lon]) => lon);
+    const latitudes = coordenadas.map(([, lat]) => lat);
+    return [
+      Math.min(...longitudes),
+      Math.min(...latitudes),
+      Math.max(...longitudes),
+      Math.max(...latitudes),
+    ] as [number, number, number, number];
+  }, [coordenadas]);
+
+  if (!paradas.length) return null;
 
   return (
     <View style={styles.mapaPlan}>
-      <GoogleMaps.View
+      <Map
         style={StyleSheet.absoluteFill}
-        cameraPosition={{
-          coordinates: { latitude: centro.latitud, longitude: centro.longitud },
-          zoom: 12,
-        }}
-        markers={[
-          {
-            id: 'origen',
-            coordinates: { latitude: origen.latitud, longitude: origen.longitud },
-            title: 'Origen',
-            snippet: 'Inicio del reparto',
-          },
-          ...paradas.map((p) => ({
-            id: p.pedidoId,
-            coordinates: { latitude: p.latitud, longitude: p.longitud },
-            title: `${p.orden}. ${p.clienteNombre}`,
-            snippet: p.direccionEntrega,
-          })),
-        ]}
-        polylines={[
-          {
-            id: 'secuencia',
-            coordinates: coordenadas,
-            geodesic: true,
-            width: 5,
-          },
-        ]}
-        uiSettings={{
-          compassEnabled: true,
-          zoomControlsEnabled: true,
-          zoomGesturesEnabled: true,
-          scrollGesturesEnabled: true,
-          rotationGesturesEnabled: false,
-          tiltGesturesEnabled: false,
-          mapToolbarEnabled: false,
-          myLocationButtonEnabled: false,
-        }}
-      />
+        mapStyle={MAP_STYLE_URL}
+        attribution
+        touchRotate={false}
+        touchPitch={false}
+      >
+        <Camera
+          initialViewState={{
+            bounds: limites,
+            padding: { top: 36, right: 36, bottom: 36, left: 36 },
+          }}
+        />
+
+        <GeoJSONSource id="secuencia-reparto" data={linea}>
+          <Layer
+            id="secuencia-reparto-linea"
+            type="line"
+            paint={{
+              'line-color': '#b83b17',
+              'line-width': 4,
+              'line-opacity': 0.82,
+            } as never}
+          />
+        </GeoJSONSource>
+
+        <Marker id="origen" lngLat={[origen.longitud, origen.latitud]}>
+          <View style={[styles.marcador, styles.marcadorOrigen]}>
+            <Text style={styles.marcadorTexto}>Z</Text>
+          </View>
+        </Marker>
+
+        {paradas.map((parada) => (
+          <Marker
+            key={parada.pedidoId}
+            id={parada.pedidoId}
+            lngLat={[parada.longitud, parada.latitud]}
+          >
+            <View style={styles.marcador}>
+              <Text style={styles.marcadorTexto}>{parada.orden}</Text>
+            </View>
+          </Marker>
+        ))}
+      </Map>
     </View>
   );
 }
@@ -469,4 +479,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ddddd5',
   },
+  marcador: {
+    minWidth: 30,
+    height: 30,
+    paddingHorizontal: 7,
+    borderRadius: 15,
+    backgroundColor: '#b83b17',
+    borderWidth: 3,
+    borderColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  marcadorOrigen: { backgroundColor: '#20201e' },
+  marcadorTexto: { color: '#fff', fontSize: 11, fontWeight: '900' },
 });

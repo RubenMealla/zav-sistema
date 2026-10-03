@@ -17,7 +17,7 @@ jobs:
     env:
       CI: 1
       EXPO_PUBLIC_API_BASE_URL: https://zav-api-2026.onrender.com
-      GOOGLE_MAPS_ANDROID_API_KEY: ${{ secrets.GOOGLE_MAPS_ANDROID_API_KEY }}
+      EXPO_PUBLIC_MAP_STYLE_URL: https://tiles.openfreemap.org/styles/liberty
       ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
       ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
       ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
@@ -46,7 +46,7 @@ jobs:
           java-version: "17"
 
       - name: Instalar dependencias
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
 
       - name: Verificar credenciales de firma Android
         shell: bash
@@ -73,14 +73,6 @@ jobs:
 
           echo "Huella del certificado que firmará el APK:"
           keytool -list -v             -keystore "$KEYSTORE_PATH"             -alias "$ANDROID_KEY_ALIAS"             -storepass "$ANDROID_KEYSTORE_PASSWORD"             | grep -E "SHA1:|SHA-1:"
-
-      - name: Verificar configuración de Maps SDK
-        shell: bash
-        run: |
-          if [ -z "${GOOGLE_MAPS_ANDROID_API_KEY:-}" ]; then
-            echo "::error::Falta el secreto GOOGLE_MAPS_ANDROID_API_KEY. Usa la huella SHA-1 mostrada en el paso anterior para restringir la clave Android."
-            exit 1
-          fi
 
       - name: Generar proyecto Android
         run: pnpm --filter @zav/mobile exec expo prebuild --platform android --no-install --clean

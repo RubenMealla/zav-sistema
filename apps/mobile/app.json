@@ -26,6 +26,7 @@
     },
     "plugins": [
       "expo-router",
+      "@maplibre/maplibre-react-native",
       [
         "expo-splash-screen",
         {
@@ -37,7 +38,7 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "ZAV necesita tu ubicación únicamente al confirmar una entrega."
+          "locationWhenInUsePermission": "ZAV necesita tu ubicación únicamente al confirmar una entrega o cuando eliges usar tu posición actual."
         }
       ],
       [
