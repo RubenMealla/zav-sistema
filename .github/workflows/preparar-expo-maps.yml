@@ -1,0 +1,47 @@
+name: Preparar dependencia Expo Maps
+
+on:
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: preparar-expo-maps-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  preparar:
+    name: Resolver expo-maps y lockfile
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.4.2
+          run_install: false
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Instalar base
+        run: pnpm install --frozen-lockfile
+
+      - name: Resolver versión compatible de Expo Maps
+        working-directory: apps/mobile
+        run: pnpm exec expo install expo-maps
+
+      - name: Guardar archivos resueltos
+        uses: actions/upload-artifact@v4
+        with:
+          name: expo-maps-lock
+          path: |
+            apps/mobile/package.json
+            pnpm-lock.yaml
+          if-no-files-found: error
+          retention-days: 1
