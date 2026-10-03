@@ -35,15 +35,8 @@ jobs:
           node-version: 24
           cache: pnpm
 
-      - name: Instalar dependencias y regenerar lock de migración
-        run: pnpm install --no-frozen-lockfile
-
-      - name: Exponer lockfile temporal para cierre reproducible
-        shell: bash
-        run: |
-          echo "ZAV_LOCKFILE_BEGIN"
-          cat pnpm-lock.yaml
-          echo "ZAV_LOCKFILE_END"
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
 
       - name: Verificar lint móvil
         run: pnpm --filter @zav/mobile lint
