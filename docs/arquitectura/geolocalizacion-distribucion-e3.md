@@ -1,6 +1,6 @@
 # ZAV 2026 — Rediseño de geolocalización y distribución
 
-**Estado general:** PROPUESTO / PENDIENTE DE IMPLEMENTAR.  
+**Estado general:** IMPLEMENTADO EN CÓDIGO / PENDIENTE DE VALIDACIÓN FÍSICA FINAL.  
 **Ámbito:** aplicación móvil del Vendedor y API REST.  
 **Objetivo:** ampliar el uso de geolocalización para que apoye el registro del punto de entrega, la preparación del reparto y la verificación de entrega sin convertir el sistema en rastreo GPS continuo ni en optimización automática de rutas.
 
@@ -43,7 +43,7 @@ El sistema podrá abrir Google Maps para navegar hacia el destino confirmado del
 
 ### 2.4 Secuenciación de entregas
 
-Se propone una **secuenciación geográfica sugerida por proximidad**, no una “ruta óptima”.
+Se implementa una **secuenciación geográfica sugerida por proximidad**, no una “ruta óptima”.
 
 El cálculo utilizará distancia geodésica entre coordenadas (fórmula Haversine) y una heurística de vecino más cercano:
 
@@ -89,7 +89,7 @@ Solo después de esa confirmación se guardan las coordenadas.
 
 ## 4. Punto geográfico de despacho
 
-La ubicación de inventario `VENTA_DESPACHO` representa el origen físico de los productos. Se propone agregar coordenadas geográficas a esa ubicación y configurarlas desde la web administrativa.
+La ubicación de inventario `VENTA_DESPACHO` representa el origen físico de los productos. Se agregaron coordenadas geográficas a esa ubicación y su configuración está disponible desde la web administrativa. Las coordenadas reales de ZAV permanecen PENDIENTES DE VALIDAR y no se inventan.
 
 No se crea una novena entidad.
 
@@ -132,13 +132,13 @@ Se conserva:
 
 ### 6.1 Retiro múltiple
 
-PROPUESTO: permitir seleccionar varios pedidos `REGISTRADO` y ejecutar **Retirar seleccionados para reparto**.
+IMPLEMENTADO EN CÓDIGO: permite seleccionar varios pedidos `REGISTRADO` y ejecutar **Retirar seleccionados para reparto**.
 
-La operación debe ser transaccional por pedido y devolver el resultado individual. No se declarará implementada hasta tener pruebas E2E.
+La API procesa cada Pedido con su propia transacción e idempotencia y devuelve un resultado individual. Se incorporó prueba E2E para retiro múltiple y repetición de las mismas claves.
 
 ## 7. Planificar reparto
 
-Nueva función propuesta para pedidos propios en estado `REGISTRADO` o `EN_DISTRIBUCION`.
+Función implementada para pedidos propios en estado `REGISTRADO` o `EN_DISTRIBUCION`.
 
 ### 7.1 Selección
 
@@ -232,7 +232,7 @@ Se conservan `entrega_latitud` y `entrega_longitud` como posición real de confi
 
 No se crea una entidad “Ruta”.
 
-## 10. Contrato API propuesto
+## 10. Contrato API implementado en la rama E3
 
 ### Cliente
 
@@ -245,7 +245,7 @@ Extender entrada con:
 
 Regla: ambos o ninguno.
 
-PROPUESTO posteriormente:
+IMPLEMENTADO:
 
 `PATCH /api/v1/clientes/:id/ubicacion`
 
@@ -253,7 +253,7 @@ Permite corregir dirección/coordenadas sin alterar Pedidos históricos.
 
 ### Despacho
 
-PROPUESTO:
+IMPLEMENTADO:
 
 `GET /api/v1/ubicaciones/venta-despacho` — Vendedor lectura.
 
@@ -263,7 +263,7 @@ PROPUESTO:
 
 `POST /api/v1/pedidos` copiará las coordenadas confirmadas del Cliente al Pedido.
 
-PROPUESTO:
+IMPLEMENTADO:
 
 `POST /api/v1/pedidos/planificacion`
 
@@ -346,12 +346,14 @@ El servidor vuelve a calcular la distancia contra el destino del Pedido. No conf
 
 ## 14. Estado de veracidad
 
-- Captura GPS puntual al entregar: **IMPLEMENTADO y probado en código/API; pendiente de revalidar tras este rediseño**.
+- Captura GPS puntual al entregar: **IMPLEMENTADO EN CÓDIGO Y API; PENDIENTE DE REVALIDACIÓN FÍSICA DEL APK GEOGRÁFICO**.
 - Registro de Cliente y Pedido: **IMPLEMENTADO**.
-- Mapa interactivo para Cliente: **PROPUESTO**.
-- Coordenadas de Cliente/Despacho: **PROPUESTO**.
-- Snapshot geográfico del Pedido: **PROPUESTO**.
-- Secuenciación por proximidad: **PROPUESTO**.
-- Navegación externa: **PROPUESTO**.
-- Precisión/distancia de entrega: **PROPUESTO**.
+- Mapa interactivo para Cliente: **IMPLEMENTADO EN CÓDIGO; PENDIENTE DE VALIDAR EN ANDROID CON MAPS SDK CONFIGURADO**.
+- Coordenadas de Cliente/Despacho: **IMPLEMENTADO EN MODELO Y API; coordenadas reales de ZAV PENDIENTES DE VALIDAR**.
+- Snapshot geográfico del Pedido: **IMPLEMENTADO**.
+- Secuenciación por proximidad: **IMPLEMENTADO Y CUBIERTO POR E2E**.
+- Reordenamiento manual de la secuencia: **IMPLEMENTADO EN MÓVIL**.
+- Retiro múltiple para reparto: **IMPLEMENTADO EN CÓDIGO Y CUBIERTO POR E2E; pendiente de QA del HEAD**.
+- Navegación externa: **IMPLEMENTADO EN CÓDIGO; PENDIENTE DE VALIDACIÓN FÍSICA**.
+- Precisión/distancia de entrega: **IMPLEMENTADO Y CUBIERTO POR E2E**.
 - Radio de advertencia: **PENDIENTE DE VALIDAR**.
