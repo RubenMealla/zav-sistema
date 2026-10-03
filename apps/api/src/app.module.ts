@@ -11,7 +11,7 @@ import { LoteEntity } from './database/entities/lote.entity.js';
 import { UbicacionEntity } from './database/entities/ubicacion.entity.js';
 import { MovimientoEntity } from './database/entities/movimiento.entity.js';
 import { AuthModule } from './auth/auth.module.js';
-import { InventarioModule } from './inventario/inventario.module.js';
+import { InventarioE3Module } from './inventario/inventario-e3.module.js';
 
 @Module({
   imports: [
@@ -20,7 +20,7 @@ import { InventarioModule } from './inventario/inventario.module.js';
       envFilePath: '.env',
     }),
     AuthModule,
-    InventarioModule,
+    InventarioE3Module,
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
