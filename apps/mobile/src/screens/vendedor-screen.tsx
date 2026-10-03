@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Linking,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -16,21 +17,26 @@ import {
   ApiError,
   crearCliente,
   crearPedido,
-  entregarPedido,
+  entregarPedidoConComprobacion,
   listarClientes,
   listarPedidos,
   obtenerDisponibilidad,
+  planificarReparto,
   retirarPedido,
 } from '@/lib/api';
 import type {
   Cliente,
   Disponibilidad,
   PedidoResumen,
+  PlanificacionParada,
+  PlanificacionReparto,
+  PuntoGeografico,
   Sesion,
 } from '@/lib/tipos';
 import { uuidV4 } from '@/lib/uuid';
+import { MapaReparto, SelectorUbicacionMapa } from '@/components/mapas-distribucion';
 
-type Seccion = 'pedidos' | 'nuevo' | 'clientes';
+type Seccion = 'pedidos' | 'nuevo' | 'clientes' | 'reparto';
 
 type Props = {
   sesion: Sesion;
@@ -60,6 +66,43 @@ function fechaCorta(valor: string) {
   });
 }
 
+function distanciaMetros(a: PuntoGeografico, b: PuntoGeografico) {
+  const radio = 6371008.8;
+  const rad = (grados: number) => (grados * Math.PI) / 180;
+  const dLat = rad(b.latitud - a.latitud);
+  const dLon = rad(b.longitud - a.longitud);
+  const lat1 = rad(a.latitud);
+  const lat2 = rad(b.latitud);
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
+  return 2 * radio * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+
+function formatearDistancia(metros: number) {
+  if (metros < 1000) return `${Math.round(metros)} m`;
+  return `${(metros / 1000).toFixed(1)} km`;
+}
+
+function recalcularSecuencia(
+  origen: PuntoGeografico,
+  paradas: PlanificacionParada[],
+) {
+  let anterior = origen;
+  let total = 0;
+  const recalculadas = paradas.map((parada, indice) => {
+    const distancia = distanciaMetros(anterior, parada);
+    total += distancia;
+    anterior = parada;
+    return {
+      ...parada,
+      orden: indice + 1,
+      distanciaDesdeAnteriorMetros: Math.round(distancia),
+    };
+  });
+  return { paradas: recalculadas, total: Math.round(total) };
+}
+
 export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
   const [seccion, setSeccion] = useState<Seccion>('pedidos');
   const [pedidos, setPedidos] = useState<PedidoResumen[]>([]);
@@ -72,6 +115,8 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
   const [clienteNombre, setClienteNombre] = useState('');
   const [clienteTelefono, setClienteTelefono] = useState('');
   const [clienteDireccion, setClienteDireccion] = useState('');
+  const [clienteUbicacion, setClienteUbicacion] = useState<PuntoGeografico | null>(null);
+  const [selectorUbicacionVisible, setSelectorUbicacionVisible] = useState(false);
   const [guardandoCliente, setGuardandoCliente] = useState(false);
 
   const [clienteSeleccionado, setClienteSeleccionado] = useState('');
@@ -79,6 +124,9 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
   const [cantidades, setCantidades] = useState<Record<string, string>>({});
   const [guardandoPedido, setGuardandoPedido] = useState(false);
   const [accionPedido, setAccionPedido] = useState<string | null>(null);
+  const [pedidosSeleccionados, setPedidosSeleccionados] = useState<string[]>([]);
+  const [planificacion, setPlanificacion] = useState<PlanificacionReparto | null>(null);
+  const [planificando, setPlanificando] = useState(false);
 
   const token = sesion.accessToken;
 
@@ -156,6 +204,10 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
       setError('Nombre y dirección son obligatorios.');
       return;
     }
+    if (!clienteUbicacion) {
+      setError('Confirma la ubicación de entrega del cliente en el mapa.');
+      return;
+    }
 
     setGuardandoCliente(true);
     setError('');
@@ -164,6 +216,8 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
         nombre: clienteNombre.trim(),
         telefono: clienteTelefono.trim() || undefined,
         direccion: clienteDireccion.trim(),
+        latitud: clienteUbicacion.latitud,
+        longitud: clienteUbicacion.longitud,
       });
       setClientes((actuales) =>
         [...actuales, cliente].sort((a, b) => a.nombre.localeCompare(b.nombre)),
@@ -171,7 +225,11 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
       setClienteNombre('');
       setClienteTelefono('');
       setClienteDireccion('');
-      Alert.alert('Cliente registrado', 'El cliente ya está disponible para pedidos.');
+      setClienteUbicacion(null);
+      Alert.alert(
+        'Cliente registrado',
+        'El cliente y su punto de entrega quedaron disponibles para pedidos.',
+      );
     } catch (e) {
       await manejarError(e);
     } finally {
@@ -229,12 +287,12 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
 
   async function retirar(pedido: PedidoResumen) {
     Alert.alert(
-      'Confirmar retiro',
-      `¿Registrar el retiro del pedido de ${pedido.cliente.nombre}?`,
+      'Retirar para reparto',
+      `¿Confirmas que ya recibiste físicamente los productos del pedido de ${pedido.cliente.nombre}?`,
       [
         { text: 'Cancelar', style: 'cancel' },
         {
-          text: 'Retirar',
+          text: 'Retirar para reparto',
           onPress: () => {
             void ejecutarRetiro(pedido.id);
           },
@@ -249,7 +307,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
     try {
       await retirarPedido(token, id, uuidV4());
       await cargar(false);
-      Alert.alert('Retiro registrado', 'El pedido pasó a En distribución.');
+      Alert.alert('Productos en reparto', 'El pedido pasó a En distribución bajo tu custodia.');
     } catch (e) {
       await manejarError(e);
     } finally {
@@ -257,24 +315,23 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
     }
   }
 
-  async function entregar(pedido: PedidoResumen) {
-    Alert.alert(
-      'Confirmar entrega',
-      'Se solicitará la ubicación del dispositivo una sola vez para registrar esta entrega.',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Continuar',
-          onPress: () => {
-            void ejecutarEntrega(pedido.id);
-          },
-        },
-      ],
-    );
+  async function abrirNavegacion(pedido: PedidoResumen) {
+    if (!pedido.destinoGps) {
+      setError('Este pedido no tiene un destino georreferenciado.');
+      return;
+    }
+    const destino = `${pedido.destinoGps.latitud},${pedido.destinoGps.longitud}`;
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destino)}`;
+    const disponible = await Linking.canOpenURL(url);
+    if (!disponible) {
+      setError('No se pudo abrir la aplicación de mapas.');
+      return;
+    }
+    await Linking.openURL(url);
   }
 
-  async function ejecutarEntrega(id: string) {
-    setAccionPedido(id);
+  async function entregar(pedido: PedidoResumen) {
+    setAccionPedido(pedido.id);
     setError('');
     try {
       const servicios = await Location.hasServicesEnabledAsync();
@@ -299,19 +356,145 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
         accuracy: Location.Accuracy.High,
       });
 
-      await entregarPedido(token, id, {
-        operacionClave: uuidV4(),
-        latitud: posicion.coords.latitude,
-        longitud: posicion.coords.longitude,
-      });
+      const distancia = pedido.destinoGps
+        ? distanciaMetros(
+            pedido.destinoGps,
+            {
+              latitud: posicion.coords.latitude,
+              longitud: posicion.coords.longitude,
+            },
+          )
+        : null;
+      const precision = posicion.coords.accuracy;
 
-      await cargar(false);
-      Alert.alert('Entrega registrada', 'Se guardó la ubicación puntual de la entrega.');
+      const detalleDistancia =
+        distancia === null
+          ? 'Este pedido no tiene destino georreferenciado para comparar.'
+          : `Estás aproximadamente a ${formatearDistancia(distancia)} del punto de entrega registrado.`;
+      const detallePrecision =
+        typeof precision === 'number'
+          ? ` Precisión reportada: ±${Math.round(precision)} m.`
+          : '';
+
+      Alert.alert(
+        'Comprobar entrega',
+        `${detalleDistancia}${detallePrecision}\n\nLa ubicación se capturó solo para esta confirmación. ¿Registrar la entrega?`,
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          {
+            text: 'Confirmar entrega',
+            onPress: () => {
+              void confirmarEntregaCapturada(
+                pedido.id,
+                posicion.coords.latitude,
+                posicion.coords.longitude,
+                typeof precision === 'number' ? precision : undefined,
+              );
+            },
+          },
+        ],
+      );
     } catch (e) {
       await manejarError(e);
     } finally {
       setAccionPedido(null);
     }
+  }
+
+  async function confirmarEntregaCapturada(
+    id: string,
+    latitud: number,
+    longitud: number,
+    precisionMetros?: number,
+  ) {
+    setAccionPedido(id);
+    setError('');
+    try {
+      const entrega = await entregarPedidoConComprobacion(token, id, {
+        operacionClave: uuidV4(),
+        latitud,
+        longitud,
+        precisionMetros,
+      });
+      await cargar(false);
+
+      const distancia = entrega.entregaGps?.distanciaDestinoMetros;
+      Alert.alert(
+        'Entrega registrada',
+        distancia === null || distancia === undefined
+          ? 'La entrega y su ubicación puntual fueron registradas.'
+          : `Entrega registrada. Distancia al destino esperado: ${formatearDistancia(distancia)}.`,
+      );
+    } catch (e) {
+      await manejarError(e);
+    } finally {
+      setAccionPedido(null);
+    }
+  }
+
+  function alternarPedidoPlanificacion(id: string) {
+    setPlanificacion(null);
+    setPedidosSeleccionados((actuales) =>
+      actuales.includes(id) ? actuales.filter((x) => x !== id) : [...actuales, id],
+    );
+  }
+
+  async function generarPlanificacion(origen: 'DESPACHO' | 'ACTUAL') {
+    if (pedidosSeleccionados.length < 2) {
+      setError('Selecciona al menos dos pedidos georreferenciados para planificar.');
+      return;
+    }
+
+    setPlanificando(true);
+    setError('');
+    try {
+      if (origen === 'DESPACHO') {
+        setPlanificacion(
+          await planificarReparto(token, {
+            pedidoIds: pedidosSeleccionados,
+            origenTipo: 'DESPACHO',
+          }),
+        );
+        return;
+      }
+
+      const permiso = await Location.requestForegroundPermissionsAsync();
+      if (permiso.status !== 'granted') {
+        setError('Se necesita permiso de ubicación para usar tu posición como origen.');
+        return;
+      }
+      const posicion = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+      setPlanificacion(
+        await planificarReparto(token, {
+          pedidoIds: pedidosSeleccionados,
+          origenTipo: 'ACTUAL',
+          origenLatitud: posicion.coords.latitude,
+          origenLongitud: posicion.coords.longitude,
+        }),
+      );
+    } catch (e) {
+      await manejarError(e);
+    } finally {
+      setPlanificando(false);
+    }
+  }
+
+  function moverParada(indice: number, direccion: -1 | 1) {
+    setPlanificacion((actual) => {
+      if (!actual) return actual;
+      const destino = indice + direccion;
+      if (destino < 0 || destino >= actual.paradas.length) return actual;
+      const paradas = [...actual.paradas];
+      [paradas[indice], paradas[destino]] = [paradas[destino], paradas[indice]];
+      const recalculadas = recalcularSecuencia(actual.origen, paradas);
+      return {
+        ...actual,
+        paradas: recalculadas.paradas,
+        distanciaTotalAproximadaMetros: recalculadas.total,
+      };
+    });
   }
 
   const productosConStock = useMemo(
@@ -356,6 +539,11 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
           texto="Clientes"
           onPress={() => setSeccion('clientes')}
         />
+        <Tab
+          activo={seccion === 'reparto'}
+          texto="Reparto"
+          onPress={() => setSeccion('reparto')}
+        />
       </View>
 
       {error ? (
@@ -380,6 +568,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
             accionPedido={accionPedido}
             onRetirar={retirar}
             onEntregar={entregar}
+            onNavegar={(pedido) => void abrirNavegacion(pedido)}
           />
         ) : null}
 
@@ -389,11 +578,26 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
             nombre={clienteNombre}
             telefono={clienteTelefono}
             direccion={clienteDireccion}
+            ubicacion={clienteUbicacion}
             guardando={guardandoCliente}
             setNombre={setClienteNombre}
             setTelefono={setClienteTelefono}
             setDireccion={setClienteDireccion}
+            onAbrirMapa={() => setSelectorUbicacionVisible(true)}
             onGuardar={guardarCliente}
+          />
+        ) : null}
+
+        {seccion === 'reparto' ? (
+          <Reparto
+            pedidos={pedidos}
+            seleccionados={pedidosSeleccionados}
+            planificacion={planificacion}
+            planificando={planificando}
+            onAlternar={alternarPedidoPlanificacion}
+            onPlanificarDespacho={() => void generarPlanificacion('DESPACHO')}
+            onPlanificarActual={() => void generarPlanificacion('ACTUAL')}
+            onMover={moverParada}
           />
         ) : null}
 
@@ -412,6 +616,22 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
           />
         ) : null}
       </ScrollView>
+
+      <SelectorUbicacionMapa
+        visible={selectorUbicacionVisible}
+        direccionInicial={clienteDireccion}
+        puntoInicial={clienteUbicacion}
+        onCancelar={() => setSelectorUbicacionVisible(false)}
+        onConfirmar={(valor) => {
+          setClienteDireccion(valor.direccion);
+          setClienteUbicacion({
+            latitud: valor.latitud,
+            longitud: valor.longitud,
+          });
+          setSelectorUbicacionVisible(false);
+          setError('');
+        }}
+      />
     </View>
   );
 }
@@ -442,11 +662,13 @@ function Pedidos({
   accionPedido,
   onRetirar,
   onEntregar,
+  onNavegar,
 }: {
   pedidos: PedidoResumen[];
   accionPedido: string | null;
   onRetirar: (pedido: PedidoResumen) => void;
   onEntregar: (pedido: PedidoResumen) => void;
+  onNavegar: (pedido: PedidoResumen) => void;
 }) {
   return (
     <View style={styles.bloque}>
@@ -477,18 +699,25 @@ function Pedidos({
 
             {pedido.estado === 'REGISTRADO' ? (
               <BotonAccion
-                texto="Registrar retiro"
+                texto="Retirar para reparto"
                 cargando={accionPedido === pedido.id}
                 onPress={() => onRetirar(pedido)}
               />
             ) : null}
 
             {pedido.estado === 'EN_DISTRIBUCION' ? (
-              <BotonAccion
-                texto="Confirmar entrega con GPS"
-                cargando={accionPedido === pedido.id}
-                onPress={() => onEntregar(pedido)}
-              />
+              <View style={styles.accionesPedido}>
+                {pedido.destinoGps ? (
+                  <Pressable onPress={() => onNavegar(pedido)} style={styles.botonMapa}>
+                    <Text style={styles.botonMapaTexto}>Abrir navegación</Text>
+                  </Pressable>
+                ) : null}
+                <BotonAccion
+                  texto="Comprobar y confirmar entrega"
+                  cargando={accionPedido === pedido.id}
+                  onPress={() => onEntregar(pedido)}
+                />
+              </View>
             ) : null}
 
             {pedido.estado === 'ENTREGADO' && pedido.entregadoEn ? (
@@ -508,20 +737,24 @@ function Clientes({
   nombre,
   telefono,
   direccion,
+  ubicacion,
   guardando,
   setNombre,
   setTelefono,
   setDireccion,
+  onAbrirMapa,
   onGuardar,
 }: {
   clientes: Cliente[];
   nombre: string;
   telefono: string;
   direccion: string;
+  ubicacion: PuntoGeografico | null;
   guardando: boolean;
   setNombre: (v: string) => void;
   setTelefono: (v: string) => void;
   setDireccion: (v: string) => void;
+  onAbrirMapa: () => void;
   onGuardar: () => void;
 }) {
   return (
@@ -546,6 +779,20 @@ function Clientes({
           onChangeText={setDireccion}
           multiline
         />
+        <Pressable onPress={onAbrirMapa} style={styles.botonMapa}>
+          <Text style={styles.botonMapaTexto}>
+            {ubicacion ? 'Revisar ubicación en mapa' : 'Definir ubicación en mapa'}
+          </Text>
+        </Pressable>
+        {ubicacion ? (
+          <Text style={styles.confirmado}>
+            Punto confirmado · {ubicacion.latitud.toFixed(6)}, {ubicacion.longitud.toFixed(6)}
+          </Text>
+        ) : (
+          <Text style={styles.textoSecundario}>
+            La ubicación no se guarda automáticamente. Debes confirmarla en el mapa.
+          </Text>
+        )}
         <BotonAccion
           texto="Guardar cliente"
           cargando={guardando}
@@ -561,8 +808,140 @@ function Clientes({
           {cliente.telefono ? (
             <Text style={styles.textoSecundario}>{cliente.telefono}</Text>
           ) : null}
+          <Text style={cliente.ubicacion ? styles.disponible : styles.textoSecundario}>
+            {cliente.ubicacion ? 'Ubicación de entrega confirmada' : 'Sin ubicación georreferenciada'}
+          </Text>
         </View>
       ))}
+    </View>
+  );
+}
+
+function Reparto({
+  pedidos,
+  seleccionados,
+  planificacion,
+  planificando,
+  onAlternar,
+  onPlanificarDespacho,
+  onPlanificarActual,
+  onMover,
+}: {
+  pedidos: PedidoResumen[];
+  seleccionados: string[];
+  planificacion: PlanificacionReparto | null;
+  planificando: boolean;
+  onAlternar: (id: string) => void;
+  onPlanificarDespacho: () => void;
+  onPlanificarActual: () => void;
+  onMover: (indice: number, direccion: -1 | 1) => void;
+}) {
+  const disponibles = pedidos.filter(
+    (pedido) =>
+      pedido.estado !== 'ENTREGADO' &&
+      pedido.destinoGps !== null,
+  );
+
+  return (
+    <View style={styles.bloque}>
+      <Titulo
+        titulo="Planificar reparto"
+        descripcion="Selecciona pedidos con ubicación confirmada. El sistema propone una secuencia por proximidad; puedes reordenarla."
+      />
+
+      {!disponibles.length ? (
+        <Vacio texto="No hay pedidos pendientes con destino georreferenciado." />
+      ) : (
+        disponibles.map((pedido) => {
+          const activo = seleccionados.includes(pedido.id);
+          return (
+            <Pressable
+              key={pedido.id}
+              onPress={() => onAlternar(pedido.id)}
+              style={[styles.opcion, activo && styles.opcionActiva]}
+            >
+              <View style={styles.filaEntre}>
+                <View style={styles.flex}>
+                  <Text style={[styles.opcionTitulo, activo && styles.opcionTituloActiva]}>
+                    {pedido.cliente.nombre}
+                  </Text>
+                  <Text style={styles.opcionSubtitulo}>{pedido.direccionEntrega}</Text>
+                </View>
+                <Text style={styles.seleccionMarca}>{activo ? '✓' : '+'}</Text>
+              </View>
+            </Pressable>
+          );
+        })
+      )}
+
+      <Text style={styles.textoSecundario}>
+        Seleccionados: {seleccionados.length}. Se requieren al menos 2.
+      </Text>
+
+      <View style={styles.fila}>
+        <Pressable
+          disabled={planificando}
+          onPress={onPlanificarDespacho}
+          style={styles.botonMapa}
+        >
+          <Text style={styles.botonMapaTexto}>Desde ZAV</Text>
+        </Pressable>
+        <Pressable
+          disabled={planificando}
+          onPress={onPlanificarActual}
+          style={styles.botonMapa}
+        >
+          <Text style={styles.botonMapaTexto}>Desde mi ubicación</Text>
+        </Pressable>
+      </View>
+
+      {planificando ? <ActivityIndicator color="#b83b17" /> : null}
+
+      {planificacion ? (
+        <>
+          <View style={styles.tarjeta}>
+            <Text style={styles.seccionTitulo}>Secuencia geográfica sugerida</Text>
+            <Text style={styles.textoSecundario}>
+              Distancia geodésica aproximada total: {formatearDistancia(planificacion.distanciaTotalAproximadaMetros)}
+            </Text>
+            <Text style={styles.textoSecundario}>{planificacion.limitacion}</Text>
+          </View>
+
+          <MapaReparto origen={planificacion.origen} paradas={planificacion.paradas} />
+
+          {planificacion.paradas.map((parada, indice) => (
+            <View key={parada.pedidoId} style={styles.tarjetaCompacta}>
+              <View style={styles.filaEntre}>
+                <View style={styles.flex}>
+                  <Text style={styles.tarjetaTitulo}>
+                    {parada.orden}. {parada.clienteNombre}
+                  </Text>
+                  <Text style={styles.direccion}>{parada.direccionEntrega}</Text>
+                  <Text style={styles.textoSecundario}>
+                    Desde la parada anterior: {formatearDistancia(parada.distanciaDesdeAnteriorMetros)}
+                  </Text>
+                </View>
+                <View style={styles.reordenar}>
+                  <Pressable
+                    disabled={indice === 0}
+                    onPress={() => onMover(indice, -1)}
+                    style={styles.botonOrden}
+                  >
+                    <Text style={styles.botonOrdenTexto}>↑</Text>
+                  </Pressable>
+                  <Pressable
+                    disabled={indice === planificacion.paradas.length - 1}
+                    onPress={() => onMover(indice, 1)}
+                    style={styles.botonOrden}
+                  >
+                    <Text style={styles.botonOrdenTexto}>↓</Text>
+                  </Pressable>
+                </View>
+              </View>
+            </View>
+          ))}
+        </>
+      ) : null}
     </View>
   );
 }
@@ -951,4 +1330,37 @@ const styles = StyleSheet.create({
   },
   alertaTexto: { color: '#a1322c', fontSize: 12, flex: 1, lineHeight: 18 },
   alertaCerrar: { color: '#a1322c', fontSize: 12, fontWeight: '800' },
+  accionesPedido: { gap: 8 },
+  botonMapa: {
+    minHeight: 44,
+    borderWidth: 1,
+    borderColor: '#b83b17',
+    borderRadius: 7,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+    flex: 1,
+  },
+  botonMapaTexto: { color: '#b83b17', fontWeight: '800', fontSize: 12 },
+  fila: { flexDirection: 'row', gap: 8 },
+  seleccionMarca: {
+    color: '#b83b17',
+    fontSize: 20,
+    fontWeight: '800',
+    minWidth: 24,
+    textAlign: 'center',
+  },
+  reordenar: { gap: 5 },
+  botonOrden: {
+    width: 36,
+    height: 32,
+    borderWidth: 1,
+    borderColor: '#c6c5bd',
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+  },
+  botonOrdenTexto: { color: '#50504a', fontSize: 18, fontWeight: '800' },
 });
