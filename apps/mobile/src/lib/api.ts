@@ -7,6 +7,7 @@ import type {
   PedidoResumen,
   PlanificacionReparto,
   PuntoGeografico,
+  ResultadoRetiroMultiple,
   Sesion,
   VentaDespacho,
 } from './tipos';
@@ -139,6 +140,17 @@ export function retirarPedido(token: string, id: string, operacionClave: string)
   return solicitud<PedidoDetalle>(
     `/api/v1/pedidos/${id}/retiro`,
     { method: 'POST', body: JSON.stringify({ operacionClave }) },
+    token,
+  );
+}
+
+export function retirarPedidosSeleccionados(
+  token: string,
+  retiros: Array<{ pedidoId: string; operacionClave: string }>,
+) {
+  return solicitud<ResultadoRetiroMultiple>(
+    '/api/v1/pedidos/retiros',
+    { method: 'POST', body: JSON.stringify({ retiros }) },
     token,
   );
 }
