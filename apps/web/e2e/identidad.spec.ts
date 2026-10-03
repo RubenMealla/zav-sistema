@@ -99,8 +99,10 @@ test('teclado, contraste y movimiento reducido', async ({ page }) => {
   await ingresar(page);
   await page.getByRole('link', { name: 'Productos terminados', exact: true }).filter({ visible: true }).click();
   await page.getByRole('button', { name: 'Nuevo producto' }).click();
-  await page.getByLabel('Código', { exact: true }).focus();
-  expect(await page.getByLabel('Código', { exact: true }).evaluate((el) => getComputedStyle(el).outlineStyle)).toBe('solid');
+  const modalProducto = page.getByRole('dialog', { name: 'Registrar producto' });
+  const codigoProducto = modalProducto.getByLabel('Código', { exact: true });
+  await codigoProducto.focus();
+  expect(await codigoProducto.evaluate((el) => getComputedStyle(el).outlineStyle)).toBe('solid');
   await page.keyboard.press('Escape');
   const contrastes = await page.locator('.boton-primario, .sidebar .nav-item, th, td, .codigo, .badge, .eyebrow').evaluateAll((elementos) => {
     const rgb = (valor: string) => valor.match(/[\d.]+/g)!.slice(0, 3).map(Number);
