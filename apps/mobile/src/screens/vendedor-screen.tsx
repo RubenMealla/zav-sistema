@@ -15,6 +15,7 @@ import {
 
 import {
   ApiError,
+  actualizarUbicacionCliente,
   crearCliente,
   crearPedido,
   entregarPedidoConComprobacion,
@@ -117,6 +118,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
   const [clienteDireccion, setClienteDireccion] = useState('');
   const [clienteUbicacion, setClienteUbicacion] = useState<PuntoGeografico | null>(null);
   const [selectorUbicacionVisible, setSelectorUbicacionVisible] = useState(false);
+  const [clienteEditandoUbicacion, setClienteEditandoUbicacion] = useState<Cliente | null>(null);
   const [guardandoCliente, setGuardandoCliente] = useState(false);
 
   const [clienteSeleccionado, setClienteSeleccionado] = useState('');
@@ -229,6 +231,56 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
       Alert.alert(
         'Cliente registrado',
         'El cliente y su punto de entrega quedaron disponibles para pedidos.',
+      );
+    } catch (e) {
+      await manejarError(e);
+    } finally {
+      setGuardandoCliente(false);
+    }
+  }
+
+  function abrirMapaNuevoCliente() {
+    setClienteEditandoUbicacion(null);
+    setSelectorUbicacionVisible(true);
+  }
+
+  function abrirMapaClienteExistente(cliente: Cliente) {
+    setClienteEditandoUbicacion(cliente);
+    setSelectorUbicacionVisible(true);
+  }
+
+  async function confirmarUbicacionMapa(
+    valor: PuntoGeografico & { direccion: string },
+  ) {
+    if (!clienteEditandoUbicacion) {
+      setClienteDireccion(valor.direccion);
+      setClienteUbicacion({
+        latitud: valor.latitud,
+        longitud: valor.longitud,
+      });
+      setSelectorUbicacionVisible(false);
+      setError('');
+      return;
+    }
+
+    setGuardandoCliente(true);
+    setError('');
+    try {
+      const actualizado = await actualizarUbicacionCliente(
+        token,
+        clienteEditandoUbicacion.id,
+        valor,
+      );
+      setClientes((actuales) =>
+        actuales.map((cliente) =>
+          cliente.id === actualizado.id ? actualizado : cliente,
+        ),
+      );
+      setSelectorUbicacionVisible(false);
+      setClienteEditandoUbicacion(null);
+      Alert.alert(
+        'Ubicación actualizada',
+        'Los pedidos ya registrados conservarán su destino histórico.',
       );
     } catch (e) {
       await manejarError(e);
@@ -583,7 +635,8 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
             setNombre={setClienteNombre}
             setTelefono={setClienteTelefono}
             setDireccion={setClienteDireccion}
-            onAbrirMapa={() => setSelectorUbicacionVisible(true)}
+            onAbrirMapa={abrirMapaNuevoCliente}
+            onEditarUbicacion={abrirMapaClienteExistente}
             onGuardar={guardarCliente}
           />
         ) : null}
@@ -619,18 +672,20 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
 
       <SelectorUbicacionMapa
         visible={selectorUbicacionVisible}
-        direccionInicial={clienteDireccion}
-        puntoInicial={clienteUbicacion}
-        onCancelar={() => setSelectorUbicacionVisible(false)}
-        onConfirmar={(valor) => {
-          setClienteDireccion(valor.direccion);
-          setClienteUbicacion({
-            latitud: valor.latitud,
-            longitud: valor.longitud,
-          });
+        direccionInicial={clienteEditandoUbicacion?.direccion ?? clienteDireccion}
+        puntoInicial={
+          clienteEditandoUbicacion?.ubicacion
+            ? {
+                latitud: clienteEditandoUbicacion.ubicacion.latitud,
+                longitud: clienteEditandoUbicacion.ubicacion.longitud,
+              }
+            : clienteUbicacion
+        }
+        onCancelar={() => {
           setSelectorUbicacionVisible(false);
-          setError('');
+          setClienteEditandoUbicacion(null);
         }}
+        onConfirmar={(valor) => void confirmarUbicacionMapa(valor)}
       />
     </View>
   );
@@ -743,6 +798,7 @@ function Clientes({
   setTelefono,
   setDireccion,
   onAbrirMapa,
+  onEditarUbicacion,
   onGuardar,
 }: {
   clientes: Cliente[];
@@ -755,6 +811,7 @@ function Clientes({
   setTelefono: (v: string) => void;
   setDireccion: (v: string) => void;
   onAbrirMapa: () => void;
+  onEditarUbicacion: (cliente: Cliente) => void;
   onGuardar: () => void;
 }) {
   return (
@@ -811,6 +868,14 @@ function Clientes({
           <Text style={cliente.ubicacion ? styles.disponible : styles.textoSecundario}>
             {cliente.ubicacion ? 'Ubicación de entrega confirmada' : 'Sin ubicación georreferenciada'}
           </Text>
+          <Pressable
+            onPress={() => onEditarUbicacion(cliente)}
+            style={styles.botonMapaCompacto}
+          >
+            <Text style={styles.botonMapaTexto}>
+              {cliente.ubicacion ? 'Corregir ubicación' : 'Definir ubicación'}
+            </Text>
+          </Pressable>
         </View>
       ))}
     </View>
@@ -1343,6 +1408,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   botonMapaTexto: { color: '#b83b17', fontWeight: '800', fontSize: 12 },
+  botonMapaCompacto: {
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: '#b83b17',
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    backgroundColor: '#fff',
+  },
   fila: { flexDirection: 'row', gap: 8 },
   seleccionMarca: {
     color: '#b83b17',
