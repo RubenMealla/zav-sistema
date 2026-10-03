@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import { Roles } from '../auth/roles.decorator.js';
 import { RolesGuard } from '../auth/roles.guard.js';
@@ -18,6 +18,11 @@ export class ClientesController {
   @Get()
   listar(@Query() consulta: Record<string, unknown>) {
     return this.clientes.listar(consulta);
+  }
+
+  @Patch(':id/ubicacion')
+  actualizarUbicacion(@Param('id') id: string, @Body() datos: unknown) {
+    return this.clientes.actualizarUbicacion(id, datos);
   }
 
   @Get(':id')
