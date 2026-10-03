@@ -19,6 +19,7 @@ describe('Pedidos y distribucion E3 (e2e)', () => {
   let tokenVendedor: string;
   let productoPrincipalId: string;
   let productoLimiteId: string;
+  let productoRetiroMultipleId: string;
   let lotePrincipalId: string;
 
   const admin = {
@@ -135,6 +136,9 @@ describe('Pedidos y distribucion E3 (e2e)', () => {
 
     const limite = await prepararProducto('QA-PED-LIMITE', 5);
     productoLimiteId = limite.productoId;
+
+    const retiroMultiple = await prepararProducto('QA-PED-MULTI', 4);
+    productoRetiroMultipleId = retiroMultiple.productoId;
   });
 
   afterAll(async () => {
@@ -291,6 +295,58 @@ describe('Pedidos y distribucion E3 (e2e)', () => {
     expect(corregido.body.ubicacion).toEqual(
       expect.objectContaining({ latitud: -21.54, longitud: -64.74 }),
     );
+  });
+
+  it('retira varios pedidos en una sola acción sin perder idempotencia por pedido', async () => {
+    const clienteA = await crearCliente('MULTI-A', {
+      latitud: -21.536,
+      longitud: -64.731,
+    });
+    const clienteB = await crearCliente('MULTI-B', {
+      latitud: -21.537,
+      longitud: -64.732,
+    });
+
+    const pedidoA = await crearPedido(clienteA, productoRetiroMultipleId, 1);
+    const pedidoB = await crearPedido(clienteB, productoRetiroMultipleId, 1);
+    expect(pedidoA.status).toBe(201);
+    expect(pedidoB.status).toBe(201);
+
+    const retiros = [
+      { pedidoId: pedidoA.body.id as string, operacionClave: randomUUID() },
+      { pedidoId: pedidoB.body.id as string, operacionClave: randomUUID() },
+    ];
+
+    const primero = await request(app.getHttpServer())
+      .post('/api/v1/pedidos/retiros')
+      .set('Authorization', `Bearer ${tokenVendedor}`)
+      .send({ retiros })
+      .expect(201);
+
+    expect(primero.body.resultado).toBe('COMPLETO');
+    expect(primero.body.exitosos).toBe(2);
+    expect(primero.body.fallidos).toBe(0);
+    expect(primero.body.items.every((item: { ok: boolean }) => item.ok)).toBe(true);
+
+    const repetido = await request(app.getHttpServer())
+      .post('/api/v1/pedidos/retiros')
+      .set('Authorization', `Bearer ${tokenVendedor}`)
+      .send({ retiros })
+      .expect(201);
+
+    expect(repetido.body.resultado).toBe('COMPLETO');
+
+    const movimientos = await db.query(
+      `SELECT referencia, count(*)::int AS total
+       FROM movimiento
+       WHERE tipo = 'RETIRO' AND referencia = ANY($1::text[])
+       GROUP BY referencia
+       ORDER BY referencia`,
+      [[pedidoA.body.id, pedidoB.body.id]],
+    );
+
+    expect(movimientos.rows).toHaveLength(2);
+    expect(movimientos.rows.every((fila) => fila.total === 1)).toBe(true);
   });
 
   it('rechaza entrega antes del retiro y coordenadas fuera de rango', async () => {
