@@ -906,7 +906,7 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   opcionActiva: { borderColor: '#b83b17', backgroundColor: '#fdf0e9' },
-  opcionTitulo: { color: '#262622', fontSize: 14, fontWeight: '750' },
+  opcionTitulo: { color: '#262622', fontSize: 14, fontWeight: '700' },
   opcionTituloActiva: { color: '#b83b17' },
   opcionSubtitulo: { color: '#717169', fontSize: 11 },
   producto: {
