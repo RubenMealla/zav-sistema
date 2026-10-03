@@ -12,8 +12,12 @@ import { ProductoEntity } from './database/entities/producto.entity.js';
 import { LoteEntity } from './database/entities/lote.entity.js';
 import { UbicacionEntity } from './database/entities/ubicacion.entity.js';
 import { MovimientoEntity } from './database/entities/movimiento.entity.js';
+import { ClienteEntity } from './database/entities/cliente.entity.js';
+import { PedidoEntity } from './database/entities/pedido.entity.js';
+import { DetallePedidoEntity } from './database/entities/detalle-pedido.entity.js';
 import { AuthModule } from './auth/auth.module.js';
 import { InventarioModule } from './inventario/inventario.module.js';
+import { PedidosModule } from './pedidos/pedidos.module.js';
 
 @Module({
   imports: [
@@ -23,6 +27,7 @@ import { InventarioModule } from './inventario/inventario.module.js';
     }),
     AuthModule,
     InventarioModule,
+    PedidosModule,
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
@@ -34,6 +39,9 @@ import { InventarioModule } from './inventario/inventario.module.js';
           LoteEntity,
           UbicacionEntity,
           MovimientoEntity,
+          ClienteEntity,
+          PedidoEntity,
+          DetallePedidoEntity,
         ],
         synchronize: false,
         migrationsRun: false,
