@@ -1,3 +1,4 @@
+import Constants from 'expo-constants';
 import * as Location from 'expo-location';
 import { GoogleMaps } from 'expo-maps';
 import { useMemo, useState } from 'react';
@@ -16,6 +17,8 @@ import type {
   PlanificacionParada,
   PuntoGeografico,
 } from '@/lib/tipos';
+
+const MAPS_CONFIGURED = Constants.expoConfig?.extra?.mapsConfigured === true;
 
 type SelectorProps = {
   visible: boolean;
@@ -187,7 +190,7 @@ export function SelectorUbicacionMapa({
           </View>
         ) : null}
 
-        {punto ? (
+        {punto && MAPS_CONFIGURED ? (
           <View style={styles.mapaContenedor}>
             <GoogleMaps.View
               key={versionMapa}
@@ -235,8 +238,9 @@ export function SelectorUbicacionMapa({
         ) : (
           <View style={styles.sinMapa}>
             <Text style={styles.ayuda}>
-              Busca una dirección o usa tu ubicación actual para abrir el mapa. Nada se guarda hasta
-              confirmar.
+              {punto && !MAPS_CONFIGURED
+                ? 'El punto fue obtenido, pero Maps SDK no está configurado en este APK. No lo uses como evidencia final.'
+                : 'Busca una dirección o usa tu ubicación actual para abrir el mapa. Nada se guarda hasta confirmar.'}
             </Text>
           </View>
         )}
@@ -269,6 +273,15 @@ export function MapaReparto({ origen, paradas }: MapaRepartoProps) {
   );
 
   if (!paradas.length) return null;
+  if (!MAPS_CONFIGURED) {
+    return (
+      <View style={styles.sinMapa}>
+        <Text style={styles.ayuda}>
+          Maps SDK no está configurado en este APK; la secuencia textual sigue disponible.
+        </Text>
+      </View>
+    );
+  }
 
   const centro = {
     latitud:
