@@ -6,6 +6,7 @@ import { randomUUID } from 'node:crypto';
 import { Icono } from '../componentes/icono';
 import { BotonEnviar, Modal, Notificacion } from '../componentes/interacciones';
 import { cambiarCondicionLote, registrarLote, registrarProducto, registrarTraslado } from './acciones';
+import { AccionesProducto } from './acciones-producto';
 
 const API = process.env.API_BASE_URL ?? 'http://localhost:3001';
 
