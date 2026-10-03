@@ -53,9 +53,10 @@ export class LotesService {
     const mapa = new Map<string, FilaExistencia[]>();
     if (ids.length === 0) return mapa;
     const filas = await this.db.query(
-      `SELECT e.lote_id, u.codigo, u.nombre, e.cantidad_fisica, e.cantidad_comprometida
-       FROM existencia e INNER JOIN ubicacion u ON u.id = e.ubicacion_id
-       WHERE e.lote_id = ANY($1::uuid[]) ORDER BY u.codigo`,
+      `SELECT s.lote_id, u.codigo, u.nombre, s.cantidad_fisica, s.cantidad_comprometida
+       FROM saldo_inventario s
+       INNER JOIN ubicacion u ON u.id = s.ubicacion_id
+       WHERE s.lote_id = ANY($1::uuid[]) ORDER BY u.codigo`,
       [ids],
     ) as FilaExistencia[];
     for (const fila of filas) {
@@ -66,7 +67,6 @@ export class LotesService {
     return mapa;
   }
 
-  // La entidad TypeORM no se extiende como objeto: se devuelve un DTO plano.
   private respuestaLote(lote: LoteEntity, existencias: FilaExistencia[]) {
     return {
       id: lote.id,
@@ -123,7 +123,6 @@ export class LotesService {
 
     try {
       const id = await this.db.transaction(async (manager) => {
-        // Serializa reintentos simultaneos de una misma operacion durante esta transaccion.
         await manager.query('SELECT pg_advisory_xact_lock(hashtext($1::text))', [operacionClave]);
         const repetido = await manager.query(
           `SELECT l.id, l.codigo, l.producto_id,
@@ -165,11 +164,6 @@ export class LotesService {
              (operacion_clave, lote_id, tipo, origen_id, destino_id, cantidad, usuario_id)
            VALUES ($1::uuid, $2::uuid, 'INGRESO', NULL, $3::uuid, $4, $5::uuid)`,
           [operacionClave, loteId, destinoId, cantidadInicial, usuarioId],
-        );
-        await manager.query(
-          `INSERT INTO existencia (lote_id, ubicacion_id, cantidad_fisica, cantidad_comprometida)
-           VALUES ($1::uuid, $2::uuid, $3, 0)`,
-          [loteId, destinoId, cantidadInicial],
         );
         return loteId;
       });
