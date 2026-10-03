@@ -26,6 +26,11 @@ export class PedidosController {
     return this.pedidos.listar(solicitud.usuario!.id, consulta);
   }
 
+  @Post('retiros')
+  retirarVarios(@Body() datos: unknown, @Req() solicitud: SolicitudAutenticada) {
+    return this.pedidos.retirarVarios(datos, solicitud.usuario!.id);
+  }
+
   @Post(':id/retiro')
   retirar(
     @Param('id') id: string,
