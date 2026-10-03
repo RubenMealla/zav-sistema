@@ -99,7 +99,8 @@ describe('Pedidos y distribucion E3 (e2e)', () => {
         nombre: `Cliente QA ${sufijo}`,
         telefono: '70000000',
         direccion: `Calle de prueba ${sufijo}, Tarija`,
-        ...(ubicacion ?? {}),
+        latitud: ubicacion?.latitud,
+        longitud: ubicacion?.longitud,
       })
       .expect(201);
     return respuesta.body.id as string;
