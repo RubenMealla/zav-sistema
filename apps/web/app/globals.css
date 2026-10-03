@@ -69,3 +69,10 @@ main:focus { outline: none; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
+
+
+/* Acciones compactas del CRUD de productos. */
+.acciones-tabla { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.acciones-tabla form { margin: 0; }
+.acciones-tabla .boton { min-height: 36px; padding: 7px 10px; white-space: nowrap; }
+.texto-secundario { color: var(--gris-600); font-size: 12px; }
