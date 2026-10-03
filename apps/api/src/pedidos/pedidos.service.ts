@@ -225,10 +225,13 @@ export class PedidosService {
     const { page, limit } = paginacion(consulta, ['estado', 'page', 'limit']);
     let estado: EstadoPedido | undefined;
     if (consulta.estado !== undefined) {
-      if (!['REGISTRADO', 'EN_DISTRIBUCION', 'ENTREGADO'].includes(String(consulta.estado))) {
+      if (
+        typeof consulta.estado !== 'string' ||
+        !['REGISTRADO', 'EN_DISTRIBUCION', 'ENTREGADO'].includes(consulta.estado)
+      ) {
         throw new BadRequestException('estado de pedido no valido.');
       }
-      estado = String(consulta.estado) as EstadoPedido;
+      estado = consulta.estado as EstadoPedido;
     }
 
     const parametros: unknown[] = [vendedorId];
@@ -467,16 +470,32 @@ export class PedidosService {
       }
 
       const pedidos = await manager.query(
-        `SELECT id, vendedor_id, estado, entrega_operacion_clave
+        `SELECT id, vendedor_id, estado, entrega_operacion_clave,
+                entrega_latitud, entrega_longitud
          FROM pedido WHERE id = $1::uuid FOR UPDATE`,
         [id],
-      ) as Array<{ id: string; vendedor_id: string; estado: EstadoPedido; entrega_operacion_clave: string | null }>;
+      ) as Array<{
+        id: string;
+        vendedor_id: string;
+        estado: EstadoPedido;
+        entrega_operacion_clave: string | null;
+        entrega_latitud: string | null;
+        entrega_longitud: string | null;
+      }>;
       if (!pedidos.length || pedidos[0].vendedor_id !== vendedorId) {
         throw new NotFoundException('Pedido no encontrado.');
       }
       const pedido = pedidos[0];
 
-      if (pedido.entrega_operacion_clave === operacionClave) return;
+      if (pedido.entrega_operacion_clave === operacionClave) {
+        if (
+          Number(pedido.entrega_latitud) !== latitud ||
+          Number(pedido.entrega_longitud) !== longitud
+        ) {
+          throw new ConflictException('La clave de entrega ya se utilizo con otras coordenadas.');
+        }
+        return;
+      }
       if (pedido.estado !== 'EN_DISTRIBUCION') {
         throw new ConflictException('El pedido debe estar en distribucion antes de registrar la entrega.');
       }
