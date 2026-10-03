@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -61,6 +62,45 @@ export class ProductosService {
     const valido = uuid(id, 'id');
     const producto = await this.productos.findOneBy({ id: valido });
     if (!producto) throw new NotFoundException('Producto no encontrado.');
+    return producto;
+  }
+
+  async editar(id: string, entrada: unknown) {
+    const valido = uuid(id, 'id');
+    const datos = objeto(entrada, CAMPOS_PRODUCTO);
+    if (Object.keys(datos).length === 0) {
+      throw new BadRequestException('Debe enviar al menos un campo para editar el producto.');
+    }
+
+    const producto = await this.productos.findOneBy({ id: valido });
+    if (!producto) throw new NotFoundException('Producto no encontrado.');
+
+    if (datos.codigo !== undefined) producto.codigo = codigo(datos.codigo, 'codigo', 40);
+    if (datos.nombre !== undefined) producto.nombre = texto(datos.nombre, 'nombre', 120);
+    if (datos.familia !== undefined) producto.familia = texto(datos.familia, 'familia', 70);
+    if (datos.presentacion !== undefined) producto.presentacion = texto(datos.presentacion, 'presentacion', 100);
+    if (datos.pesoGramos !== undefined) producto.pesoGramos = enteroPositivo(datos.pesoGramos, 'pesoGramos');
+    if (datos.precioBob !== undefined) producto.precioBob = precio(datos.precioBob);
+
+    try {
+      return await this.productos.save(producto);
+    } catch (error) {
+      if (codigoPostgres(error) === '23505') {
+        throw new ConflictException('El codigo del producto ya existe.');
+      }
+      throw error;
+    }
+  }
+
+  async darBaja(id: string) {
+    const valido = uuid(id, 'id');
+    const producto = await this.productos.findOneBy({ id: valido });
+    if (!producto) throw new NotFoundException('Producto no encontrado.');
+
+    if (producto.activo) {
+      producto.activo = false;
+      await this.productos.save(producto);
+    }
     return producto;
   }
 }
