@@ -9,7 +9,6 @@ import { UsuarioEntity } from './database/entities/usuario.entity.js';
 import { ProductoEntity } from './database/entities/producto.entity.js';
 import { LoteEntity } from './database/entities/lote.entity.js';
 import { UbicacionEntity } from './database/entities/ubicacion.entity.js';
-import { ExistenciaEntity } from './database/entities/existencia.entity.js';
 import { MovimientoEntity } from './database/entities/movimiento.entity.js';
 import { AuthModule } from './auth/auth.module.js';
 import { InventarioModule } from './inventario/inventario.module.js';
@@ -32,7 +31,6 @@ import { InventarioModule } from './inventario/inventario.module.js';
           ProductoEntity,
           LoteEntity,
           UbicacionEntity,
-          ExistenciaEntity,
           MovimientoEntity,
         ],
         synchronize: false,
