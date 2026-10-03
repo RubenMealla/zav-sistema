@@ -94,16 +94,22 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
     [onCerrarSesion],
   );
 
+  const consultarDatos = useCallback(
+    () =>
+      Promise.all([
+        listarPedidos(token),
+        listarClientes(token),
+        obtenerDisponibilidad(token),
+      ]),
+    [token],
+  );
+
   const cargar = useCallback(
     async (mostrarCarga = true) => {
       if (mostrarCarga) setCargando(true);
       setError('');
       try {
-        const [p, c, d] = await Promise.all([
-          listarPedidos(token),
-          listarClientes(token),
-          obtenerDisponibilidad(token),
-        ]);
+        const [p, c, d] = await consultarDatos();
         setPedidos(p.items);
         setClientes(c.items);
         setDisponibilidad(d);
@@ -114,12 +120,31 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
         setActualizando(false);
       }
     },
-    [manejarError, token],
+    [consultarDatos, manejarError],
   );
 
   useEffect(() => {
-    void cargar();
-  }, [cargar]);
+    let activa = true;
+
+    async function inicializar() {
+      try {
+        const [p, c, d] = await consultarDatos();
+        if (!activa) return;
+        setPedidos(p.items);
+        setClientes(c.items);
+        setDisponibilidad(d);
+      } catch (e) {
+        if (activa) await manejarError(e);
+      } finally {
+        if (activa) setCargando(false);
+      }
+    }
+
+    void inicializar();
+    return () => {
+      activa = false;
+    };
+  }, [consultarDatos, manejarError]);
 
   async function refrescar() {
     setActualizando(true);
