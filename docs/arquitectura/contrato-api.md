@@ -53,7 +53,8 @@ Un traslado que retire stock liberado y vigente desde `VENTA_DESPACHO` responde 
 | GET | `/api/v1/pedidos` | Vendedor | `estado`, `page`, `limit` | 200 solo pedidos propios | 400 |
 | GET | `/api/v1/pedidos/:id` | Vendedor | UUID | 200 Pedido propio | 404 |
 | POST | `/api/v1/pedidos/:id/retiro` | Vendedor | `operacionClave` | 201 EN_DISTRIBUCION | 404, 409 |
-| POST | `/api/v1/pedidos/:id/entrega` | Vendedor | `operacionClave`, `latitud`, `longitud` | 201 ENTREGADO | 400, 404, 409 |
+| POST | `/api/v1/pedidos/retiros` | Vendedor | `retiros[] { pedidoId, operacionClave }` | 201 resultado individual por Pedido | 400; cada ítem conserva 404/409 |
+| POST | `/api/v1/pedidos/:id/entrega` | Vendedor | `operacionClave`, `latitud`, `longitud`, `precisionMetros?` | 201 ENTREGADO | 400, 404, 409 |
 
 ### Creación de pedido
 
@@ -61,7 +62,7 @@ El servidor bloquea lógicamente por Producto durante la comprobación de dispon
 
 ### Retiro
 
-El retiro exige estado `REGISTRADO`, pertenece al mismo Vendedor y asigna lotes FEFO liberados/vigentes en `VENTA_DESPACHO`. Crea movimientos `RETIRO` hacia `EN_DISTRIBUCION` y cambia el pedido a `EN_DISTRIBUCION`. Repetir la misma clave no duplica movimientos.
+El retiro exige estado `REGISTRADO`, pertenece al mismo Vendedor y asigna lotes FEFO liberados/vigentes en `VENTA_DESPACHO`. Crea movimientos `RETIRO` hacia `EN_DISTRIBUCION` y cambia el pedido a `EN_DISTRIBUCION`. Repetir la misma clave no duplica movimientos. El endpoint `POST /api/v1/pedidos/retiros` permite confirmar varios pedidos en una sola acción; cada Pedido conserva su propia transacción, clave idempotente y resultado individual, por lo que un conflicto no revierte los retiros correctos de otros pedidos.
 
 ### Entrega
 
@@ -87,10 +88,11 @@ Cambios previstos:
 | PATCH | `/api/v1/ubicaciones/:id/georreferencia` | Administrador | Configurar coordenadas de una ubicación física |
 | POST | `/api/v1/pedidos/planificacion` | Vendedor | Calcular secuencia geográfica sugerida para pedidos propios |
 
-También se propone extender:
+Estas extensiones ya están implementadas en la rama E3 móvil:
 
-- `POST /api/v1/clientes` con `latitud?` y `longitud?`;
-- `POST /api/v1/pedidos` para copiar al Pedido el snapshot geográfico del Cliente;
-- `POST /api/v1/pedidos/:id/entrega` con `precisionMetros?` y `observacionDistancia?`.
+- `POST /api/v1/clientes` admite `latitud?` y `longitud?`;
+- `POST /api/v1/pedidos` copia al Pedido el snapshot geográfico del Cliente;
+- `POST /api/v1/pedidos/:id/entrega` admite `precisionMetros?` y `observacionDistancia?`;
+- `POST /api/v1/pedidos/retiros` procesa retiros múltiples con resultado individual.
 
-La planificación devolverá distancias geodésicas aproximadas y una secuencia por proximidad. No se presentará como ruta óptima ni como cálculo vial. El servidor recalculará la distancia entre destino esperado y posición real de entrega.
+La planificación devuelve distancias geodésicas aproximadas y una secuencia por proximidad. No se presenta como ruta óptima ni como cálculo vial. El servidor recalcula la distancia entre destino esperado y posición real de entrega.
