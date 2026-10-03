@@ -16,6 +16,7 @@ export class ProductosController {
   }
 
   @Get()
+  @Roles('ADMINISTRADOR', 'VENDEDOR')
   listar(@Query() consulta: Record<string, unknown>) {
     return this.productos.listar(consulta);
   }
@@ -31,6 +32,7 @@ export class ProductosController {
   }
 
   @Get(':id')
+  @Roles('ADMINISTRADOR', 'VENDEDOR')
   obtener(@Param('id') id: string) {
     return this.productos.obtener(id);
   }
