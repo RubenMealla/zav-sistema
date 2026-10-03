@@ -11,6 +11,7 @@ type Condicion = 'LIBERADO' | 'RETENIDO' | 'BLOQUEADO';
 
 type FilaLote = {
   id: string;
+  producto_id: string;
   condicion: Condicion;
   vence_el: string;
   producto_activo: boolean;
@@ -103,10 +104,17 @@ export class CondicionesLoteService {
         return previo.id;
       }
 
+      const referencias = await manager.query(
+        'SELECT producto_id FROM lote WHERE id = $1::uuid',
+        [loteId],
+      ) as Array<{ producto_id: string }>;
+      if (!referencias.length) throw new NotFoundException('Lote no encontrado.');
+
+      await manager.query('SELECT pg_advisory_xact_lock(hashtext($1::text))', [`producto:${referencias[0].producto_id}`]);
       await manager.query('SELECT pg_advisory_xact_lock(hashtext($1::text))', [`condicion-lote:${loteId}`]);
 
       const lotes = await manager.query(
-        `SELECT l.id, l.condicion,
+        `SELECT l.id, l.producto_id, l.condicion,
                 to_char(l.vence_el, 'YYYY-MM-DD') AS vence_el,
                 p.activo AS producto_activo
          FROM lote l
@@ -132,6 +140,48 @@ export class CondicionesLoteService {
         }
         if (!lote.producto_activo) {
           throw new ConflictException('No se puede liberar un lote de un producto inactivo.');
+        }
+      }
+
+      if (condicionNueva === 'BLOQUEADO' && lote.condicion === 'LIBERADO') {
+        const saldosVenta = await manager.query(
+          `SELECT COALESCE(s.cantidad_fisica, 0)::int AS cantidad
+           FROM ubicacion u
+           LEFT JOIN saldo_inventario s
+             ON s.ubicacion_id = u.id AND s.lote_id = $1::uuid
+           WHERE u.codigo = 'VENTA_DESPACHO'`,
+          [loteId],
+        ) as Array<{ cantidad: number }>;
+        const cantidadLoteVenta = saldosVenta[0]?.cantidad ?? 0;
+
+        if (cantidadLoteVenta > 0) {
+          const [fisico, comprometido] = await Promise.all([
+            manager.query(
+              `SELECT COALESCE(SUM(s.cantidad_fisica), 0)::int AS cantidad
+               FROM lote l
+               JOIN saldo_inventario s ON s.lote_id = l.id
+               JOIN ubicacion u ON u.id = s.ubicacion_id
+               WHERE l.producto_id = $1::uuid
+                 AND u.codigo = 'VENTA_DESPACHO'
+                 AND l.condicion = 'LIBERADO'
+                 AND l.vence_el >= CURRENT_DATE`,
+              [lote.producto_id],
+            ) as Promise<Array<{ cantidad: number }>>,
+            manager.query(
+              `SELECT COALESCE(SUM(d.cantidad), 0)::int AS cantidad
+               FROM detalle_pedido d
+               JOIN pedido pe ON pe.id = d.pedido_id
+               WHERE d.producto_id = $1::uuid AND pe.estado = 'REGISTRADO'`,
+              [lote.producto_id],
+            ) as Promise<Array<{ cantidad: number }>>,
+          ]);
+
+          const disponibleTrasBloqueo = fisico[0].cantidad - cantidadLoteVenta;
+          if (disponibleTrasBloqueo < comprometido[0].cantidad) {
+            throw new ConflictException(
+              'No se puede bloquear el lote porque su stock esta reservado para pedidos registrados.',
+            );
+          }
         }
       }
 
