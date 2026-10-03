@@ -19,6 +19,11 @@ import {
   View,
 } from 'react-native';
 
+import {
+  ApiError,
+  buscarDirecciones,
+  direccionInversa,
+} from '@/lib/api';
 import type {
   PlanificacionParada,
   PuntoGeografico,
@@ -30,6 +35,7 @@ const MAP_STYLE_URL =
 
 type SelectorProps = {
   visible: boolean;
+  token: string;
   direccionInicial: string;
   puntoInicial: PuntoGeografico | null;
   onCancelar: () => void;
@@ -59,6 +65,7 @@ function direccionLegible(direccion: Location.LocationGeocodedAddress | undefine
 
 export function SelectorUbicacionMapa({
   visible,
+  token,
   direccionInicial,
   puntoInicial,
   onCancelar,
@@ -70,6 +77,29 @@ export function SelectorUbicacionMapa({
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState('');
 
+  function permiteFallback(error: unknown) {
+    return (
+      error instanceof ApiError &&
+      (error.status === 0 || error.status === 404 || error.status === 503)
+    );
+  }
+
+  async function resolverDireccionInversa(valor: PuntoGeografico) {
+    try {
+      const remota = await direccionInversa(token, valor);
+      if (remota.direccion) return remota.direccion;
+    } catch (e) {
+      if (!permiteFallback(e)) throw e;
+    }
+
+    if (Platform.OS === 'android' && !(await permisoForeground())) return '';
+    const reversa = await Location.reverseGeocodeAsync({
+      latitude: valor.latitud,
+      longitude: valor.longitud,
+    });
+    return direccionLegible(reversa[0]);
+  }
+
   async function buscarDireccion() {
     if (!direccion.trim()) {
       setError('Escribe una dirección para buscarla.');
@@ -78,10 +108,31 @@ export function SelectorUbicacionMapa({
     setCargando(true);
     setError('');
     try {
+      try {
+        const remotos = await buscarDirecciones(token, direccion.trim());
+        if (remotos.resultados.length) {
+          const elegido = remotos.resultados[0];
+          setDireccion(elegido.direccion);
+          setPunto({
+            latitud: elegido.latitud,
+            longitud: elegido.longitud,
+          });
+          setVersionMapa((actual) => actual + 1);
+          return;
+        }
+        setError('No se encontró esa dirección. Puedes corregir el texto e intentar otra vez.');
+        return;
+      } catch (e) {
+        if (!permiteFallback(e)) throw e;
+      }
+
       if (Platform.OS === 'android' && !(await permisoForeground())) {
-        setError('Android requiere permiso de ubicación para buscar direcciones con el proveedor local.');
+        setError(
+          'El servicio de búsqueda remoto no está disponible y Android requiere permiso de ubicación para usar la búsqueda local.',
+        );
         return;
       }
+
       const resultados = await Location.geocodeAsync(direccion.trim());
       if (!resultados.length) {
         setError('No se encontró esa dirección. Puedes corregir el texto e intentar otra vez.');
@@ -119,11 +170,7 @@ export function SelectorUbicacionMapa({
       setPunto(nuevo);
       setVersionMapa((actual) => actual + 1);
 
-      const reversa = await Location.reverseGeocodeAsync({
-        latitude: nuevo.latitud,
-        longitude: nuevo.longitud,
-      });
-      const sugerida = direccionLegible(reversa[0]);
+      const sugerida = await resolverDireccionInversa(nuevo);
       if (sugerida) setDireccion(sugerida);
     } catch {
       setError('No se pudo obtener la ubicación actual.');
@@ -140,13 +187,7 @@ export function SelectorUbicacionMapa({
     let direccionFinal = direccion.trim();
     if (!direccionFinal) {
       try {
-        if (await permisoForeground()) {
-          const reversa = await Location.reverseGeocodeAsync({
-            latitude: punto.latitud,
-            longitude: punto.longitud,
-          });
-          direccionFinal = direccionLegible(reversa[0]);
-        }
+        direccionFinal = await resolverDireccionInversa(punto);
       } catch {
         // La geocodificación inversa es auxiliar: el punto sigue siendo válido.
       }

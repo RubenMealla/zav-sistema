@@ -744,6 +744,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
       {selectorUbicacionVisible ? (
         <SelectorUbicacionMapa
           visible
+          token={token}
           direccionInicial={clienteEditandoUbicacion?.direccion ?? clienteDireccion}
           puntoInicial={
             clienteEditandoUbicacion?.ubicacion

@@ -219,3 +219,32 @@ export function entregarPedidoConComprobacion(
     token,
   );
 }
+
+export type DireccionGeocodificada = {
+  direccion: string;
+  latitud: number;
+  longitud: number;
+};
+
+export function buscarDirecciones(token: string, consulta: string) {
+  return solicitud<{
+    proveedor: 'GEOAPIFY';
+    resultados: DireccionGeocodificada[];
+  }>(
+    `/api/v1/geografia/geocodificar?q=${encodeURIComponent(consulta.trim())}`,
+    {},
+    token,
+  );
+}
+
+export function direccionInversa(token: string, punto: PuntoGeografico) {
+  const params = new URLSearchParams({
+    latitud: String(punto.latitud),
+    longitud: String(punto.longitud),
+  });
+  return solicitud<{ proveedor: 'GEOAPIFY'; direccion: string | null }>(
+    `/api/v1/geografia/reversa?${params.toString()}`,
+    {},
+    token,
+  );
+}

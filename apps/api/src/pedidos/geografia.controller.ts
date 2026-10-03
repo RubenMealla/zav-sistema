@@ -5,6 +5,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -29,6 +30,21 @@ export class GeografiaController {
   @Roles('ADMINISTRADOR')
   actualizarUbicacionFisica(@Param('id') id: string, @Body() datos: unknown) {
     return this.geografia.actualizarUbicacionFisica(id, datos);
+  }
+
+  @Get('geografia/geocodificar')
+  @Roles('VENDEDOR')
+  geocodificar(@Query('q') consulta: string | undefined) {
+    return this.geografia.geocodificar(consulta);
+  }
+
+  @Get('geografia/reversa')
+  @Roles('VENDEDOR')
+  geocodificacionInversa(
+    @Query('latitud') latitud: string | undefined,
+    @Query('longitud') longitud: string | undefined,
+  ) {
+    return this.geografia.geocodificacionInversa(latitud, longitud);
   }
 
   @Post('pedidos/planificacion')

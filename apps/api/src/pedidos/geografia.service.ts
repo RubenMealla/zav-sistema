@@ -3,6 +3,7 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { objeto, uuid } from '../inventario/validacion.js';
@@ -43,9 +44,134 @@ function distanciaHaversine(a: Punto, b: Punto): number {
   return 2 * radioTierraM * Math.asin(Math.min(1, Math.sqrt(h)));
 }
 
+function coordenadaConsulta(
+  valor: unknown,
+  campo: string,
+  minimo: number,
+  maximo: number,
+): number {
+  const numero =
+    typeof valor === 'string' && valor.trim() !== '' ? Number(valor) : valor;
+  return coordenada(numero, campo, minimo, maximo);
+}
+
+function consultaDireccion(valor: unknown): string {
+  if (typeof valor !== 'string') {
+    throw new BadRequestException('q es obligatorio.');
+  }
+  const consulta = valor.trim();
+  if (consulta.length < 3 || consulta.length > 200) {
+    throw new BadRequestException('q debe contener entre 3 y 200 caracteres.');
+  }
+  return consulta;
+}
+
+type GeoapifyResultado = {
+  formatted?: unknown;
+  lat?: unknown;
+  lon?: unknown;
+};
+
+type GeoapifyRespuesta = {
+  results?: GeoapifyResultado[];
+};
+
 @Injectable()
 export class GeografiaService {
   constructor(private readonly db: DataSource) {}
+
+  private claveGeoapify(): string {
+    const apiKey = process.env.GEOAPIFY_API_KEY?.trim();
+    if (!apiKey) {
+      throw new ServiceUnavailableException(
+        'El proveedor externo de geocodificacion no esta configurado.',
+      );
+    }
+    return apiKey;
+  }
+
+  private async consultarGeoapify(
+    ruta: 'search' | 'reverse',
+    parametros: Record<string, string>,
+  ): Promise<GeoapifyRespuesta> {
+    const url = new URL(`https://api.geoapify.com/v1/geocode/${ruta}`);
+    for (const [clave, valor] of Object.entries(parametros)) {
+      url.searchParams.set(clave, valor);
+    }
+    url.searchParams.set('format', 'json');
+    url.searchParams.set('lang', 'es');
+    url.searchParams.set('apiKey', this.claveGeoapify());
+
+    let respuesta: Response;
+    try {
+      respuesta = await fetch(url, {
+        headers: { Accept: 'application/json' },
+        signal: AbortSignal.timeout(6000),
+      });
+    } catch {
+      throw new ServiceUnavailableException(
+        'El proveedor externo de geocodificacion no esta disponible.',
+      );
+    }
+
+    if (!respuesta.ok) {
+      throw new ServiceUnavailableException(
+        'El proveedor externo de geocodificacion respondio con error.',
+      );
+    }
+
+    try {
+      return (await respuesta.json()) as GeoapifyRespuesta;
+    } catch {
+      throw new ServiceUnavailableException(
+        'El proveedor externo de geocodificacion devolvio una respuesta invalida.',
+      );
+    }
+  }
+
+  async geocodificar(entrada: unknown) {
+    const consulta = consultaDireccion(entrada);
+    const cuerpo = await this.consultarGeoapify('search', {
+      text: consulta,
+      filter: 'countrycode:bo',
+      limit: '5',
+    });
+
+    const resultados = (cuerpo.results ?? [])
+      .map((resultado) => ({
+        direccion:
+          typeof resultado.formatted === 'string' ? resultado.formatted : '',
+        latitud: Number(resultado.lat),
+        longitud: Number(resultado.lon),
+      }))
+      .filter(
+        (resultado) =>
+          resultado.direccion.length > 0 &&
+          Number.isFinite(resultado.latitud) &&
+          Number.isFinite(resultado.longitud),
+      );
+
+    return { proveedor: 'GEOAPIFY', resultados };
+  }
+
+  async geocodificacionInversa(latitudEntrada: unknown, longitudEntrada: unknown) {
+    const latitud = coordenadaConsulta(latitudEntrada, 'latitud', -90, 90);
+    const longitud = coordenadaConsulta(longitudEntrada, 'longitud', -180, 180);
+    const cuerpo = await this.consultarGeoapify('reverse', {
+      lat: String(latitud),
+      lon: String(longitud),
+      limit: '1',
+    });
+    const primero = cuerpo.results?.[0];
+
+    return {
+      proveedor: 'GEOAPIFY',
+      direccion:
+        primero && typeof primero.formatted === 'string'
+          ? primero.formatted
+          : null,
+    };
+  }
 
   async ventaDespacho() {
     const filas = await this.db.query(

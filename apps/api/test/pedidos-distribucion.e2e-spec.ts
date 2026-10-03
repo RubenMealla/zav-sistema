@@ -164,6 +164,32 @@ describe('Pedidos y distribucion E3 (e2e)', () => {
     );
   });
 
+  it('protege la geocodificación externa y no exige una credencial en el cliente móvil', async () => {
+    const anterior = process.env.GEOAPIFY_API_KEY;
+    delete process.env.GEOAPIFY_API_KEY;
+    try {
+      await request(app.getHttpServer())
+        .get('/api/v1/geografia/geocodificar?q=Tarija')
+        .set('Authorization', `Bearer ${tokenAdmin}`)
+        .expect(403);
+
+      const noConfigurado = await request(app.getHttpServer())
+        .get('/api/v1/geografia/geocodificar?q=Tarija')
+        .set('Authorization', `Bearer ${tokenVendedor}`)
+        .expect(503);
+
+      expect(noConfigurado.body).toEqual(
+        expect.objectContaining({
+          statusCode: 503,
+          path: '/api/v1/geografia/geocodificar?q=Tarija',
+        }),
+      );
+    } finally {
+      if (anterior === undefined) delete process.env.GEOAPIFY_API_KEY;
+      else process.env.GEOAPIFY_API_KEY = anterior;
+    }
+  });
+
   it('registra y consulta un Cliente como Vendedor', async () => {
     const clienteId = await crearCliente('REGISTRO');
 
