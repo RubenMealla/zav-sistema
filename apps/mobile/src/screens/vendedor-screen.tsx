@@ -84,8 +84,8 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
 
   const manejarError = useCallback(
     async (e: unknown) => {
-      if (e instanceof ApiError && e.status === 401) {
-        Alert.alert('Sesión vencida', 'Vuelve a iniciar sesión para continuar.');
+      if (e instanceof ApiError && (e.status === 401 || e.status === 403)) {
+        Alert.alert('Sesión no válida', 'Vuelve a iniciar sesión para continuar.');
         await onCerrarSesion();
         return;
       }
