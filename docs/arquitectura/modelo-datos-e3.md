@@ -12,7 +12,7 @@ La tabla lote_condicion_historial se conserva como estructura técnica de audito
 
 ## Justificación del saldo derivado
 
-Un destino suma cantidad y un origen resta cantidad. INGRESO tiene destino sin origen y TRASLADO resta en origen y suma en destino. La migración 1790380800000-saldos-derivados.mjs valida antes de retirar la tabla anterior que el saldo persistido coincida con el historial y que no existan cantidades comprometidas. Si la validación falla, la migración se detiene.
+Un destino suma cantidad y un origen resta cantidad. INGRESO tiene destino sin origen y TRASLADO resta en origen y suma en destino. La migración se aplica en dos etapas para evitar incompatibilidad entre la API desplegada y el esquema. `1790380800000-saldos-derivados.mjs` valida la equivalencia y crea la vista `saldo_inventario` sin eliminar la tabla anterior. Después de desplegar y verificar la API que lee la vista, `1790384400000-retirar-existencia.mjs` repite la validación y recién entonces elimina `existencia`. Si cualquiera de las validaciones falla, el cambio se detiene.
 
 ## Estado de implementación
 
