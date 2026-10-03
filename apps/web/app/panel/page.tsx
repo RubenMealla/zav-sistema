@@ -50,6 +50,8 @@ const mensajes: Record<string, string> = {
   'condicion-conflicto': 'No se pudo cambiar la condición. Revisa estado, vigencia y producto.',
   conexion: 'No se pudo conectar con la API de ZAV.',
   producto: 'No se registró el producto. Revisa los datos.',
+  'producto-edicion': 'No se pudo actualizar el producto. Revisa los datos.',
+  'producto-baja': 'No se pudo dar de baja el producto.'
   lote: 'No se registró el lote. Comprueba fechas, ubicación y cantidad.',
   traslado: 'No se registró el traslado. Revisa lote, ubicaciones y cantidad.',
   condicion: 'No se cambió la condición del lote. Revisa los datos.',
@@ -57,6 +59,8 @@ const mensajes: Record<string, string> = {
 
 const mensajesOk: Record<string, string> = {
   producto: 'Producto registrado correctamente.',
+  'producto-editado': 'Producto actualizado correctamente.',
+  'producto-baja': 'Producto dado de baja correctamente.',
   lote: 'Lote e ingreso inicial registrados correctamente.',
   traslado: 'Traslado registrado correctamente.',
   condicion: 'Condición del lote actualizada correctamente.',
