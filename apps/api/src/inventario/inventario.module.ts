@@ -3,7 +3,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from '../auth/auth.module.js';
 import { ProductoEntity } from '../database/entities/producto.entity.js';
 import { LoteEntity } from '../database/entities/lote.entity.js';
-import { ExistenciaEntity } from '../database/entities/existencia.entity.js';
 import { UsuarioEntity } from '../database/entities/usuario.entity.js';
 import { ProductosController } from './productos.controller.js';
 import { ProductosService } from './productos.service.js';
@@ -15,7 +14,7 @@ import { CondicionesLoteController } from './condiciones-lote.controller.js';
 import { CondicionesLoteService } from './condiciones-lote.service.js';
 
 @Module({
-  imports: [AuthModule, TypeOrmModule.forFeature([ProductoEntity, LoteEntity, ExistenciaEntity, UsuarioEntity])],
+  imports: [AuthModule, TypeOrmModule.forFeature([ProductoEntity, LoteEntity, UsuarioEntity])],
   controllers: [ProductosController, LotesController, MovimientosController, CondicionesLoteController],
   providers: [ProductosService, LotesService, MovimientosService, CondicionesLoteService],
 })

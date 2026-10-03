@@ -1,15 +1,16 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { APP_FILTER } from '@nestjs/core';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
-
+import { ApiHttpExceptionFilter } from './common/api-http-exception.filter.js';
+import { CorsMiddleware } from './common/cors.middleware.js';
 import { UsuarioEntity } from './database/entities/usuario.entity.js';
 import { ProductoEntity } from './database/entities/producto.entity.js';
 import { LoteEntity } from './database/entities/lote.entity.js';
 import { UbicacionEntity } from './database/entities/ubicacion.entity.js';
-import { ExistenciaEntity } from './database/entities/existencia.entity.js';
 import { MovimientoEntity } from './database/entities/movimiento.entity.js';
 import { AuthModule } from './auth/auth.module.js';
 import { InventarioModule } from './inventario/inventario.module.js';
@@ -32,7 +33,6 @@ import { InventarioModule } from './inventario/inventario.module.js';
           ProductoEntity,
           LoteEntity,
           UbicacionEntity,
-          ExistenciaEntity,
           MovimientoEntity,
         ],
         synchronize: false,
@@ -43,6 +43,13 @@ import { InventarioModule } from './inventario/inventario.module.js';
     }),
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    { provide: APP_FILTER, useClass: ApiHttpExceptionFilter },
+  ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(CorsMiddleware).forRoutes('{*splat}');
+  }
+}

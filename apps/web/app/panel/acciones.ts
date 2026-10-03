@@ -5,12 +5,12 @@ import { redirect } from 'next/navigation';
 
 const API = process.env.API_BASE_URL ?? 'http://localhost:3001';
 
-async function enviar(ruta: string, datos: Record<string, unknown>): Promise<number | 'conexion'> {
+export async function enviar(ruta: string, datos: Record<string, unknown>, metodo: 'POST' | 'PATCH' = 'POST'): Promise<number | 'conexion'> {
   const token = (await cookies()).get('zav_acceso')?.value;
   if (!token) redirect('/acceso?error=sesion');
   try {
     const r = await fetch(`${API}${ruta}`, {
-      method: 'POST',
+      method: metodo,
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify(datos),
       cache: 'no-store',

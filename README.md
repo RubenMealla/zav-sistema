@@ -1,501 +1,220 @@
-
 # Sistema ZAV
 
-### Sistema web y móvil para la gestión de pedidos, inventario y distribución de ZAV
+Sistema web y móvil para la gestión de productos terminados, pedidos y distribución de Fiambres y Embutidos ZAV. Trabajo Final del Diplomado en Desarrollo Web y Aplicaciones Móviles de la Universidad Autónoma Juan Misael Saracho (UAJMS), Tarija, Bolivia, gestión 2026.
 
-Proyecto de desarrollo de software realizado como Trabajo Final del Diplomado en Desarrollo Web y Aplicaciones Móviles de la Universidad Autónoma Juan Misael Saracho (UAJMS), Tarija, Bolivia, gestión 2026.
+## Alcance y roles
 
----
+La solución se organiza como un monorepo con una API REST central y dos clientes diferenciados por rol:
 
-## 1. Descripción del proyecto
+- **Administrador — aplicación web:** autenticación, productos, lotes, condición comercial e inventario administrativo.
+- **Vendedor — aplicación móvil:** clientes, pedidos, retiro, distribución y entrega con ubicación GPS puntual.
+- **Acceso público:** únicamente las funciones que se habiliten expresamente sin autenticación. El catálogo/noticias/promociones no forman parte de los Must de E3.
 
-ZAV es un sistema informático web y móvil orientado a integrar la gestión de pedidos, inventario de productos terminados y distribución de la empresa Fiambres y Embutidos ZAV.
+No se incluyen materias primas, recetas, proveedores, compras, costos de producción, facturación fiscal, seguimiento GPS continuo ni optimización automática de rutas.
 
-El proyecto busca centralizar la información de los procesos comerciales y operativos, facilitando el registro de productos terminados, el control de existencias, los movimientos de inventario, la atención de pedidos y el seguimiento de las entregas.
-
-La solución se desarrolla mediante una aplicación web y una aplicación móvil que comparten una API REST y una base de datos centralizada.
-
-El sistema contempla dos roles internos: Administrador y Vendedor. El Administrador podrá utilizar web y móvil según sus permisos; las operaciones internas del Vendedor se centrarán en la aplicación móvil.
-
-Adicionalmente, se contempla un módulo público para consultar información de la empresa, productos, noticias y promociones sin necesidad de iniciar sesión.
-
-La aplicación móvil incorporará funciones de distribución, incluido el registro puntual de la ubicación GPS al confirmar las entregas.
-
-### Alcance funcional
-
-El desarrollo se centra en los siguientes módulos:
-
-- Autenticación y control de acceso por roles.
-- Gestión de clientes y pedidos.
-- Registro de productos terminados y lotes.
-- Control de existencias y movimientos de inventario.
-- Registro de entradas, traslados y salidas de productos.
-- Gestión y seguimiento de la distribución.
-- Registro de entregas con ubicación GPS.
-- Consulta pública de productos, noticias y promociones.
-
-El inventario comprende productos terminados en las áreas de Producción y Almacenamiento y Venta y Despacho.
-
-### Límites del proyecto
-
-Esta versión no contempla la gestión de materias primas, recetas, proveedores, compras, costos de producción, pagos ni facturación fiscal.
-
-Tampoco incluye seguimiento GPS continuo, optimización automática de rutas ni integración automática con servicios de mensajería.
-
----
-
-## 2. Arquitectura del sistema
-
-El proyecto se organiza como un monorepo, con tres aplicaciones independientes que comparten una estructura de trabajo y un único gestor de dependencias.
+## Arquitectura
 
 ```text
-                  ┌─────────────────────┐
-                  │   Aplicación web    │
-                  │   Next.js + React   │
-                  └──────────┬──────────┘
-                             │
-                             │ HTTPS / JSON
-                             │
-┌─────────────────────┐      │
-│  Aplicación móvil   │      │
-│ React Native + Expo │      │
-└──────────┬──────────┘      │
-           │                 │
-           │ HTTPS / JSON    │
-           │                 │
-           ▼                 ▼
-      ┌──────────────────────────┐
-      │         API REST         │
-      │     NestJS + Node.js     │
-      │                          │
-      │ Reglas de negocio y      │
-      │ control de acceso        │
-      └────────────┬─────────────┘
-                   │
-                   │ Conexión PostgreSQL
-                   │
-                   ▼
-      ┌──────────────────────────┐
-      │        PostgreSQL        │
-      │     Base de datos        │
-      │       centralizada       │
-      └──────────────────────────┘
+Next.js / React (Administrador)
+             |
+             | HTTPS / JSON
+             v
+      NestJS REST API
+             |
+             | PostgreSQL
+             v
+          Neon
+
+React Native / Expo (Vendedor)
+             |
+             +---- HTTPS / JSON ----> misma API
 ```
 
-**Estado de la arquitectura:** la API ya se conecta con PostgreSQL en Neon development y cuenta con autenticación de Administrador, registro y consulta de productos y lotes e ingreso inicial de existencias. Las aplicaciones web y móvil aún tienen su estructura inicial; su integración con la API está pendiente.
+La API concentra autenticación, autorización y reglas de negocio. Los permisos no dependen de ocultar botones en los clientes.
 
-La aplicación web y la aplicación móvil consumirán una misma API para mantener centralizadas las reglas de negocio y la información del sistema.
+## Modelo de inventario
 
----
+El modelo principal de E3 se limita a ocho entidades de negocio:
 
-## 3. Tecnologías utilizadas
+`Usuario, Cliente, Producto, Lote, Ubicacion, Movimiento, Pedido, DetallePedido`.
 
-### Aplicación web
+**Movimiento es la fuente de verdad del inventario físico.** El saldo actual se obtiene mediante la vista SQL `saldo_inventario`, calculada desde los movimientos de entrada y salida por lote y ubicación. No existe un endpoint para sobrescribir saldos.
 
-| Tecnología | Función |
+`lote_condicion_historial` se conserva como estructura técnica de auditoría de cambios de condición. No constituye una entidad principal de negocio.
+
+## Tecnologías
+
+| Capa | Tecnologías principales |
 |---|---|
-| Next.js 16.3.5 | Framework de desarrollo web |
-| React 19.2.8 | Construcción de interfaces |
-| TypeScript | Desarrollo con tipado estático |
-| Tailwind CSS | Estilos de la interfaz |
-| App Router | Navegación y organización de páginas |
-| ESLint | Análisis estático del código |
+| Web | Next.js 16.3.5, React 19.2.8, TypeScript |
+| Móvil | React Native 0.86.3, Expo SDK 57, Expo Router, TypeScript |
+| API | NestJS 12, Node.js 24, TypeScript, TypeORM |
+| Datos | PostgreSQL 18, Neon |
+| Web pública | Vercel |
+| API pública | Render |
+| QA | Vitest, Supertest, Playwright, GitHub Actions |
+| Gestión | GitHub Issues/PR/Actions y Trello Kanban |
 
-Directorio: `apps/web`
+Las versiones efectivas de dependencias se encuentran en los archivos `package.json` y `pnpm-lock.yaml`.
 
-### Aplicación móvil
+## URLs de revisión
 
-| Tecnología | Función |
-|---|---|
-| React Native 0.86.3 | Desarrollo de la aplicación móvil |
-| Expo SDK 57 | Herramientas y entorno de desarrollo |
-| React | Construcción de interfaces móviles |
-| TypeScript | Desarrollo con tipado estático |
-| Expo Router | Navegación entre pantallas |
-| Expo Go | Ejecución durante el desarrollo en Android |
-| Metro Bundler | Empaquetado de la aplicación |
+- Web: https://zav-sistema.vercel.app
+- API: https://zav-api-2026.onrender.com
+- Salud de la API: https://zav-api-2026.onrender.com/api/v1/salud
+- Repositorio: https://github.com/RubenMealla/zav-sistema
 
-Directorio: `apps/mobile`
+La ruta de salud responde:
 
-La captura de ubicación GPS se implementará mediante las capacidades de geolocalización del dispositivo móvil, solicitando los permisos correspondientes.
-
-### Backend y API
-
-| Tecnología | Función |
-|---|---|
-| NestJS 12 | Framework del backend |
-| Node.js 24 | Entorno de ejecución |
-| TypeScript | Lenguaje principal |
-| Express | Servidor HTTP utilizado por NestJS |
-| Vitest | Pruebas automatizadas |
-| Supertest | Pruebas de endpoints HTTP |
-| Oxlint | Análisis estático del código |
-| Prettier | Formato del código |
-
-Directorio: `apps/api`
-
-### Base de datos y despliegue
-
-| Tecnología o servicio | Función |
-|---|---|
-| PostgreSQL | Base de datos relacional |
-| Neon | Alojamiento de PostgreSQL |
-| Vercel | Despliegue de la aplicación web |
-| Render | Despliegue de la API |
-
-La conexión con la base de datos se comprobó en Neon development. El despliegue público de las aplicaciones y la API sigue pendiente.
-
-### Herramientas de desarrollo
-
-- Visual Studio Code.
-- Git y GitHub.
-- pnpm Workspaces.
-- PowerShell.
-- Trello para la gestión de tareas mediante Kanban.
-
-Las versiones específicas de las dependencias se encuentran registradas en los archivos `package.json` y en el archivo `pnpm-lock.yaml`.
-
----
-
-## 4. Estructura del repositorio
-
-```text
-zav-sistema/
-│
-├── apps/
-│   ├── web/                  # Aplicación web Next.js
-│   ├── mobile/               # Aplicación móvil Expo
-│   └── api/                  # Backend NestJS
-│
-├── packages/                 # Código compartido
-│
-├── docs/                     # Documentación técnica
-│   └── licencias/
-│
-├── .vscode/                  # Configuración del editor
-│
-├── .gitignore                # Archivos excluidos de Git
-├── .gitattributes            # Configuración de atributos Git
-│
-├── package.json              # Configuración del monorepo
-├── pnpm-workspace.yaml       # Definición de los workspaces
-├── pnpm-lock.yaml            # Registro de dependencias
-│
-└── README.md                 # Documentación principal
+```json
+{"estado":"ok"}
 ```
 
-La organización permite desarrollar las aplicaciones de forma independiente y mantener un backend común para las operaciones del sistema.
+La URL de salud se considera evidencia de producción únicamente después de que la versión correspondiente haya sido integrada y desplegada.
 
----
+## Ejecución local
 
-## 5. Requisitos del entorno
-
-Para ejecutar el proyecto en desarrollo se requiere:
-
-| Herramienta | Versión utilizada |
-|---|---|
-| Node.js | 24.20.0 |
-| pnpm | 12.4.2 |
-| npm | 11.19.0 |
-| Git | Instalación compatible con el entorno |
-| Editor | Visual Studio Code u otro editor compatible |
-
-Para ejecutar la aplicación móvil en un dispositivo físico se utiliza Android con Expo Go.
-
-Las pruebas iniciales se realizan en un entorno de desarrollo Windows mediante PowerShell.
-
----
-
-## 6. Instalación del proyecto
-
-### 6.1. Clonar el repositorio
-
-```bash
-git clone https://github.com/RubenMealla/zav-sistema.git
-```
-
-Ingresar al directorio del proyecto:
-
-```bash
-cd zav-sistema
-```
-
-### 6.2. Instalar las dependencias
-
-Ejecutar desde la raíz:
+Desde la raíz:
 
 ```bash
 pnpm install
 ```
 
-pnpm instalará las dependencias de las aplicaciones definidas en el workspace.
-
-Para comprobar las versiones del entorno:
-
-```bash
-node --version
-pnpm --version
-```
-
----
-
-## 7. Ejecución de las aplicaciones
-
-Cada aplicación se ejecuta de manera independiente desde la raíz del repositorio.
-
-### 7.1. Aplicación web
-
-Iniciar el servidor de desarrollo:
+Web:
 
 ```bash
 pnpm --filter @zav/web dev
 ```
 
-Abrir en el navegador:
-
-http://localhost:3000
-
-Para generar una compilación de producción:
-
-```bash
-pnpm --filter @zav/web build
-```
-
-### 7.2. Aplicación móvil
-
-Iniciar Expo:
-
-```bash
-pnpm --filter @zav/mobile start
-```
-
-Expo iniciará Metro Bundler y mostrará un código QR en la terminal.
-
-Para ejecutar la aplicación en Android:
-
-1. Instalar Expo Go en el dispositivo.
-2. Conectar el teléfono y el equipo de desarrollo a una red compatible.
-3. Abrir Expo Go y escanear el código QR.
-4. Esperar a que se cargue la aplicación.
-
-Para iniciar la versión web de la aplicación móvil:
-
-```bash
-pnpm --filter @zav/mobile web
-```
-
-La versión web de Expo se utiliza como herramienta de desarrollo y no sustituye a la aplicación web principal desarrollada con Next.js.
-
-### 7.3. Backend
-
-Iniciar la API en modo desarrollo:
+API:
 
 ```bash
 pnpm --filter @zav/api start:dev
 ```
 
-La API utiliza inicialmente el puerto 3001:
+Móvil:
 
-http://localhost:3001
+```bash
+pnpm --filter @zav/mobile start
+```
 
-El puerto puede modificarse mediante la variable de entorno `PORT`.
+## Variables de entorno
 
-La API cuenta con el endpoint inicial y con rutas de autenticación (`/api/v1/auth`), productos (`/api/v1/productos`) y lotes (`/api/v1/lotes`). Las rutas empresariales existentes requieren un JWT de Administrador; los demás módulos siguen pendientes.
+La API documenta su configuración en `apps/api/.env.example`. Los valores reales deben permanecer fuera de Git.
 
----
-
-## 8. Variables de entorno
-
-El backend dispone de un archivo de configuración de ejemplo:
-
-`apps/api/.env.example`
-
-Este archivo documenta las variables necesarias para el entorno local.
-
-Para preparar la configuración de desarrollo, copiarlo dentro de `apps/api` con el nombre `.env` y completar los valores correspondientes.
-
-Ejemplo:
+Variables principales:
 
 ```dotenv
 NODE_ENV=development
 PORT=3001
-
-DATABASE_URL=postgresql://usuario:contrasena@localhost:5432/zav_db
-
-WEB_ORIGIN=http://localhost:3000
+DATABASE_URL=postgresql://...
+CORS_ORIGINS=http://localhost:3000,https://zav-sistema.vercel.app
 JWT_SECRET=
 ```
 
-Los valores mostrados son únicamente ejemplos.
+Nunca se versionan archivos `.env`, cadenas de conexión reales, tokens, contraseñas ni claves de servicio.
 
-El backend ya carga variables de entorno y utiliza `DATABASE_URL` para PostgreSQL y `JWT_SECRET` para firmar tokens. Los valores reales se guardan únicamente en el archivo privado `.env`. La configuración definitiva de CORS para web y móvil aún debe verificarse.
+## Seguridad
 
-**Seguridad:** no incorporar al repositorio archivos `.env`, contraseñas reales, tokens, claves privadas ni cadenas de conexión que contengan credenciales.
+- Contraseñas almacenadas con Argon2id.
+- JWT de acceso con expiración.
+- Autorización por rol comprobada en NestJS.
+- Una ruta protegida sin token responde 401.
+- Un usuario autenticado con rol incorrecto responde 403.
+- Validación de entrada en servidor y validación de usabilidad en los clientes.
+- CORS restringido a los orígenes web configurados.
+- Los errores internos no deben exponer trazas, contraseñas ni secretos.
+- La baja de Producto es lógica y preserva trazabilidad histórica.
 
-El archivo `.gitignore` excluye los archivos de entorno y permite conservar los archivos de ejemplo sin información sensible.
+## API base de inventario
 
----
+| Método | Ruta | Rol |
+|---|---|---|
+| GET | `/api/v1/salud` | Público |
+| POST | `/api/v1/auth/login` | Público |
+| GET | `/api/v1/auth/me` | Autenticado |
+| GET/POST | `/api/v1/productos` | Administrador |
+| GET/PATCH | `/api/v1/productos/:id` | Administrador |
+| PATCH | `/api/v1/productos/:id/baja` | Administrador |
+| GET/POST | `/api/v1/lotes` | Administrador |
+| POST | `/api/v1/movimientos/traslado` | Administrador |
+| GET | `/api/v1/movimientos?loteId=...` | Administrador |
+| POST | `/api/v1/lotes/:id/liberar` | Administrador |
+| POST | `/api/v1/lotes/:id/bloquear` | Administrador |
+| GET | `/api/v1/lotes/:id/condiciones` | Administrador |
 
-## 9. Comprobaciones y pruebas
+Los comandos de inventario usan `operacionClave` para idempotencia. Repetir la misma operación con los mismos datos no duplica movimientos; reutilizar la misma clave para una operación diferente se rechaza.
 
-### Aplicación web
+## Pruebas
 
-Ejecutar el análisis estático:
-
-```bash
-pnpm --filter @zav/web lint
-```
-
-Generar la compilación:
-
-```bash
-pnpm --filter @zav/web build
-```
-
-### Aplicación móvil
-
-Ejecutar ESLint:
-
-```bash
-pnpm --filter @zav/mobile lint
-```
-
-Comprobar TypeScript:
-
-```bash
-pnpm --filter @zav/mobile exec tsc --noEmit
-```
-
-Ejecutar Expo Doctor:
-
-```bash
-cd apps/mobile
-npx expo-doctor
-```
-
-El diagnóstico permite comprobar la compatibilidad de las dependencias con el SDK de Expo instalado.
-
-### Backend
-
-Ejecutar el análisis estático:
+API:
 
 ```bash
 pnpm --filter @zav/api lint
-```
-
-Compilar la aplicación:
-
-```bash
 pnpm --filter @zav/api build
-```
-
-Ejecutar las pruebas unitarias:
-
-```bash
 pnpm --filter @zav/api test
-```
-
-Ejecutar las pruebas de extremo a extremo:
-
-```bash
 pnpm --filter @zav/api test:e2e
 ```
 
-Los resultados iniciales corresponden a la configuración base de las aplicaciones. Las pruebas funcionales del sistema ZAV se incorporarán conforme se desarrollen los módulos empresariales.
+Web:
 
----
+```bash
+pnpm --filter @zav/web lint
+pnpm --filter @zav/web build
+pnpm --filter @zav/web test:e2e
+```
 
-## 10. Metodología y seguimiento del desarrollo
+Móvil:
 
-El proyecto utiliza Kanban como metodología de organización y seguimiento del trabajo.
+```bash
+pnpm --filter @zav/mobile lint
+pnpm --filter @zav/mobile exec tsc --noEmit
+```
 
-Las actividades se gestionan mediante un tablero en Trello, estructurado en cinco columnas:
+GitHub Actions ejecuta QA con PostgreSQL aislado. Los reportes y artifacts de cada ejecución se conservan como evidencia. Durante el desarrollo se mantienen también los fallos reales detectados y sus correcciones; una ejecución final verde no significa que el desarrollo no haya tenido incidencias.
 
-1. Pendiente.
-2. Por realizar.
-3. En desarrollo.
-4. En verificación.
-5. Terminado.
+## Kanban y trazabilidad
 
-Se establece un límite de dos tareas simultáneas en la columna En desarrollo.
+El proyecto utiliza Kanban en Trello con estas columnas:
 
-Cada actividad se documenta mediante sus criterios de aceptación, estado de ejecución y evidencias correspondientes.
+`Pendiente → Por realizar → En desarrollo (máx. 1) → En verificación → Terminado`.
 
-El desarrollo del software utiliza Git para el control de versiones y GitHub para el almacenamiento del repositorio, la gestión de ramas y la integración de cambios mediante Pull Requests.
+La trazabilidad de una tarea técnica sigue, cuando corresponde:
 
-### Tablero Kanban
+`Trello → GitHub Issue → rama → commits → Pull Request → GitHub Actions → reporte/captura → requisito del documento`.
 
-[ZAV 2026 - Desarrollo del sistema](https://trello.com/b/Tn5elZCY/zav-2026-desarrollo-del-sistema-kanban)
+El límite WIP de la columna **En desarrollo es 1**, coherente con un desarrollo individual.
 
-### Repositorio GitHub
+Tablero: https://trello.com/b/Tn5elZCY/zav-2026-desarrollo-del-sistema-kanban
 
-[Repositorio del sistema ZAV](https://github.com/RubenMealla/zav-sistema)
+## Estado de E3
 
----
+**Implementado y bajo verificación en la rama de corrección T3/E3:**
 
-## 11. Estado actual del proyecto
+- autenticación JWT y roles en servidor;
+- CRUD de Producto, incluida edición y baja lógica;
+- lotes e ingreso inicial idempotente;
+- liberación/bloqueo auditado de lotes;
+- traslados;
+- saldo derivado de Movimiento;
+- ruta pública de salud;
+- formato uniforme de errores;
+- pruebas de 401 y 403;
+- QA backend y Playwright.
 
-### Configuración inicial
+**Pendiente de implementar para completar todos los Must de E3:**
 
-- Monorepo configurado mediante pnpm Workspaces.
-- Aplicación web inicializada con Next.js y TypeScript.
-- Aplicación móvil inicializada con React Native y Expo.
-- Backend inicializado con NestJS y TypeScript.
-- Repositorio Git configurado y publicado en GitHub.
-- Configuración inicial de análisis estático, compilación y pruebas.
-- Corrección de dependencias de la aplicación móvil para Expo SDK 57.
+- Cliente;
+- Pedido y DetallePedido;
+- retiro de pedido;
+- entrega con GPS puntual desde la aplicación móvil;
+- evidencia final en producción de todos los Must.
 
-### Comprobaciones realizadas
+No se considera una funcionalidad implementada únicamente porque aparezca diseñada o documentada.
 
-- Aplicación web: ESLint y compilación de producción completados correctamente.
-- Aplicación móvil: ESLint y TypeScript comprobados correctamente.
-- Expo Doctor: 21 de 21 comprobaciones superadas después de actualizar las dependencias.
-- Ejecución de la aplicación móvil en Android físico mediante Expo Go, con navegación inicial sin errores observados.
-- Backend: compilación y análisis estático completados.
-- Backend: prueba unitaria inicial y prueba E2E del endpoint de ejemplo superadas.
+## Autor
 
-### Desarrollo implementado y comprobado en development
-
-- Conexión API–PostgreSQL y migración inicial de seis tablas.
-- Inicio de sesión y consulta de perfil del Administrador mediante JWT.
-- Registro y consulta de productos y lotes; ingreso inicial de existencias y un movimiento por lote.
-- En la ejecución local del script de comprobación se obtuvieron 11 resultados correctos y 0 fallidos, incluidos reintento idéntico sin duplicación, conflicto 409, cantidad cero y fechas inválidas 400 y solicitud sin token 401. El script se conservó como herramienta local y no forma parte del repositorio.
-
-### Desarrollo pendiente
-
-- Completar pruebas de autorización con cuenta Vendedor y pruebas de rollback ante fallos internos de transacción.
-- Registro y seguimiento de pedidos.
-- Gestión de movimientos de inventario.
-- Integración de las aplicaciones web y móvil con la API.
-- Implementación de la distribución y el registro GPS.
-- Pruebas funcionales, de integración y seguridad.
-- Despliegue y verificación del sistema.
-
-Las funcionalidades se considerarán implementadas una vez que hayan sido desarrolladas y verificadas mediante las pruebas correspondientes.
-
----
-
-## 12. Información académica
-
-| Dato | Información |
-|---|---|
-| Proyecto | Sistema web y móvil para la gestión de pedidos, inventario y distribución de ZAV |
-| Institución | Universidad Autónoma Juan Misael Saracho |
-| Unidad académica | Dirección de Posgrado |
-| Programa | Diplomado en Desarrollo Web y Aplicaciones Móviles |
-| Modalidad del trabajo | Trabajo Final de Diplomado — Monografía y desarrollo de software |
-| Empresa objeto de estudio | Fiambres y Embutidos ZAV |
-| Lugar | Tarija, Bolivia |
-| Gestión | 2026 |
-
----
-
-## 13. Autor
-
-**Rubén Darío Mealla Lerma**
-
-Diplomado en Desarrollo Web y Aplicaciones Móviles
-
-Universidad Autónoma Juan Misael Saracho
-
+**Rubén Darío Mealla Lerma**  
+Diplomado en Desarrollo Web y Aplicaciones Móviles  
+Universidad Autónoma Juan Misael Saracho  
 Tarija, Bolivia — 2026

@@ -6,6 +6,7 @@ import { randomUUID } from 'node:crypto';
 import { Icono } from '../componentes/icono';
 import { BotonEnviar, Modal, Notificacion } from '../componentes/interacciones';
 import { cambiarCondicionLote, registrarLote, registrarProducto, registrarTraslado } from './acciones';
+import { AccionesProducto } from './acciones-producto';
 
 const API = process.env.API_BASE_URL ?? 'http://localhost:3001';
 
@@ -49,6 +50,8 @@ const mensajes: Record<string, string> = {
   'condicion-conflicto': 'No se pudo cambiar la condición. Revisa estado, vigencia y producto.',
   conexion: 'No se pudo conectar con la API de ZAV.',
   producto: 'No se registró el producto. Revisa los datos.',
+  'producto-edicion': 'No se pudo actualizar el producto. Revisa los datos.',
+  'producto-baja': 'No se pudo dar de baja el producto.',
   lote: 'No se registró el lote. Comprueba fechas, ubicación y cantidad.',
   traslado: 'No se registró el traslado. Revisa lote, ubicaciones y cantidad.',
   condicion: 'No se cambió la condición del lote. Revisa los datos.',
@@ -56,6 +59,8 @@ const mensajes: Record<string, string> = {
 
 const mensajesOk: Record<string, string> = {
   producto: 'Producto registrado correctamente.',
+  'producto-editado': 'Producto actualizado correctamente.',
+  'producto-baja': 'Producto dado de baja correctamente.',
   lote: 'Lote e ingreso inicial registrados correctamente.',
   traslado: 'Traslado registrado correctamente.',
   condicion: 'Condición del lote actualizada correctamente.',
@@ -254,10 +259,10 @@ export default async function Panel({
               ) : (
                 <div className="tabla-contenedor" role="region" tabIndex={0} aria-label="Productos registrados; tabla desplazable">
                   <table><caption className="solo-lectores">Productos registrados</caption>
-                    <thead><tr><th scope="col">Código</th><th scope="col">Producto</th><th scope="col">Familia</th><th scope="col">Presentación</th><th scope="col">Peso</th><th scope="col">Precio</th><th scope="col">Estado</th></tr></thead>
+                    <thead><tr><th scope="col">Código</th><th scope="col">Producto</th><th scope="col">Familia</th><th scope="col">Presentación</th><th scope="col">Peso</th><th scope="col">Precio</th><th scope="col">Estado</th><th scope="col">Acciones</th></tr></thead>
                     <tbody>
                       {itemsProductos.length === 0 ? (
-                        <tr><td colSpan={7}><div className="tabla-vacia"><strong>Todavía no hay productos registrados.</strong><span>Usa «Nuevo producto» para registrar la primera presentación.</span></div></td></tr>
+                        <tr><td colSpan={8}><div className="tabla-vacia"><strong>Todavía no hay productos registrados.</strong><span>Usa «Nuevo producto» para registrar la primera presentación.</span></div></td></tr>
                       ) : itemsProductos.map((producto) => (
                         <tr key={producto.id}>
                           <td><span className="codigo">{producto.codigo}</span></td>
@@ -267,6 +272,7 @@ export default async function Panel({
                           <td className="numero">{producto.pesoGramos} g</td>
                           <td className="numero"><strong>Bs {producto.precioBob}</strong></td>
                           <td><span className={producto.activo ? 'badge badge-verde' : 'badge badge-neutro'}>{producto.activo ? 'ACTIVO' : 'INACTIVO'}</span></td>
+                          <td><AccionesProducto producto={producto} /></td>
                         </tr>
                       ))}
                     </tbody>
