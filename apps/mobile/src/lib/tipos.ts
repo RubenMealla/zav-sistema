@@ -89,6 +89,19 @@ export type PedidoDetalle = {
   totalBob: string;
 };
 
+export type ResultadoRetiroMultiple = {
+  resultado: 'COMPLETO' | 'PARCIAL' | 'SIN_CAMBIOS';
+  exitosos: number;
+  fallidos: number;
+  items: Array<{
+    pedidoId: string;
+    ok: boolean;
+    estado?: EstadoPedido;
+    statusCode?: number;
+    message?: string;
+  }>;
+};
+
 export type VentaDespacho = {
   id: string;
   codigo: 'VENTA_DESPACHO';
