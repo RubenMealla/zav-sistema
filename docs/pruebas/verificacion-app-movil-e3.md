@@ -61,3 +61,24 @@ Se añadió además una construcción Android en CI para obtener un APK instalab
 **PENDIENTE DE VALIDAR EN DISPOSITIVO:** ejecución real en Android, concesión/denegación del permiso de ubicación, captura GPS del dispositivo y flujo completo contra la API pública.
 
 No se utilizará el QA estático como sustituto de la evidencia física de GPS.
+
+## Decisión cartográfica posterior
+
+Durante el cierre del APK geográfico se comprobó que Google Maps Platform requería habilitar facturación para utilizar Maps SDK for Android. Se reevaluó la dependencia antes de incorporar una credencial de producción.
+
+Se migró el motor móvil a:
+
+- `@maplibre/maplibre-react-native 11.4.1`;
+- OpenFreeMap como estilo/cartografía inicial;
+- `expo-location` para GPS puntual y fallback de geocodificación;
+- Geoapify como proveedor opcional de geocodificación a través de la API ZAV, sin incluir su clave en el APK.
+
+Commits de la migración:
+
+- `0a165e4` — migración del motor de mapa a MapLibre + OpenFreeMap;
+- `821f9c8` — lockfile generado por CI y restauración de instalación reproducible con `--frozen-lockfile`;
+- `e237917` — geocodificación desacoplada mediante backend y fallback móvil.
+
+**CONFIRMADO:** lint y TypeScript de MapLibre pasaron en GitHub Actions con el lockfile reproducible.
+
+**PENDIENTE DE VALIDAR:** resultado final del primer APK MapLibre firmado y ejecución del mapa en Android físico.

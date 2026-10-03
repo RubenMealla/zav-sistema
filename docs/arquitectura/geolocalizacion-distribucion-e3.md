@@ -20,26 +20,40 @@ No se implementará seguimiento continuo del Vendedor.
 
 ### 2.1 Mapa dentro de la aplicación
 
-Para Android se propone **Expo Maps** sobre Expo SDK 57. La documentación oficial permite mostrar Google Maps, marcadores, polilíneas, responder a movimientos de cámara y clics en el mapa.
+**Decisión implementada en código:** MapLibre React Native 11.4.1 como motor cartográfico y OpenFreeMap como fuente inicial del estilo/tiles vectoriales.
 
-**Alternativa evaluada:** `react-native-maps`.
+La elección separa deliberadamente el **motor de representación** del **proveedor de cartografía**. El estilo se configura mediante `EXPO_PUBLIC_MAP_STYLE_URL` y actualmente apunta a `https://tiles.openfreemap.org/styles/liberty`. Por ello, cambiar de proveedor compatible con MapLibre no exige reescribir el flujo Cliente → Pedido → Reparto.
 
-**Elección propuesta:** Expo Maps, porque el cliente móvil ya utiliza Expo SDK 57 y la integración oficial reduce dependencias adicionales. La configuración real de Google Maps para el APK standalone deberá verificarse con una clave del Maps SDK for Android antes de declarar el mapa IMPLEMENTADO.
+**Alternativas consideradas:**
 
-### 2.2 Ubicación puntual
+- Google Maps SDK: descartado como motor principal porque exige habilitar facturación en Google Cloud aun cuando el uso concreto pueda resultar sin cargo; además introduce dependencia de una credencial y plataforma propietaria;
+- Mapbox: técnicamente completo, pero con mayor dependencia del proveedor;
+- servicios públicos directos de OpenStreetMap: descartados como infraestructura principal porque no constituyen un servicio de hosting con SLA para aplicaciones;
+- MapLibre + OpenFreeMap: elegido por compatibilidad nativa, licencia abierta, ausencia de API key para el mapa base y posibilidad de migrar a otro proveedor o autoalojar cartografía en una evolución futura.
+
+**Limitación aceptada:** el servicio público de OpenFreeMap no ofrece un SLA contractual. Para una operación empresarial crítica o de mayor escala se deberá evaluar un proveedor con SLA o cartografía autoalojada. Esta limitación no se oculta ni se interpreta como disponibilidad garantizada.
+
+### 2.2 Ubicación puntual y geocodificación
 
 Se conserva `expo-location` para:
 
 - solicitar permiso foreground;
 - obtener la ubicación actual cuando el usuario la pide;
-- geocodificar una dirección escrita;
-- realizar geocodificación inversa de un punto seleccionado.
+- disponer de un fallback de geocodificación en el dispositivo;
+- realizar captura GPS puntual al confirmar una entrega.
 
-No se solicitará permiso de ubicación en segundo plano.
+No se solicita permiso de ubicación en segundo plano.
+
+Para mejorar la búsqueda de direcciones sin exponer una credencial en el APK se incorpora una capa de geocodificación en la API ZAV. El backend puede utilizar **Geoapify** mediante `GEOAPIFY_API_KEY`, restringiendo los resultados de búsqueda a Bolivia. La app consulta:
+
+- `GET /api/v1/geografia/geocodificar?q=...`;
+- `GET /api/v1/geografia/reversa?latitud=...&longitud=...`.
+
+La clave de Geoapify permanece únicamente en el servidor. Si el proveedor no está configurado o temporalmente no está disponible, el cliente conserva un fallback con `expo-location`. La ausencia de Geoapify no bloquea la compilación del APK ni la selección manual del punto en el mapa.
 
 ### 2.3 Navegación
 
-El sistema podrá abrir Google Maps para navegar hacia el destino confirmado del Pedido. La navegación giro a giro queda delegada a la aplicación de mapas; ZAV no implementará un motor propio de navegación.
+El sistema delega la navegación giro a giro a una aplicación/servicio externo de mapas mediante un enlace al destino confirmado. ZAV no implementa un motor propio de navegación y el mapa embebido no se presenta como navegación vial.
 
 ### 2.4 Secuenciación de entregas
 
@@ -326,7 +340,7 @@ El servidor vuelve a calcular la distancia contra el destino del Pedido. No conf
 | Registrar destino real del cliente | RF-07 | mapa + búsqueda + confirmación | registro por ubicación actual y por dirección remota |
 | Custodiar producto al salir | RF-10 | Retirar para reparto + FEFO | transición, idempotencia, stock |
 | Organizar varios pedidos | extensión de distribución | vecino más cercano + Haversine | secuencia determinista y reordenable |
-| Llegar al destino | apoyo operativo RF-11 | abrir Google Maps | enlace generado con destino correcto |
+| Llegar al destino | apoyo operativo RF-11 | navegación externa | enlace generado con destino correcto |
 | Acreditar entrega | RF-11 | posición real + precisión + distancia | GPS válido, permiso denegado, distancia calculada |
 
 ## 13. Decisiones de defensa
@@ -339,7 +353,7 @@ El servidor vuelve a calcular la distancia contra el destino del Pedido. No conf
 
 - GPS solo al entregar: insuficiente como apoyo operativo;
 - seguimiento continuo: descartado por alcance, privacidad y complejidad;
-- Google Places/Routes como núcleo: no seleccionado inicialmente por dependencia externa, credenciales y posible costo;
+- Google Maps/Places/Routes como núcleo: descartado por dependencia de plataforma, credenciales y requisito de facturación;
 - optimización TSP/VRP: descartada porque el problema real no incluye suficientes restricciones para afirmar una ruta óptima.
 
 **Limitación aceptada:** las distancias utilizadas para ordenar pedidos son geodésicas y no equivalen a distancia vial ni tiempo de conducción.
@@ -348,7 +362,7 @@ El servidor vuelve a calcular la distancia contra el destino del Pedido. No conf
 
 - Captura GPS puntual al entregar: **IMPLEMENTADO EN CÓDIGO Y API; PENDIENTE DE REVALIDACIÓN FÍSICA DEL APK GEOGRÁFICO**.
 - Registro de Cliente y Pedido: **IMPLEMENTADO**.
-- Mapa interactivo para Cliente: **IMPLEMENTADO EN CÓDIGO; PENDIENTE DE VALIDAR EN ANDROID CON MAPS SDK CONFIGURADO**.
+- Mapa interactivo para Cliente: **IMPLEMENTADO EN CÓDIGO CON MAPLIBRE + OPENFREEMAP; PENDIENTE DE VALIDAR FÍSICAMENTE EN ANDROID**.
 - Coordenadas de Cliente/Despacho: **IMPLEMENTADO EN MODELO Y API; coordenadas reales de ZAV PENDIENTES DE VALIDAR**.
 - Snapshot geográfico del Pedido: **IMPLEMENTADO**.
 - Secuenciación por proximidad: **IMPLEMENTADO Y CUBIERTO POR E2E**.

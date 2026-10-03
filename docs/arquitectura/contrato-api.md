@@ -75,20 +75,22 @@ La ejecución QA backend `37100513647` comprobó lint sin advertencias, build co
 La ejecución previa `37100404491` falló por una dependencia faltante de `JwtAuthGuard` en `PedidosModule`. Se conserva como evidencia de incidencia y regresión.
 
 
-## 6. Extensión geográfica propuesta
+## 6. Extensión geográfica E3
 
-**Estado:** PROPUESTO / PENDIENTE DE IMPLEMENTAR. La especificación de diseño se encuentra en `docs/arquitectura/geolocalizacion-distribucion-e3.md`.
-
-Cambios previstos:
+**Estado:** IMPLEMENTADO EN LA RAMA E3 / PENDIENTE DE VALIDACIÓN FÍSICA DEL CLIENTE MÓVIL.
 
 | Método | Ruta | Rol | Propósito |
 |---|---|---|---|
 | PATCH | `/api/v1/clientes/:id/ubicacion` | Vendedor | Corregir dirección/coordenadas confirmadas del Cliente sin alterar Pedidos históricos |
-| GET | `/api/v1/ubicaciones/venta-despacho` | Vendedor | Consultar el origen geográfico de reparto |
+| GET | `/api/v1/ubicaciones/venta-despacho` | Vendedor / Administrador | Consultar el origen geográfico de reparto |
 | PATCH | `/api/v1/ubicaciones/:id/georreferencia` | Administrador | Configurar coordenadas de una ubicación física |
-| POST | `/api/v1/pedidos/planificacion` | Vendedor | Calcular secuencia geográfica sugerida para pedidos propios |
+| GET | `/api/v1/geografia/geocodificar?q=...` | Vendedor | Buscar hasta cinco direcciones mediante el proveedor configurado en backend |
+| GET | `/api/v1/geografia/reversa?latitud=...&longitud=...` | Vendedor | Obtener una dirección legible a partir de un punto |
+| POST | `/api/v1/pedidos/planificacion` | Vendedor | Calcular una secuencia geográfica sugerida para pedidos propios |
 
-Estas extensiones ya están implementadas en la rama E3 móvil:
+La credencial del proveedor de geocodificación se mantiene en el backend mediante `GEOAPIFY_API_KEY`; no se incorpora al APK. Si el proveedor no está configurado, las rutas de geocodificación responden 503 y el cliente móvil puede recurrir al mecanismo local de `expo-location`.
+
+También se encuentran implementadas las siguientes extensiones:
 
 - `POST /api/v1/clientes` admite `latitud?` y `longitud?`;
 - `POST /api/v1/pedidos` copia al Pedido el snapshot geográfico del Cliente;
