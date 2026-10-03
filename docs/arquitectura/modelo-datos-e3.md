@@ -80,3 +80,18 @@ Cliente, Pedido y DetallePedido no se declararán en producción hasta aplicar l
 ## Evidencia de regresión
 
 Durante la primera ejecución de QA de esta iteración, NestJS no pudo construir `PedidosModule` porque `JwtAuthGuard` requería `UsuarioEntityRepository` en el contexto del módulo. La ejecución falló antes de los casos E2E. Se corrigió importando `TypeOrmModule.forFeature([UsuarioEntity])` y la regresión posterior obtuvo 11/11 pruebas unitarias y 18/18 E2E. Este fallo real se conserva como evidencia del apartado 2.8.
+
+
+## Extensión geográfica propuesta para distribución
+
+**Estado:** PROPUESTO / PENDIENTE DE IMPLEMENTAR. La especificación completa está en `docs/arquitectura/geolocalizacion-distribucion-e3.md`.
+
+Se mantienen las ocho entidades principales. No se crea una entidad Ruta.
+
+Cambios propuestos:
+
+- **Cliente:** `latitud`, `longitud`, `ubicacion_confirmada_en`.
+- **Ubicacion:** coordenadas opcionales para `AREA_FISICA`; `VENTA_DESPACHO` se utilizará como origen geográfico del reparto. `CUSTODIA_LOGICA` no representa un punto fijo.
+- **Pedido:** snapshot de destino mediante `destino_latitud` y `destino_longitud`; la posición real de entrega continúa en `entrega_latitud` y `entrega_longitud`; se propone registrar además precisión, distancia respecto al destino y observación cuando corresponda.
+
+La planificación de varios pedidos se calculará bajo demanda y no se persistirá como una novena entidad. Se propone ordenar por proximidad mediante distancia Haversine y heurística de vecino más cercano. El resultado será una sugerencia editable, no una ruta óptima.
