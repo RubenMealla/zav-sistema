@@ -6,6 +6,7 @@ on:
       - "pruebas/**"
       - "desarrollo/**"
       - "correccion/**"
+      - main
   pull_request:
     branches:
       - main
