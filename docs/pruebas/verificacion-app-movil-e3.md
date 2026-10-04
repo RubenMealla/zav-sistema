@@ -102,11 +102,11 @@ En el primer uso de búsqueda/ubicación el mapa podía quedar en blanco aunque 
 **Corrección en código:** el mapa dentro del Modal utiliza TextureView en Android, incorpora estado visible de carga y error, y se recrea al seleccionar una nueva posición.  
 **Estado:** IMPLEMENTADO EN CÓDIGO / PENDIENTE DE REVALIDAR EN DISPOSITIVO.
 
-### Hallazgo F-03 · búsqueda fuera de Bolivia
+### Hallazgo F-03 · búsqueda fuera de Tarija
 
 Una consulta textual como “Senac” podía terminar en una localidad extranjera cuando el fallback local del dispositivo resolvía la búsqueda.
 
-**Corrección en código:** se elimina ese fallback para búsqueda textual y el backend centraliza búsqueda/autocompletado con filtro de país Bolivia y prioridad Tarija.  
+**Corrección en código:** el backend centraliza búsqueda/autocompletado y devuelve únicamente coincidencias del departamento de Tarija, Bolivia. También prioriza barrios, zonas y calles frente a edificios cuando existen varias coincidencias.  
 **Estado:** IMPLEMENTADO EN CÓDIGO + PRUEBA UNITARIA DEL FILTRO / PENDIENTE DE VALIDAR CON GEOAPIFY REAL.
 
 ### Hallazgo F-04 · dirección poco legible
@@ -128,5 +128,22 @@ El APK geográfico estaba conectado al backend desplegado desde main, que no cor
 
 La planificación se mostraba como una cuarta pestaña incluso cuando había un único pedido.
 
-**Corrección en código:** Reparto se integra dentro de Pedidos y el planificador solo aparece cuando hay al menos dos pedidos georreferenciados pendientes.  
+**Corrección en código:** Reparto permanece integrado dentro de Pedidos. El bloque siempre es visible y explica cuántos pedidos son planificables; la secuenciación se habilita con dos o más pedidos pendientes georreferenciados.  
 **Estado:** IMPLEMENTADO EN CÓDIGO / PENDIENTE DE REVALIDAR EN DISPOSITIVO.
+
+
+### Hallazgo F-07 · actualización de Cliente y destino histórico
+
+En development se verificó que pedidos antiguos de un cliente conservaban una dirección previa aunque el registro actual del Cliente ya había sido corregido. Esto corresponde al diseño de instantánea histórica del Pedido, pero la interfaz no lo explicaba con suficiente claridad.
+
+**Corrección en código:** se agregó edición completa de nombre, teléfono y ubicación del Cliente; los pedidos nuevos copian los datos actualizados y los pedidos existentes conservan su destino histórico. Se añadió una prueba E2E específica para este comportamiento.
+
+**Estado:** IMPLEMENTADO EN CÓDIGO / PENDIENTE DE REVALIDAR EN ANDROID.
+
+### Hallazgo F-08 · gestión de listas crecientes
+
+La lista completa de Clientes y Pedidos dependía demasiado del desplazamiento vertical.
+
+**Corrección en código:** Clientes incorpora búsqueda y filtro por estado de ubicación; Pedidos incorpora búsqueda por cliente/dirección y filtro por estado; Nuevo pedido permite buscar únicamente clientes con ubicación confirmada.
+
+**Estado:** IMPLEMENTADO EN CÓDIGO / PENDIENTE DE REVALIDAR EN ANDROID.
