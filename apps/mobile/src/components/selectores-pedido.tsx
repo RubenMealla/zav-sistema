@@ -3,12 +3,12 @@ import {
   FlatList,
   Modal,
   Pressable,
-  SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { Cliente, Disponibilidad } from '@/lib/tipos';
 
@@ -56,7 +56,7 @@ export function SelectorClientePedidoModal({
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onCerrar}>
-      <SafeAreaView style={styles.pantalla}>
+      <SafeAreaView style={styles.pantalla} edges={['top', 'bottom']}>
         <View style={styles.cabecera}>
           <View style={styles.flex}>
             <Text style={styles.eyebrow}>NUEVO PEDIDO</Text>
@@ -206,7 +206,7 @@ export function SelectorProductosPedidoModal({
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onCerrar}>
-      <SafeAreaView style={styles.pantalla}>
+      <SafeAreaView style={styles.pantalla} edges={['top', 'bottom']}>
         <View style={styles.cabecera}>
           <View style={styles.flex}>
             <Text style={styles.eyebrow}>NUEVO PEDIDO</Text>
