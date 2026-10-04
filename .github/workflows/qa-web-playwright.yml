@@ -8,9 +8,23 @@ on:
       - "correccion/**"
       - "mejora/**"
       - main
+    paths:
+      - "apps/web/**"
+      - "apps/api/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - ".github/workflows/qa-web-playwright.yml"
   pull_request:
     branches:
       - main
+    paths:
+      - "apps/web/**"
+      - "apps/api/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - ".github/workflows/qa-web-playwright.yml"
 
 concurrency:
   group: qa-web-playwright-${{ github.ref }}

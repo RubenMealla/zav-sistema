@@ -4,9 +4,21 @@ on:
   pull_request:
     branches:
       - main
+    paths:
+      - "apps/mobile/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - ".github/workflows/qa-mobile-apk.yml"
   push:
     branches:
       - main
+    paths:
+      - "apps/mobile/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - ".github/workflows/qa-mobile-apk.yml"
   workflow_dispatch:
 
 concurrency:
