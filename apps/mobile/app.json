@@ -1,11 +1,11 @@
 {
   "expo": {
     "name": "ZAV Vendedor",
-    "slug": "zav-mobile",
+    "slug": "zav-vendedor",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "zav",
+    "scheme": "zav-vendedor",
     "userInterfaceStyle": "light",
     "ios": {
       "icon": "./assets/images/icon.png",
@@ -52,9 +52,7 @@
       "typedRoutes": true,
       "reactCompiler": true
     },
-    "extra": {
-      "apiBaseUrl": "https://zav-api-2026.onrender.com"
-    },
+    "extra": {},
     "web": {
       "favicon": "./assets/images/icon.png"
     }

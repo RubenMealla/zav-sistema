@@ -115,6 +115,16 @@ jobs:
           test -f "$APK"
           unzip -l "$APK" | grep -q "assets/index.android.bundle"
 
+          if unzip -l "$APK" | grep -Eiq 'expo-logo|react-logo|expo-badge|tutorial-web|tabIcons|explore\.png|home\.png'; then
+            echo "::error::El APK contiene recursos residuales de la plantilla Expo."
+            exit 1
+          fi
+
+          if unzip -p "$APK" assets/index.android.bundle | strings | grep -Eiq 'Edit src/app|Welcome to Expo|Explore tab'; then
+            echo "::error::El bundle contiene textos residuales de la plantilla Expo."
+            exit 1
+          fi
+
           AAPT="$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -n 1)"
           test -n "$AAPT"
           BADGING="$("$AAPT" dump badging "$APK")"
