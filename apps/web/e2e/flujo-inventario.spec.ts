@@ -49,13 +49,14 @@ test('permite gestionar inventario desde módulos, modales y notificaciones', as
   await page.getByRole('button', { name: /Ingresar al sistema/ }).click();
 
   await expect(page).toHaveURL(/\/panel$/);
+  const modulos = page.getByRole('navigation', { name: 'Módulos del sistema', exact: true });
   await expect(page.getByRole('heading', { name: 'Resumen' })).toBeVisible();
   await expect(page.getByText('Trabaja por módulo')).toBeVisible();
   await expect(page.getByText('Condición actual')).toBeVisible();
   await captura(page, '03-dashboard-administrativo.png');
   await expect(page.getByText(/Lotes consultados:/)).toBeVisible();
 
-  await page.getByRole('link', { name: 'Productos' }).click();
+  await modulos.getByRole('link', { name: 'Productos', exact: true }).click();
   await expect(page).toHaveURL(/\/panel\?vista=productos$/);
   await expect(page.getByRole('heading', { name: 'Productos' })).toBeVisible();
   await expect(page.getByRole('table', { name: 'Productos registrados' })).toBeVisible();
@@ -85,7 +86,7 @@ test('permite gestionar inventario desde módulos, modales y notificaciones', as
   await page.getByRole('button', { name: 'Cerrar notificación' }).click();
   await expect(page.getByRole('status')).toHaveCount(0);
 
-  await page.getByRole('link', { name: 'Lotes' }).click();
+  await modulos.getByRole('link', { name: 'Lotes', exact: true }).click();
   await page.getByRole('button', { name: 'Nuevo lote' }).click();
   const modalLote = page.getByRole('dialog');
   await modalLote.getByLabel('Producto').selectOption({ label: `${productoCodigo} · Producto QA UI` });
@@ -102,7 +103,7 @@ test('permite gestionar inventario desde módulos, modales y notificaciones', as
   await expect(filaLote.getByText('Producción y Almacenamiento')).toBeVisible();
   await captura(page, '06-lote-registrado.png');
 
-  await page.getByRole('link', { name: 'Movimientos' }).click();
+  await modulos.getByRole('link', { name: 'Movimientos', exact: true }).click();
   await page.getByRole('button', { name: 'Nuevo traslado' }).click();
   const modalTraslado = page.getByRole('dialog');
   await modalTraslado.getByLabel('Lote a trasladar').selectOption({ label: `${loteCodigo} · RETENIDO` });
@@ -122,14 +123,14 @@ test('permite gestionar inventario desde módulos, modales y notificaciones', as
   await expect(filaTraslado.getByRole('cell', { name: 'Venta y Despacho' })).toBeVisible();
   await captura(page, '07-traslado-registrado.png');
 
-  await page.getByRole('link', { name: 'Lotes' }).click();
+  await modulos.getByRole('link', { name: 'Lotes', exact: true }).click();
   const filaLoteTrasladado = page.getByRole('row').filter({ has: page.getByRole('cell', { name: loteCodigo }) });
   await expect(filaLoteTrasladado.getByText('Producción y Almacenamiento')).toBeVisible();
   await expect(filaLoteTrasladado.getByText('7', { exact: true })).toBeVisible();
   await expect(filaLoteTrasladado.getByText('Venta y Despacho')).toBeVisible();
   await expect(filaLoteTrasladado.getByText('5', { exact: true })).toBeVisible();
 
-  await page.getByRole('link', { name: 'Condiciones' }).click();
+  await modulos.getByRole('link', { name: 'Condiciones', exact: true }).click();
   await page.getByRole('button', { name: 'Gestionar condición' }).click();
   const modalCondicion = page.getByRole('dialog');
   await modalCondicion.locator('select[name="loteId"]').selectOption({ label: `${loteCodigo} · RETENIDO` });
@@ -162,7 +163,7 @@ test('permite gestionar inventario desde módulos, modales y notificaciones', as
   await expect(page.getByText('QA UI: observación temporal')).toBeVisible();
   await captura(page, '10-condicion-persistente.png');
 
-  await page.getByRole('link', { name: 'Resumen' }).click();
+  await modulos.getByRole('link', { name: 'Resumen', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Resumen' })).toBeVisible();
   await expect(page.getByText('Trabaja por módulo')).toBeVisible();
   await captura(page, '11-dashboard-final.png');
