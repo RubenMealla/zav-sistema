@@ -224,6 +224,8 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
         const [p, c, d] = await consultarDatos();
         if (!activa) return;
         setPedidos(p.items);
+        setTotalPedidos(p.total);
+        setPaginaPedidos(p.page);
         setClientes(c.items);
         setDisponibilidad(d);
       } catch (e) {
