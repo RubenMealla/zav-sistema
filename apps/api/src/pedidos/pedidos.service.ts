@@ -318,6 +318,85 @@ export class PedidosService {
     };
   }
 
+  async listarAdmin(consulta: Record<string, unknown>) {
+    const { page, limit } = paginacion(consulta, ['estado', 'vendedorId', 'page', 'limit']);
+    const parametros: unknown[] = [];
+    const filtros: string[] = [];
+
+    if (consulta.estado !== undefined) {
+      if (
+        typeof consulta.estado !== 'string' ||
+        !['REGISTRADO', 'EN_DISTRIBUCION', 'ENTREGADO'].includes(consulta.estado)
+      ) {
+        throw new BadRequestException('estado de pedido no valido.');
+      }
+      parametros.push(consulta.estado);
+      filtros.push(`pe.estado = ${parametros.length}`);
+    }
+
+    if (consulta.vendedorId !== undefined) {
+      parametros.push(uuid(consulta.vendedorId, 'vendedorId'));
+      filtros.push(`pe.vendedor_id = ${parametros.length}::uuid`);
+    }
+
+    const where = filtros.length ? `WHERE ${filtros.join(' AND ')}` : '';
+    parametros.push(limit, (page - 1) * limit);
+    const limitePos = parametros.length - 1;
+    const offsetPos = parametros.length;
+
+    const items = await this.db.query(
+      `SELECT pe.id, pe.estado, pe.direccion_entrega, pe.creado_en,
+              pe.retirado_en, pe.entregado_en,
+              c.id AS cliente_id, c.nombre AS cliente_nombre,
+              u.id AS vendedor_id, u.nombre AS vendedor_nombre,
+              u.identificador AS vendedor_identificador,
+              COALESCE(SUM(d.cantidad * d.precio_unitario_bob), 0)::numeric(14,2) AS total_bob,
+              COALESCE(SUM(d.cantidad), 0)::int AS unidades
+       FROM pedido pe
+       JOIN cliente c ON c.id = pe.cliente_id
+       JOIN usuario u ON u.id = pe.vendedor_id
+       JOIN detalle_pedido d ON d.pedido_id = pe.id
+       ${where}
+       GROUP BY pe.id, c.id, c.nombre, u.id, u.nombre, u.identificador
+       ORDER BY pe.creado_en DESC, pe.id DESC
+       LIMIT ${limitePos} OFFSET ${offsetPos}`,
+      parametros,
+    ) as Array<Record<string, unknown>>;
+
+    const totalParametros = parametros.slice(0, filtros.length);
+    const total = await this.db.query(
+      `SELECT count(*)::int AS total
+       FROM pedido pe
+       ${where}`,
+      totalParametros,
+    ) as Array<{ total: number }>;
+
+    return {
+      items: items.map((fila) => ({
+        id: fila.id,
+        estado: fila.estado,
+        direccionEntrega: fila.direccion_entrega,
+        creadoEn: fila.creado_en,
+        retiradoEn: fila.retirado_en,
+        entregadoEn: fila.entregado_en,
+        cliente: {
+          id: fila.cliente_id,
+          nombre: fila.cliente_nombre,
+        },
+        vendedor: {
+          id: fila.vendedor_id,
+          nombre: fila.vendedor_nombre,
+          identificador: fila.vendedor_identificador,
+        },
+        unidades: fila.unidades,
+        totalBob: fila.total_bob,
+      })),
+      total: total[0].total,
+      page,
+      limit,
+    };
+  }
+
   async obtener(idEntrada: string, vendedorId: string) {
     const id = uuid(idEntrada, 'id');
     const pedidos = await this.db.query(
