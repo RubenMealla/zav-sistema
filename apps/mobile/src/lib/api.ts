@@ -86,8 +86,8 @@ export function crearCliente(
     nombre: string;
     telefono?: string;
     direccion: string;
-    latitud?: number;
-    longitud?: number;
+    latitud: number;
+    longitud: number;
   },
 ) {
   return solicitud<Cliente>(
