@@ -20,6 +20,7 @@ describe('Pedidos y distribucion E3 (e2e)', () => {
   let productoPrincipalId: string;
   let productoLimiteId: string;
   let productoRetiroMultipleId: string;
+  let productoEdicionId: string;
   let lotePrincipalId: string;
 
   const admin = {
@@ -142,6 +143,9 @@ describe('Pedidos y distribucion E3 (e2e)', () => {
 
     const retiroMultiple = await prepararProducto('QA-PED-MULTI', 4);
     productoRetiroMultipleId = retiroMultiple.productoId;
+
+    const edicion = await prepararProducto('QA-PED-EDICION', 2);
+    productoEdicionId = edicion.productoId;
   });
 
   afterAll(async () => {
@@ -242,7 +246,7 @@ describe('Pedidos y distribucion E3 (e2e)', () => {
       expect.objectContaining({ latitud: -21.541, longitud: -64.741 }),
     );
 
-    const pedido = await crearPedido(clienteId, productoPrincipalId, 1);
+    const pedido = await crearPedido(clienteId, productoEdicionId, 1);
     expect(pedido.status).toBe(201);
     expect(pedido.body.direccionEntrega).toBe('Barrio de prueba actualizado, Tarija');
     expect(pedido.body.destinoGps).toEqual({
