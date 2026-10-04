@@ -4,6 +4,7 @@ import { consultaTexto, objeto, paginacion, texto, uuid } from '../inventario/va
 
 const CAMPOS_CLIENTE = ['nombre', 'telefono', 'direccion', 'latitud', 'longitud'] as const;
 const CAMPOS_UBICACION = ['direccion', 'latitud', 'longitud'] as const;
+const CAMPOS_EDICION = ['nombre', 'telefono', 'direccion', 'latitud', 'longitud'] as const;
 
 function telefonoOpcional(valor: unknown): string | null {
   if (valor === undefined || valor === null || valor === '') return null;
@@ -40,6 +41,11 @@ export class ClientesService {
     const telefono = telefonoOpcional(datos.telefono);
     const direccion = texto(datos.direccion, 'direccion', 240);
     const { latitud, longitud } = coordenadasOpcionales(datos);
+    if (latitud === null || longitud === null) {
+      throw new BadRequestException(
+        'Todo cliente nuevo requiere una ubicación confirmada en Tarija.',
+      );
+    }
 
     const filas = await this.db.query(
       `INSERT INTO cliente
@@ -50,6 +56,39 @@ export class ClientesService {
       [nombre, telefono, direccion, latitud, longitud],
     ) as Array<Record<string, unknown>>;
 
+    return this.respuesta(filas[0]);
+  }
+
+  async actualizar(idEntrada: string, entrada: unknown) {
+    const id = uuid(idEntrada, 'id');
+    const datos = objeto(entrada, CAMPOS_EDICION);
+    const nombre = texto(datos.nombre, 'nombre', 140);
+    const telefono = telefonoOpcional(datos.telefono);
+    const direccion = texto(datos.direccion, 'direccion', 240);
+    const { latitud, longitud } = coordenadasOpcionales(datos);
+
+    if (latitud === null || longitud === null) {
+      throw new BadRequestException(
+        'El cliente debe conservar una ubicación confirmada.',
+      );
+    }
+
+    const filas = await this.db.query(
+      `UPDATE cliente
+       SET nombre = $2,
+           telefono = $3,
+           direccion = $4,
+           latitud = $5,
+           longitud = $6,
+           ubicacion_confirmada_en = now(),
+           actualizado_en = now()
+       WHERE id = $1::uuid AND activo = TRUE
+       RETURNING id, nombre, telefono, direccion, latitud, longitud,
+                 ubicacion_confirmada_en, activo, creado_en, actualizado_en`,
+      [id, nombre, telefono, direccion, latitud, longitud],
+    ) as Array<Record<string, unknown>>;
+
+    if (!filas.length) throw new NotFoundException('Cliente activo no encontrado.');
     return this.respuesta(filas[0]);
   }
 
