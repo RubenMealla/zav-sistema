@@ -38,6 +38,12 @@ export class GeografiaController {
     return this.geografia.geocodificar(consulta);
   }
 
+  @Get('geografia/autocompletar')
+  @Roles('VENDEDOR')
+  autocompletar(@Query('q') consulta: string | undefined) {
+    return this.geografia.autocompletar(consulta);
+  }
+
   @Get('geografia/reversa')
   @Roles('VENDEDOR')
   geocodificacionInversa(
