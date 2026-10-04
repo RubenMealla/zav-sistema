@@ -4,7 +4,7 @@ import { cerrarSesion } from '../acciones';
 import { Icono } from '../componentes/icono';
 import { Marca } from '../componentes/marca';
 
-export type Vista = 'resumen' | 'productos' | 'lotes' | 'condiciones' | 'movimientos';
+export type Vista = 'resumen' | 'productos' | 'lotes' | 'condiciones' | 'movimientos' | 'pedidos';
 type VistaConfig = { titulo: string; descripcion: string; icono: 'inicio' | 'producto' | 'lote' | 'condicion' | 'movimiento' };
 export const vistas: Record<Vista, VistaConfig> = {
   resumen: { titulo: 'Resumen general', descripcion: 'Inventario de productos terminados.', icono: 'inicio' },
@@ -12,6 +12,7 @@ export const vistas: Record<Vista, VistaConfig> = {
   lotes: { titulo: 'Lotes y existencias', descripcion: 'Existencia física, vencimientos y ubicación de cada lote.', icono: 'lote' },
   condiciones: { titulo: 'Condición de lotes', descripcion: 'Liberación, bloqueo y registro de decisiones comerciales.', icono: 'condicion' },
   movimientos: { titulo: 'Movimientos', descripcion: 'Traslados entre ubicaciones e historial de inventario.', icono: 'movimiento' },
+  pedidos: { titulo: 'Pedidos', descripcion: 'Auditoría de pedidos y vendedor responsable.', icono: 'movimiento' },
 };
 
 export function MarcoPanel({ vista, perfil, children }: {
