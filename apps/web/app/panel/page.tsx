@@ -157,8 +157,6 @@ export default async function Panel({
     }
     if (vista === 'productos' && parametros.productoActivo && ['true', 'false'].includes(parametros.productoActivo)) {
       productoParametros.set('activo', parametros.productoActivo);
-    } else if (vista !== 'productos') {
-      productoParametros.set('activo', 'true');
     }
 
     const loteParametros = new URLSearchParams({ limit: '50' });

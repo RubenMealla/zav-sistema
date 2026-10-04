@@ -88,9 +88,13 @@ export function MapaUbicacion({
   latitud: number | null;
   longitud: number | null;
 }) {
+  const latitudInicial =
+    latitud !== null && Number.isFinite(latitud) ? latitud : null;
+  const longitudInicial =
+    longitud !== null && Number.isFinite(longitud) ? longitud : null;
   const inicial =
-    Number.isFinite(latitud) && Number.isFinite(longitud) && latitud !== null && longitud !== null
-      ? { latitud, longitud }
+    latitudInicial !== null && longitudInicial !== null
+      ? { latitud: latitudInicial, longitud: longitudInicial }
       : null;
 
   const contenedorRef = useRef<HTMLDivElement>(null);
@@ -114,7 +118,7 @@ export function MapaUbicacion({
 
         L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
           maxZoom: 19,
-          attribution: '&copy; OpenStreetMap contributors',
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>',
         }).addTo(mapa);
 
         if (inicial) {
@@ -153,7 +157,7 @@ export function MapaUbicacion({
       mapaRef.current?.remove();
       mapaRef.current = null;
     };
-  }, []);
+  }, [latitudInicial, longitudInicial]);
 
   function centrarTarija() {
     mapaRef.current?.setView([CENTRO_TARIJA.latitud, CENTRO_TARIJA.longitud], 14);
