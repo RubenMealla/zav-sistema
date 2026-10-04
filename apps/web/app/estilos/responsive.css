@@ -50,6 +50,11 @@
     padding: 16px 14px 28px;
   }
 
+  .vista-contenido > .card-modulo,
+  .vista-contenido > .modulo-dos-columnas {
+    min-height: calc(100dvh - 156px);
+  }
+
   .ubicacion-editor-pie {
     align-items: stretch;
     flex-direction: column;

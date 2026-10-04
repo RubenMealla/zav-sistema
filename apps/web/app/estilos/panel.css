@@ -215,6 +215,9 @@
 }
 
 .card-modulo { margin-top: 14px; overflow: hidden; }
+.vista-contenido > .card-modulo { min-height: calc(100dvh - 140px); }
+.vista-contenido > .modulo-dos-columnas { min-height: calc(100dvh - 140px); }
+.vista-contenido > .modulo-dos-columnas > .card { min-height: 100%; }
 
 .card-cabecera {
   min-height: 72px;
