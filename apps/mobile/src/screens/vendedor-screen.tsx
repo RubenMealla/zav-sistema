@@ -861,17 +861,84 @@ function Pedidos({
   onEntregar: (pedido: PedidoResumen) => void;
   onNavegar: (pedido: PedidoResumen) => void;
 }) {
+  const [busqueda, setBusqueda] = useState('');
+  const [filtroEstado, setFiltroEstado] = useState<'TODOS' | PedidoResumen['estado']>('TODOS');
+
+  const pedidosVisibles = useMemo(() => {
+    const consulta = busqueda.trim().toLocaleLowerCase('es-BO');
+    return pedidos.filter((pedido) => {
+      const coincide =
+        !consulta ||
+        pedido.cliente.nombre.toLocaleLowerCase('es-BO').includes(consulta) ||
+        pedido.direccionEntrega.toLocaleLowerCase('es-BO').includes(consulta);
+      const coincideEstado =
+        filtroEstado === 'TODOS' || pedido.estado === filtroEstado;
+      return coincide && coincideEstado;
+    });
+  }, [busqueda, filtroEstado, pedidos]);
+
+  const pendientes = pedidos.filter((pedido) => pedido.estado !== 'ENTREGADO').length;
+
   return (
     <View style={styles.bloque}>
       <Titulo
-        titulo="Mis pedidos"
-        descripcion="Desliza hacia abajo para actualizar el estado y la disponibilidad."
+        titulo="Pedidos"
+        descripcion="Consulta pedidos, gestiona entregas y organiza la salida de reparto desde esta misma sección."
       />
 
-      {!pedidos.length ? (
-        <Vacio texto="Todavía no registraste pedidos." />
+      <View style={styles.tarjeta}>
+        <View style={styles.resumenPedido}>
+          <Dato etiqueta="Total" valor={String(pedidos.length)} />
+          <Dato etiqueta="Pendientes" valor={String(pendientes)} />
+          <Dato
+            etiqueta="Entregados"
+            valor={String(pedidos.length - pendientes)}
+          />
+        </View>
+        <TextInput
+          value={busqueda}
+          onChangeText={setBusqueda}
+          placeholder="Buscar cliente o dirección"
+          placeholderTextColor="#8a8982"
+          style={styles.input}
+        />
+        <View style={styles.filtros}>
+          {[
+            ['TODOS', 'Todos'],
+            ['REGISTRADO', 'Registrados'],
+            ['EN_DISTRIBUCION', 'En reparto'],
+            ['ENTREGADO', 'Entregados'],
+          ].map(([valor, texto]) => (
+            <Pressable
+              key={valor}
+              onPress={() =>
+                setFiltroEstado(valor as 'TODOS' | PedidoResumen['estado'])
+              }
+              style={[
+                styles.filtroChip,
+                filtroEstado === valor && styles.filtroChipActivo,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.filtroChipTexto,
+                  filtroEstado === valor && styles.filtroChipTextoActivo,
+                ]}
+              >
+                {texto}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+        <Text style={styles.contador}>
+          Mostrando {pedidosVisibles.length} de {pedidos.length} pedido(s)
+        </Text>
+      </View>
+
+      {!pedidosVisibles.length ? (
+        <Vacio texto="No hay pedidos que coincidan con los filtros." />
       ) : (
-        pedidos.map((pedido) => (
+        pedidosVisibles.map((pedido) => (
           <View key={pedido.id} style={styles.tarjeta}>
             <View style={styles.filaEntre}>
               <View style={styles.flex}>
@@ -882,6 +949,11 @@ function Pedidos({
             </View>
 
             <Text style={styles.direccion}>{pedido.direccionEntrega}</Text>
+            <Text style={pedido.destinoGps ? styles.disponible : styles.alertaInline}>
+              {pedido.destinoGps
+                ? 'Destino GPS confirmado para este pedido'
+                : 'Este pedido histórico no tiene destino GPS'}
+            </Text>
 
             <View style={styles.resumenPedido}>
               <Dato etiqueta="Unidades" valor={String(pedido.unidades)} />
