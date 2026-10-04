@@ -95,13 +95,13 @@ export type ResultadoRetiroMultiple = {
   resultado: 'COMPLETO' | 'PARCIAL' | 'SIN_CAMBIOS';
   exitosos: number;
   fallidos: number;
-  items: Array<{
+  items: {
     pedidoId: string;
     ok: boolean;
     estado?: EstadoPedido;
     statusCode?: number;
     message?: string;
-  }>;
+  }[];
 };
 
 export type VentaDespacho = {

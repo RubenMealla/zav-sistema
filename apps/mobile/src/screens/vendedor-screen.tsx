@@ -155,7 +155,6 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
   const [seccion, setSeccion] = useState<Seccion>('pedidos');
   const [pedidos, setPedidos] = useState<PedidoResumen[]>([]);
   const [totalPedidos, setTotalPedidos] = useState(0);
-  const [paginaPedidos, setPaginaPedidos] = useState(1);
   const [cargandoMasPedidos, setCargandoMasPedidos] = useState(false);
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [disponibilidad, setDisponibilidad] = useState<Disponibilidad[]>([]);
@@ -244,12 +243,11 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
         const [pedidosResultado, clientesResultado, disponibilidadResultado] =
           await consultarDatos();
 
-        const errores: Array<{ recurso: string; error: unknown }> = [];
+        const errores: { recurso: string; error: unknown }[] = [];
 
         if (pedidosResultado.status === 'fulfilled') {
           setPedidos(pedidosResultado.value.items);
           setTotalPedidos(pedidosResultado.value.total);
-          setPaginaPedidos(1);
         } else {
           errores.push({ recurso: 'pedidos', error: pedidosResultado.reason });
         }
@@ -290,8 +288,57 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
   );
 
   useEffect(() => {
-    void cargar();
-  }, [cargar]);
+    let activa = true;
+
+    async function inicializar() {
+      setError('');
+      const [pedidosResultado, clientesResultado, disponibilidadResultado] =
+        await consultarDatos();
+
+      if (!activa) return;
+
+      const errores: { recurso: string; error: unknown }[] = [];
+
+      if (pedidosResultado.status === 'fulfilled') {
+        setPedidos(pedidosResultado.value.items);
+        setTotalPedidos(pedidosResultado.value.total);
+      } else {
+        errores.push({ recurso: 'pedidos', error: pedidosResultado.reason });
+      }
+
+      if (clientesResultado.status === 'fulfilled') {
+        setClientes(clientesResultado.value.items);
+      } else {
+        errores.push({ recurso: 'clientes', error: clientesResultado.reason });
+      }
+
+      if (disponibilidadResultado.status === 'fulfilled') {
+        setDisponibilidad(disponibilidadResultado.value);
+      } else {
+        errores.push({ recurso: 'productos', error: disponibilidadResultado.reason });
+      }
+
+      const errorSesion = errores.find(
+        ({ error }) =>
+          error instanceof ApiError && (error.status === 401 || error.status === 403),
+      );
+      if (errorSesion) {
+        await manejarError(errorSesion.error);
+      } else if (errores.length) {
+        const nombres = errores.map(({ recurso }) => recurso).join(', ');
+        setError(
+          `No se pudo actualizar ${nombres}. El resto de la información permanece disponible; desliza hacia abajo para reintentar.`,
+        );
+      }
+
+      if (activa) setCargando(false);
+    }
+
+    void inicializar();
+    return () => {
+      activa = false;
+    };
+  }, [consultarDatos, manejarError]);
 
   async function refrescar() {
     setActualizando(true);
@@ -307,7 +354,6 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
       const respuesta = await listarPedidosActivos(token);
       setPedidos(respuesta.items);
       setTotalPedidos(respuesta.total);
-      setPaginaPedidos(1);
     } catch (e) {
       await manejarError(e);
     } finally {
@@ -1513,9 +1559,6 @@ function Pedidos({
       pedido.estado !== 'ENTREGADO' &&
       pedido.estado !== 'CANCELADO' &&
       pedido.destinoGps !== null,
-  );
-  const registradosVisibles = pedidosVisibles.filter(
-    (pedido) => pedido.estado === 'REGISTRADO',
   );
   const sinGpsVisibles = pedidosVisibles.filter(
     (pedido) =>

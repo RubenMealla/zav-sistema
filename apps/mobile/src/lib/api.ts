@@ -208,7 +208,7 @@ export function retirarPedido(token: string, id: string, operacionClave: string)
 
 export function retirarPedidosSeleccionados(
   token: string,
-  retiros: Array<{ pedidoId: string; operacionClave: string }>,
+  retiros: { pedidoId: string; operacionClave: string }[],
 ) {
   return solicitud<ResultadoRetiroMultiple>(
     '/api/v1/pedidos/retiros',
