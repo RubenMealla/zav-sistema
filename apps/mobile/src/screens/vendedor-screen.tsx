@@ -36,12 +36,22 @@ import type {
 } from '@/lib/tipos';
 import { uuidV4 } from '@/lib/uuid';
 import { MapaReparto, MapaRepartoModal, SelectorUbicacionMapa } from '@/components/mapas-distribucion';
+import {
+  SelectorClientePedidoModal,
+  SelectorProductosPedidoModal,
+} from '@/components/selectores-pedido';
 
 type Seccion = 'pedidos' | 'nuevo' | 'clientes';
 
 type Props = {
   sesion: Sesion;
   onCerrarSesion: () => Promise<void>;
+};
+
+type MapaOperativoVista = {
+  origen: PuntoGeografico | null;
+  paradas: PlanificacionParada[];
+  enfoquePedidoId?: string | null;
 };
 
 function mensajeError(error: unknown) {
@@ -59,12 +69,28 @@ function fechaCorta(valor: string) {
   const fecha = new Date(valor);
   if (Number.isNaN(fecha.getTime())) return valor;
   return fecha.toLocaleString('es-BO', {
+    timeZone: 'America/La_Paz',
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
   });
+}
+
+function claveFechaBolivia(valor: string | Date) {
+  const fecha = typeof valor === 'string' ? new Date(valor) : valor;
+  if (Number.isNaN(fecha.getTime())) return '';
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/La_Paz',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(fecha);
+}
+
+function esHoyBolivia(valor: string) {
+  return claveFechaBolivia(valor) === claveFechaBolivia(new Date());
 }
 
 function distanciaMetros(a: PuntoGeografico, b: PuntoGeografico) {
@@ -112,6 +138,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
   const [cargando, setCargando] = useState(true);
   const [actualizando, setActualizando] = useState(false);
   const [error, setError] = useState('');
+  const [aviso, setAviso] = useState('');
 
   const [clienteNombre, setClienteNombre] = useState('');
   const [clienteTelefono, setClienteTelefono] = useState('');
@@ -130,13 +157,16 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
   const [observacion, setObservacion] = useState('');
   const [cantidades, setCantidades] = useState<Record<string, string>>({});
   const [guardandoPedido, setGuardandoPedido] = useState(false);
+  const [selectorClientePedidoVisible, setSelectorClientePedidoVisible] = useState(false);
+  const [selectorProductosPedidoVisible, setSelectorProductosPedidoVisible] = useState(false);
   const [accionPedido, setAccionPedido] = useState<string | null>(null);
   const [pedidosSeleccionados, setPedidosSeleccionados] = useState<string[]>([]);
   const [planificacion, setPlanificacion] = useState<PlanificacionReparto | null>(null);
   const [planificando, setPlanificando] = useState(false);
   const [retirandoSeleccionados, setRetirandoSeleccionados] = useState(false);
-  const [mapaOperativo, setMapaOperativo] = useState<PlanificacionReparto | null>(null);
+  const [mapaOperativo, setMapaOperativo] = useState<MapaOperativoVista | null>(null);
   const scrollPrincipalRef = useRef<ScrollView>(null);
+  const accionesEnCursoRef = useRef(new Set<string>());
 
   const token = sesion.accessToken;
 
@@ -390,8 +420,10 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
       setObservacion('');
       setCantidades({});
       await cargar(false);
-      setSeccion('pedidos');
-      Alert.alert('Pedido registrado', 'El stock disponible quedó comprometido para el pedido.');
+      setAviso('Pedido registrado. El formulario quedó limpio y la disponibilidad fue actualizada.');
+      requestAnimationFrame(() => {
+        scrollPrincipalRef.current?.scrollTo({ y: 0, animated: true });
+      });
     } catch (e) {
       await manejarError(e);
     } finally {
