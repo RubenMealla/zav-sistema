@@ -14,7 +14,7 @@ test('edita y desactiva un producto desde la web', async ({ page }) => {
   await page.getByLabel('Contraseña', { exact: true }).fill(requerida('QA_ADMIN_PASSWORD'));
   await page.getByRole('button', { name: /Ingresar al sistema/ }).click();
 
-  await page.getByRole('link', { name: 'Productos terminados', exact: true }).filter({ visible: true }).click();
+  await page.getByRole('link', { name: 'Productos', exact: true }).filter({ visible: true }).click();
   await page.getByRole('button', { name: 'Nuevo producto' }).click();
 
   const alta = page.getByRole('dialog', { name: 'Registrar producto' });

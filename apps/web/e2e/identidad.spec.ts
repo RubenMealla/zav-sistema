@@ -17,7 +17,7 @@ async function ingresar(page: Page) {
   await page.getByLabel('Identificador de acceso').fill(usuario);
   await page.getByLabel('Contraseña', { exact: true }).fill(clave);
   await page.getByRole('button', { name: 'Ingresar al sistema' }).click();
-  await expect(page.getByRole('heading', { name: 'Resumen general' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Resumen' })).toBeVisible();
 }
 
 async function sinDesborde(page: Page) {
@@ -53,9 +53,9 @@ for (const ancho of [390, 768, 1440]) {
     await captura(page, `identidad-resumen-${ancho}.png`);
     const navegacion = page.getByRole('navigation', { name: ancho <= 820 ? 'Módulos' : 'Módulos del sistema', exact: true });
     for (const [nombre, boton, dialogo, archivo] of [
-      ['Productos terminados', 'Nuevo producto', 'Registrar producto', 'productos'],
-      ['Lotes y existencias', 'Nuevo lote', 'Registrar lote e ingreso inicial', 'lotes'],
-      ['Condición de lotes', 'Gestionar condición', 'Cambiar condición del lote', 'condiciones'],
+      ['Productos', 'Nuevo producto', 'Registrar producto', 'productos'],
+      ['Lotes', 'Nuevo lote', 'Registrar lote e ingreso inicial', 'lotes'],
+      ['Condiciones', 'Gestionar condición', 'Cambiar condición del lote', 'condiciones'],
       ['Movimientos', 'Nuevo traslado', 'Registrar traslado', 'movimientos'],
     ]) {
       await navegacion.getByRole('link', { name: nombre, exact: true }).click();
@@ -101,7 +101,7 @@ test('landing extendida conserva jerarquía editorial y secciones públicas', as
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto('/');
 
-  await expect(page.getByRole('navigation', { name: 'Navegación pública' })).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Navegación principal' })).toBeVisible();
   await expect(page.locator('#productos')).toBeVisible();
   await expect(page.locator('#promociones')).toBeVisible();
   await expect(page.locator('#novedades')).toBeVisible();
@@ -125,7 +125,7 @@ test('teclado, contraste y movimiento reducido', async ({ page }) => {
   await page.keyboard.press('Enter');
   await expect(page.locator('#principal')).toBeFocused();
   await ingresar(page);
-  await page.getByRole('link', { name: 'Productos terminados', exact: true }).filter({ visible: true }).click();
+  await page.getByRole('link', { name: 'Productos', exact: true }).filter({ visible: true }).click();
   await page.getByRole('button', { name: 'Nuevo producto' }).click();
   const modalProducto = page.getByRole('dialog', { name: 'Registrar producto' });
   const codigoProducto = modalProducto.getByLabel('Código', { exact: true });
