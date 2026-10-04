@@ -294,8 +294,7 @@ export class GeografiaService {
     const resultados = await this.buscarEnTarija('autocomplete', consulta);
     return {
       proveedor: 'GEOAPIFY',
-      alcance: 'BOLIVIA',
-      prioridad: 'TARIJA',
+      alcance: 'TARIJA_BOLIVIA',
       resultados,
     };
   }
