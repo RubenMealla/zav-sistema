@@ -446,9 +446,16 @@ export function SelectorUbicacionMapa({
 type MapaRepartoProps = {
   origen: PuntoGeografico;
   paradas: PlanificacionParada[];
+  interactivo?: boolean;
+  expandido?: boolean;
 };
 
-export function MapaReparto({ origen, paradas }: MapaRepartoProps) {
+export function MapaReparto({
+  origen,
+  paradas,
+  interactivo = false,
+  expandido = false,
+}: MapaRepartoProps) {
   const coordenadas = useMemo(
     () =>
       [
@@ -484,7 +491,10 @@ export function MapaReparto({ origen, paradas }: MapaRepartoProps) {
   if (!paradas.length) return null;
 
   return (
-    <View style={styles.mapaPlan}>
+    <View
+      pointerEvents={interactivo ? 'auto' : 'none'}
+      style={[styles.mapaPlan, expandido && styles.mapaPlanExpandido]}
+    >
       <Map
         style={StyleSheet.absoluteFill}
         mapStyle={MAP_STYLE_URL}
@@ -530,6 +540,47 @@ export function MapaReparto({ origen, paradas }: MapaRepartoProps) {
         ))}
       </Map>
     </View>
+  );
+}
+
+export function MapaRepartoModal({
+  visible,
+  origen,
+  paradas,
+  onCerrar,
+}: {
+  visible: boolean;
+  origen: PuntoGeografico;
+  paradas: PlanificacionParada[];
+  onCerrar: () => void;
+}) {
+  return (
+    <Modal visible={visible} animationType="slide" onRequestClose={onCerrar}>
+      <SafeAreaView style={styles.modalMapaPlan} edges={['top', 'bottom']}>
+        <View style={styles.cabeceraMapaPlan}>
+          <View style={styles.flex}>
+            <Text style={styles.eyebrow}>PEDIDOS · MAPA</Text>
+            <Text style={styles.tituloMapaPlan}>Recorrido de entrega</Text>
+          </View>
+          <Pressable onPress={onCerrar} style={styles.secundarioCompacto}>
+            <Text style={styles.secundarioTexto}>Cerrar</Text>
+          </Pressable>
+        </View>
+        <View style={styles.mapaPlanCuerpo}>
+          <MapaReparto
+            origen={origen}
+            paradas={paradas}
+            interactivo
+            expandido
+          />
+        </View>
+        <View style={styles.mapaPlanAyuda}>
+          <Text style={styles.ayuda}>
+            Usa uno o dos dedos para mover y acercar el mapa. La línea representa la secuencia sugerida entre paradas, no una ruta vial optimizada.
+          </Text>
+        </View>
+      </SafeAreaView>
+    </Modal>
   );
 }
 
@@ -712,11 +763,46 @@ const styles = StyleSheet.create({
   primarioTexto: { color: '#fff', fontSize: 12, fontWeight: '800' },
   deshabilitado: { opacity: 0.5 },
   mapaPlan: {
-    height: 300,
+    height: 250,
     borderRadius: 10,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: '#ddddd5',
+  },
+  mapaPlanExpandido: {
+    flex: 1,
+    height: undefined,
+    borderRadius: 0,
+    borderWidth: 0,
+  },
+  modalMapaPlan: {
+    flex: 1,
+    backgroundColor: '#f6f5f0',
+  },
+  cabeceraMapaPlan: {
+    backgroundColor: '#20201e',
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  tituloMapaPlan: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: '800',
+    marginTop: 3,
+  },
+  mapaPlanCuerpo: {
+    flex: 1,
+    backgroundColor: '#ecebe5',
+  },
+  mapaPlanAyuda: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: '#fff',
+    borderTopWidth: 1,
+    borderTopColor: '#ddddd5',
   },
   marcador: {
     minWidth: 30,
