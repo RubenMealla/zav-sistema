@@ -20,6 +20,11 @@ export class ClientesController {
     return this.clientes.listar(consulta);
   }
 
+  @Patch(':id')
+  actualizar(@Param('id') id: string, @Body() datos: unknown) {
+    return this.clientes.actualizar(id, datos);
+  }
+
   @Patch(':id/ubicacion')
   actualizarUbicacion(@Param('id') id: string, @Body() datos: unknown) {
     return this.clientes.actualizarUbicacion(id, datos);
