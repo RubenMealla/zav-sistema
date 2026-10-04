@@ -51,7 +51,8 @@ button { cursor: pointer; }
 button:disabled { opacity: .55; cursor: not-allowed; }
 .icono { display: block; flex: none; }
 .eyebrow { color: var(--marca-oscura); font-size: 10px; font-weight: 650; letter-spacing: .13em; line-height: 1.5; }
-.boton { min-height: 44px; border-radius: var(--radio); border: 1px solid transparent; padding: 10px 16px; display: inline-flex; align-items: center; justify-content: center; gap: 10px; font-size: 13px; font-weight: 600; line-height: 1.4; text-align: center; transition: background .15s, border-color .15s; }
+.boton { min-height: 44px; border-radius: var(--radio); border: 1px solid transparent; padding: 10px 16px; display: inline-flex; align-items: center; justify-content: center; gap: 10px; font-size: 13px; font-weight: 600; line-height: 1.4; text-align: center; transition: background .15s, border-color .15s, color .15s, transform .15s; }
+.boton:hover:not(:disabled) { transform: translateY(-1px); }
 .boton-primario { background: var(--marca-oscura); color: white; }
 .boton-primario:hover:not(:disabled) { background: var(--marca-hover); }
 .boton-primario:active:not(:disabled) { background: var(--carbon); }
@@ -67,7 +68,8 @@ main:focus { outline: none; }
 .saltar-contenido { position: fixed; top: 8px; left: 8px; z-index: 200; padding: 12px 18px; color: white; background: var(--carbon); transform: translateY(-160%); }
 .saltar-contenido:focus { transform: none; }
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation: none !important; transition: none !important; }
 }
 
 
