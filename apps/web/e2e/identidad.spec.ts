@@ -81,6 +81,13 @@ for (const ancho of [390, 768, 1440]) {
       await expect(modal).not.toBeVisible();
       await expect(abrir).toBeFocused();
     }
+    await navegacion.getByRole('link', { name: 'Distribución', exact: true }).click();
+    await expect(navegacion.getByRole('link', { name: 'Distribución', exact: true })).toHaveAttribute('aria-current', 'page');
+    await expect(page.getByRole('heading', { name: 'Distribución', exact: true })).toBeVisible();
+    await expect(page.getByRole('application', { name: 'Mapa para seleccionar la ubicación de Venta y Despacho' })).toBeVisible();
+    await sinDesborde(page);
+    await captura(page, `identidad-distribucion-${ancho}.png`);
+
     await navegacion.getByRole('link', { name: 'Pedidos', exact: true }).click();
     await expect(navegacion.getByRole('link', { name: 'Pedidos', exact: true })).toHaveAttribute('aria-current', 'page');
     await expect(page.getByRole('heading', { name: 'Pedidos', exact: true })).toBeVisible();

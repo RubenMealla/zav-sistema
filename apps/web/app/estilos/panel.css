@@ -160,7 +160,10 @@
 .vista-contenido {
   width: 100%;
   min-height: calc(100dvh - 86px);
-  padding: 20px clamp(18px, 2.4vw, 34px) 34px;
+  padding: 16px clamp(18px, 2.2vw, 30px) 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .bienvenida {
@@ -203,9 +206,9 @@
 
 .dashboard-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(280px, .8fr);
-  gap: 14px;
-  align-items: start;
+  grid-template-columns: minmax(0, 1.35fr) minmax(280px, .85fr);
+  gap: 12px;
+  align-items: stretch;
 }
 
 .card {
@@ -214,10 +217,16 @@
   border: 1px solid #d4cfc5;
 }
 
-.card-modulo { margin-top: 14px; overflow: hidden; }
-.vista-contenido > .card-modulo { min-height: calc(100dvh - 140px); }
-.vista-contenido > .modulo-dos-columnas { min-height: calc(100dvh - 140px); }
-.vista-contenido > .modulo-dos-columnas > .card { min-height: 100%; }
+.card-modulo { overflow: hidden; display: flex; flex-direction: column; }
+.vista-productos > .card-modulo,
+.vista-lotes > .card-modulo,
+.vista-pedidos > .card-modulo,
+.vista-movimientos > .card-modulo,
+.vista-distribucion > .card-modulo { flex: 1; min-height: 0; }
+.vista-condiciones > .modulo-dos-columnas { flex: 1; min-height: 0; }
+.vista-condiciones > .modulo-dos-columnas > .card { min-height: 0; display: flex; flex-direction: column; }
+.card-modulo > .tabla-contenedor { flex: 1; min-height: 0; }
+.card-distribucion .formulario-mapa { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 
 .card-cabecera {
   min-height: 72px;
@@ -306,9 +315,9 @@
 .timeline-item p { display: flex; align-items: center; gap: 7px; margin: 7px 0; }
 .timeline-item small { color: #666159; font-size: 9px; }
 
-.ubicacion-editor { padding: 16px; }
-.mapa-selector-wrap { position: relative; min-height: 360px; border: 1px solid #cbc6bc; background: #e7e3da; }
-.mapa-selector { width: 100%; height: clamp(360px, 46vh, 520px); }
+.ubicacion-editor { flex: 1; min-height: 0; padding: 14px; display: flex; flex-direction: column; }
+.mapa-selector-wrap { position: relative; flex: 1; min-height: 340px; border: 1px solid #c9c4ba; background: #e7e3da; overflow: hidden; }
+.mapa-selector { width: 100%; height: clamp(340px, calc(100dvh - 300px), 620px); }
 .mapa-estado { position: absolute; inset: 0; display: grid; place-items: center; z-index: 500; background: #f5f2eb; color: #666159; font-size: 12px; }
 .mapa-error { color: var(--rojo); }
 .ubicacion-editor-pie { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding-top: 13px; }

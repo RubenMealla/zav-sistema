@@ -50,9 +50,13 @@
     padding: 16px 14px 28px;
   }
 
-  .vista-contenido > .card-modulo,
-  .vista-contenido > .modulo-dos-columnas {
-    min-height: calc(100dvh - 156px);
+  .vista-productos > .card-modulo,
+  .vista-lotes > .card-modulo,
+  .vista-pedidos > .card-modulo,
+  .vista-movimientos > .card-modulo,
+  .vista-distribucion > .card-modulo,
+  .vista-condiciones > .modulo-dos-columnas {
+    min-height: 0;
   }
 
   .ubicacion-editor-pie {

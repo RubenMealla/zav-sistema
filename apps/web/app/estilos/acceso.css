@@ -1,141 +1,47 @@
 .acceso-layout {
   min-height: 100dvh;
   display: grid;
-  grid-template-columns: minmax(390px, 44%) minmax(0, 1fr);
-  background: #f3f0e9;
+  grid-template-columns: minmax(330px, 38%) minmax(0, 1fr);
+  background: #f4f1ea;
 }
-
 .acceso-identidad {
   min-height: 100dvh;
-  padding: 28px clamp(28px, 4vw, 58px);
+  padding: 26px clamp(26px, 3.5vw, 52px);
   display: grid;
   grid-template-rows: auto 1fr auto;
   color: #fff;
   background: #151512;
   border-right: 1px solid #34332e;
 }
-
-.acceso-identidad-cabecera,
-.acceso-identidad-pie {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 22px;
-}
-
-.acceso-identidad-cabecera>span,
-.acceso-identidad-pie {
-  color: #969188;
-  font-size: 9px;
-  letter-spacing: .12em;
-  text-transform: uppercase;
-}
-
-.acceso-identidad-marca {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.acceso-identidad-marca>span:last-child {
-  display: grid;
-  gap: 2px;
-}
-
-.acceso-identidad-marca strong {
-  font-family: Georgia, 'Times New Roman', serif;
-  font-size: 21px;
-}
-
-.acceso-identidad-marca small {
-  color: #aaa69d;
-  font-size: 8px;
-  letter-spacing: .1em;
-  text-transform: uppercase;
-}
-
-.acceso-identidad-centro {
-  align-self: center;
-  display: grid;
-  grid-template-columns: minmax(180px, 290px) minmax(0, 1fr);
-  align-items: center;
-  gap: clamp(28px, 4vw, 58px);
-}
-
-.acceso-identidad-centro>div:last-child>span {
-  color: #f07851;
-  font-size: 9px;
-  font-weight: 750;
-  letter-spacing: .14em;
-}
-
-.acceso-identidad-centro h2 {
-  margin: 14px 0 16px;
-  font-family: Georgia, 'Times New Roman', serif;
-  font-size: clamp(36px, 4vw, 56px);
-  font-weight: 400;
-  line-height: .98;
-  letter-spacing: -.045em;
-}
-
-.acceso-identidad-centro p {
-  max-width: 420px;
-  margin: 0;
-  color: #bbb7ad;
-  font-size: 12px;
-  line-height: 1.7;
-}
-
-.acceso-panel {
-  min-width: 0;
-  min-height: 100dvh;
-  padding: 26px clamp(28px, 6vw, 86px);
-  display: grid;
-  grid-template-rows: auto 1fr auto;
-}
-
-.acceso-panel-superior { align-self: start; }
-.volver { min-height: 40px; display: inline-flex; align-items: center; gap: 8px; color: #6c675e; font-size: 11px; font-weight: 650; }
-.volver:hover { color: #22211d; }
-
-.acceso-formulario-caja {
-  align-self: center;
-  width: min(100%, 420px);
-  margin-inline: auto;
-}
-
-.acceso-marca-movil { display: none; }
-.acceso-titulo { margin-bottom: 28px; }
-.acceso-titulo h1 { margin: 10px 0 10px; font-size: 38px; font-weight: 650; letter-spacing: -.035em; }
-.acceso-titulo>p { margin: 0; color: #69645b; font-size: 13px; }
-.acceso-formulario { gap: 18px; }
-
-.acceso-seguridad {
-  display: flex;
-  gap: 9px;
-  align-items: center;
-  margin-top: 22px;
-  padding-top: 18px;
-  border-top: 1px solid #d6d1c7;
-  color: #6b665d;
-}
-
-.acceso-seguridad p { margin: 0; font-size: 11px; line-height: 1.55; }
-
-.acceso-panel-pie {
-  margin: 0;
-  align-self: end;
-  padding-top: 16px;
-  border-top: 1px solid #dcd7ce;
-  color: #787269;
-  font-size: 9px;
-  letter-spacing: .1em;
-  text-transform: uppercase;
-}
-
-@media (max-width: 880px) {
-  .acceso-layout { grid-template-columns: 1fr; }
-  .acceso-identidad { display: none; }
-  .acceso-panel { padding: 22px; }
-  .acceso-marca-movil { display: inline-flex; align-items: center; gap: 9px; margin-bottom: 30px; }
+.acceso-identidad-cabecera,.acceso-identidad-pie { display:flex; align-items:center; justify-content:space-between; gap:20px; }
+.acceso-identidad-cabecera>span,.acceso-identidad-pie { color:#aaa69d; font-size:10px; letter-spacing:.11em; text-transform:uppercase; }
+.acceso-identidad-marca { display:inline-flex; align-items:center; gap:10px; }
+.acceso-identidad-marca>span:last-child { display:grid; gap:2px; }
+.acceso-identidad-marca strong { font-family:Georgia,'Times New Roman',serif; font-size:20px; }
+.acceso-identidad-marca small { color:#aaa69d; font-size:9px; letter-spacing:.1em; text-transform:uppercase; }
+.acceso-identidad-centro { align-self:center; max-width:560px; padding-block:42px; }
+.acceso-identidad-indice { display:block; margin-bottom:16px; color:#c7c2b8; font-size:10px; font-weight:750; letter-spacing:.14em; }
+.acceso-identidad-centro h2 { max-width:520px; margin:0 0 18px; font-family:Georgia,'Times New Roman',serif; font-size:clamp(40px,4.2vw,60px); font-weight:400; line-height:1; letter-spacing:-.045em; }
+.acceso-identidad-centro p { max-width:500px; margin:0; color:#c0bbb1; font-size:13px; line-height:1.75; }
+.acceso-identidad-modulos { display:flex; flex-wrap:wrap; gap:8px 18px; margin-top:28px; padding-top:18px; border-top:1px solid #3a3933; color:#ded9cf; font-size:11px; }
+.acceso-identidad-modulos span::before { content:'•'; margin-right:8px; color:#e45a2e; }
+.acceso-panel { min-width:0; min-height:100dvh; padding:24px clamp(28px,5vw,72px); display:grid; grid-template-rows:auto 1fr auto; }
+.acceso-panel-superior { align-self:start; }
+.volver { min-height:40px; display:inline-flex; align-items:center; gap:8px; color:#6c675e; font-size:12px; font-weight:650; }
+.volver:hover { color:#22211d; }
+.acceso-formulario-caja { align-self:center; width:min(100%,440px); margin-inline:auto; padding:30px 0; }
+.acceso-marca-movil { display:none; }
+.acceso-titulo { margin-bottom:26px; }
+.acceso-titulo h1 { margin:9px 0; font-size:36px; font-weight:650; letter-spacing:-.035em; }
+.acceso-titulo>p { margin:0; color:#69645b; font-size:13px; }
+.acceso-formulario { gap:16px; }
+.acceso-seguridad { display:flex; gap:9px; align-items:center; margin-top:20px; padding-top:16px; border-top:1px solid #d6d1c7; color:#6b665d; }
+.acceso-seguridad p { margin:0; font-size:11px; line-height:1.55; }
+.acceso-panel-pie { margin:0; align-self:end; padding-top:14px; border-top:1px solid #dcd7ce; color:#787269; font-size:9px; letter-spacing:.1em; text-transform:uppercase; }
+@media (max-width:880px) {
+  .acceso-layout { grid-template-columns:1fr; }
+  .acceso-identidad { display:none; }
+  .acceso-panel { padding:0 20px 22px; }
+  .acceso-panel-superior { padding-top:18px; }
+  .acceso-marca-movil { display:inline-flex; align-items:center; gap:9px; width:fit-content; margin-bottom:24px; padding:8px 12px; color:#fff; background:#151512; }
 }

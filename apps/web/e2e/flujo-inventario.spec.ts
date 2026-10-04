@@ -163,8 +163,13 @@ test('permite gestionar inventario desde módulos, modales y notificaciones', as
   await expect(page.getByText('QA UI: observación temporal')).toBeVisible();
   await captura(page, '10-condicion-persistente.png');
 
+  await modulos.getByRole('link', { name: 'Distribución', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Distribución', exact: true })).toBeVisible();
+  await expect(page.getByRole('application', { name: 'Mapa para seleccionar la ubicación de Venta y Despacho' })).toBeVisible();
+  await captura(page, '11-distribucion-mapa.png');
+
   await modulos.getByRole('link', { name: 'Resumen', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Resumen' })).toBeVisible();
   await expect(page.getByText('Trabaja por módulo')).toBeVisible();
-  await captura(page, '11-dashboard-final.png');
+  await captura(page, '12-dashboard-final.png');
 });
