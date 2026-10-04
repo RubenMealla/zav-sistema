@@ -68,6 +68,19 @@ function consultaDireccion(valor: unknown): string {
 
 type GeoapifyResultado = {
   formatted?: unknown;
+  address_line1?: unknown;
+  address_line2?: unknown;
+  name?: unknown;
+  street?: unknown;
+  housenumber?: unknown;
+  suburb?: unknown;
+  district?: unknown;
+  city?: unknown;
+  county?: unknown;
+  state?: unknown;
+  country?: unknown;
+  country_code?: unknown;
+  result_type?: unknown;
   lat?: unknown;
   lon?: unknown;
 };
@@ -75,6 +88,100 @@ type GeoapifyResultado = {
 type GeoapifyRespuesta = {
   results?: GeoapifyResultado[];
 };
+
+function textoOpcional(valor: unknown): string {
+  return typeof valor === 'string' ? valor.trim() : '';
+}
+
+function esPlusCode(valor: string): boolean {
+  return /^[A-Z0-9]{4,8}\+[A-Z0-9]{2,4}$/i.test(valor.trim());
+}
+
+function direccionHumana(resultado: GeoapifyResultado): string {
+  const linea1 = textoOpcional(resultado.address_line1);
+  const nombre = textoOpcional(resultado.name);
+  const calle = textoOpcional(resultado.street);
+  const numero = textoOpcional(resultado.housenumber);
+  const principal =
+    linea1 && !esPlusCode(linea1)
+      ? linea1
+      : [nombre && !esPlusCode(nombre) ? nombre : '', calle, numero]
+          .filter(Boolean)
+          .join(' ');
+
+  const partes = [
+    principal,
+    textoOpcional(resultado.suburb),
+    textoOpcional(resultado.district),
+    textoOpcional(resultado.city),
+    textoOpcional(resultado.county),
+    textoOpcional(resultado.state),
+  ]
+    .filter(Boolean)
+    .filter((valor, indice, todos) => todos.indexOf(valor) === indice);
+
+  if (partes.length) return partes.join(', ');
+
+  const formateada = textoOpcional(resultado.formatted);
+  return formateada.replace(/^[A-Z0-9]{4,8}\+[A-Z0-9]{2,4},?\s*/i, '');
+}
+
+function normalizarResultado(resultado: GeoapifyResultado) {
+  const direccion = direccionHumana(resultado);
+  const latitud = Number(resultado.lat);
+  const longitud = Number(resultado.lon);
+  if (!direccion || !Number.isFinite(latitud) || !Number.isFinite(longitud)) {
+    return null;
+  }
+
+  return {
+    direccion,
+    principal:
+      textoOpcional(resultado.address_line1) ||
+      textoOpcional(resultado.name) ||
+      textoOpcional(resultado.street) ||
+      direccion.split(',')[0],
+    secundaria: [
+      textoOpcional(resultado.suburb),
+      textoOpcional(resultado.district),
+      textoOpcional(resultado.city),
+      textoOpcional(resultado.state),
+    ]
+      .filter(Boolean)
+      .filter((valor, indice, todos) => todos.indexOf(valor) === indice)
+      .join(', '),
+    tipo: textoOpcional(resultado.result_type) || 'unknown',
+    departamento: textoOpcional(resultado.state) || null,
+    ciudad: textoOpcional(resultado.city) || null,
+    paisCodigo: textoOpcional(resultado.country_code).toLowerCase() || null,
+    latitud,
+    longitud,
+  };
+}
+
+function esTarija(resultado: ReturnType<typeof normalizarResultado>): boolean {
+  if (!resultado) return false;
+  return [resultado.departamento, resultado.ciudad, resultado.secundaria]
+    .filter((valor): valor is string => Boolean(valor))
+    .some((valor) => valor.toLocaleLowerCase('es-BO').includes('tarija'));
+}
+
+function combinarResultados(
+  prioritarios: GeoapifyResultado[],
+  generales: GeoapifyResultado[],
+) {
+  const mapa = new Map<string, NonNullable<ReturnType<typeof normalizarResultado>>>();
+  for (const bruto of [...prioritarios, ...generales]) {
+    const resultado = normalizarResultado(bruto);
+    if (!resultado || resultado.paisCodigo !== 'bo') continue;
+    const clave = `${resultado.latitud.toFixed(5)}:${resultado.longitud.toFixed(5)}:${resultado.direccion.toLocaleLowerCase('es-BO')}`;
+    if (!mapa.has(clave)) mapa.set(clave, resultado);
+  }
+
+  return [...mapa.values()]
+    .sort((a, b) => Number(esTarija(b)) - Number(esTarija(a)))
+    .slice(0, 8);
+}
 
 @Injectable()
 export class GeografiaService {
@@ -91,7 +198,7 @@ export class GeografiaService {
   }
 
   private async consultarGeoapify(
-    ruta: 'search' | 'reverse',
+    ruta: 'search' | 'reverse' | 'autocomplete',
     parametros: Record<string, string>,
   ): Promise<GeoapifyRespuesta> {
     const url = new URL(`https://api.geoapify.com/v1/geocode/${ruta}`);
@@ -129,29 +236,49 @@ export class GeografiaService {
     }
   }
 
+  private async buscarEnBolivia(
+    ruta: 'search' | 'autocomplete',
+    consulta: string,
+  ) {
+    const comunes = {
+      filter: 'countrycode:bo',
+      limit: '8',
+    };
+
+    const [tarija, bolivia] = await Promise.all([
+      this.consultarGeoapify(ruta, {
+        ...comunes,
+        text: `${consulta}, Tarija, Bolivia`,
+      }),
+      this.consultarGeoapify(ruta, {
+        ...comunes,
+        text: consulta,
+      }),
+    ]);
+
+    return combinarResultados(tarija.results ?? [], bolivia.results ?? []);
+  }
+
   async geocodificar(entrada: unknown) {
     const consulta = consultaDireccion(entrada);
-    const cuerpo = await this.consultarGeoapify('search', {
-      text: consulta,
-      filter: 'countrycode:bo',
-      limit: '5',
-    });
+    const resultados = await this.buscarEnBolivia('search', consulta);
+    return {
+      proveedor: 'GEOAPIFY',
+      alcance: 'BOLIVIA',
+      prioridad: 'TARIJA',
+      resultados,
+    };
+  }
 
-    const resultados = (cuerpo.results ?? [])
-      .map((resultado) => ({
-        direccion:
-          typeof resultado.formatted === 'string' ? resultado.formatted : '',
-        latitud: Number(resultado.lat),
-        longitud: Number(resultado.lon),
-      }))
-      .filter(
-        (resultado) =>
-          resultado.direccion.length > 0 &&
-          Number.isFinite(resultado.latitud) &&
-          Number.isFinite(resultado.longitud),
-      );
-
-    return { proveedor: 'GEOAPIFY', resultados };
+  async autocompletar(entrada: unknown) {
+    const consulta = consultaDireccion(entrada);
+    const resultados = await this.buscarEnBolivia('autocomplete', consulta);
+    return {
+      proveedor: 'GEOAPIFY',
+      alcance: 'BOLIVIA',
+      prioridad: 'TARIJA',
+      resultados,
+    };
   }
 
   async geocodificacionInversa(latitudEntrada: unknown, longitudEntrada: unknown) {
@@ -162,14 +289,19 @@ export class GeografiaService {
       lon: String(longitud),
       limit: '1',
     });
-    const primero = cuerpo.results?.[0];
+    const normalizado = cuerpo.results?.map(normalizarResultado).find(Boolean) ?? null;
+
+    if (normalizado?.paisCodigo && normalizado.paisCodigo !== 'bo') {
+      throw new BadRequestException(
+        'El punto seleccionado debe estar dentro de Bolivia.',
+      );
+    }
 
     return {
       proveedor: 'GEOAPIFY',
-      direccion:
-        primero && typeof primero.formatted === 'string'
-          ? primero.formatted
-          : null,
+      alcance: 'BOLIVIA',
+      direccion: normalizado?.direccion ?? null,
+      paisCodigo: normalizado?.paisCodigo ?? null,
     };
   }
 
