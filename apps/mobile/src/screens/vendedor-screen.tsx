@@ -21,8 +21,9 @@ import {
   crearCliente,
   crearPedido,
   entregarPedidoConComprobacion,
-  listarClientes,
+  listarDirectorioClientes,
   listarPedidos,
+  listarPedidosActivos,
   obtenerDisponibilidad,
   obtenerPedido,
   planificarReparto,
@@ -61,7 +62,20 @@ type MapaOperativoVista = {
 };
 
 function mensajeError(error: unknown) {
-  if (error instanceof ApiError) return error.message;
+  if (error instanceof ApiError) {
+    const mensaje = error.message.toLocaleLowerCase('es-BO');
+    if (
+      error.status === 400 &&
+      (mensaje.includes('estado de pedido no valido') ||
+        mensaje.includes('campos no permitidos'))
+    ) {
+      return 'La API de desarrollo no está alineada con esta versión de la aplicación. Actualiza los datos e inténtalo nuevamente.';
+    }
+    if (error.status === 404 && error.body?.path?.includes('/estado')) {
+      return 'La gestión de estado de clientes todavía no está disponible en la API conectada.';
+    }
+    return error.message;
+  }
   return 'Ocurrió un error inesperado.';
 }
 
@@ -152,6 +166,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
   const [historialVisible, setHistorialVisible] = useState(false);
   const [historialPedidos, setHistorialPedidos] = useState<PedidoResumen[]>([]);
   const [cargandoHistorial, setCargandoHistorial] = useState(false);
+  const [historialMensaje, setHistorialMensaje] = useState('');
 
   const [clienteNombre, setClienteNombre] = useState('');
   const [clienteTelefono, setClienteTelefono] = useState('');
@@ -188,13 +203,13 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
 
   useEffect(() => {
     if (!error) return;
-    const temporizador = setTimeout(() => setError(''), 5000);
+    const temporizador = setTimeout(() => setError(''), 5500);
     return () => clearTimeout(temporizador);
   }, [error]);
 
   useEffect(() => {
     if (!aviso) return;
-    const temporizador = setTimeout(() => setAviso(''), 3500);
+    const temporizador = setTimeout(() => setAviso(''), 3800);
     return () => clearTimeout(temporizador);
   }, [aviso]);
 
@@ -211,10 +226,10 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
   );
 
   const consultarDatos = useCallback(
-    () =>
-      Promise.all([
-        listarPedidos(token, 'ACTIVOS'),
-        listarClientes(token),
+    async () =>
+      Promise.allSettled([
+        listarPedidosActivos(token),
+        listarDirectorioClientes(token),
         obtenerDisponibilidad(token),
       ]),
     [token],
@@ -224,15 +239,48 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
     async (mostrarCarga = true) => {
       if (mostrarCarga) setCargando(true);
       setError('');
+
       try {
-        const [p, c, d] = await consultarDatos();
-        setPedidos(p.items);
-        setTotalPedidos(p.total);
-        setPaginaPedidos(p.page);
-        setClientes(c.items);
-        setDisponibilidad(d);
-      } catch (e) {
-        await manejarError(e);
+        const [pedidosResultado, clientesResultado, disponibilidadResultado] =
+          await consultarDatos();
+
+        const errores: Array<{ recurso: string; error: unknown }> = [];
+
+        if (pedidosResultado.status === 'fulfilled') {
+          setPedidos(pedidosResultado.value.items);
+          setTotalPedidos(pedidosResultado.value.total);
+          setPaginaPedidos(1);
+        } else {
+          errores.push({ recurso: 'pedidos', error: pedidosResultado.reason });
+        }
+
+        if (clientesResultado.status === 'fulfilled') {
+          setClientes(clientesResultado.value.items);
+        } else {
+          errores.push({ recurso: 'clientes', error: clientesResultado.reason });
+        }
+
+        if (disponibilidadResultado.status === 'fulfilled') {
+          setDisponibilidad(disponibilidadResultado.value);
+        } else {
+          errores.push({ recurso: 'productos', error: disponibilidadResultado.reason });
+        }
+
+        const errorSesion = errores.find(
+          ({ error }) =>
+            error instanceof ApiError && (error.status === 401 || error.status === 403),
+        );
+        if (errorSesion) {
+          await manejarError(errorSesion.error);
+          return;
+        }
+
+        if (errores.length) {
+          const nombres = errores.map(({ recurso }) => recurso).join(', ');
+          setError(
+            `No se pudo actualizar ${nombres}. El resto de la información permanece disponible; desliza hacia abajo para reintentar.`,
+          );
+        }
       } finally {
         setCargando(false);
         setActualizando(false);
@@ -242,29 +290,8 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
   );
 
   useEffect(() => {
-    let activa = true;
-
-    async function inicializar() {
-      try {
-        const [p, c, d] = await consultarDatos();
-        if (!activa) return;
-        setPedidos(p.items);
-        setTotalPedidos(p.total);
-        setPaginaPedidos(p.page);
-        setClientes(c.items);
-        setDisponibilidad(d);
-      } catch (e) {
-        if (activa) await manejarError(e);
-      } finally {
-        if (activa) setCargando(false);
-      }
-    }
-
-    void inicializar();
-    return () => {
-      activa = false;
-    };
-  }, [consultarDatos, manejarError]);
+    void cargar();
+  }, [cargar]);
 
   async function refrescar() {
     setActualizando(true);
@@ -277,17 +304,10 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
     setCargandoMasPedidos(true);
     setError('');
     try {
-      const siguientePagina = paginaPedidos + 1;
-      const respuesta = await listarPedidos(token, 'ACTIVOS', siguientePagina);
-      setPedidos((actuales) => {
-        const ids = new Set(actuales.map((pedido) => pedido.id));
-        return [
-          ...actuales,
-          ...respuesta.items.filter((pedido) => !ids.has(pedido.id)),
-        ];
-      });
+      const respuesta = await listarPedidosActivos(token);
+      setPedidos(respuesta.items);
       setTotalPedidos(respuesta.total);
-      setPaginaPedidos(respuesta.page);
+      setPaginaPedidos(1);
     } catch (e) {
       await manejarError(e);
     } finally {
@@ -407,14 +427,14 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
   function confirmarCambioEstadoCliente(cliente: Cliente) {
     const activar = !cliente.activo;
     Alert.alert(
-      activar ? 'Reactivar cliente' : 'Dar de baja al cliente',
+      activar ? 'Reactivar cliente' : 'Desactivar cliente',
       activar
         ? `¿Reactivar a ${cliente.nombre} para permitir nuevos pedidos?`
-        : `¿Dar de baja a ${cliente.nombre}? Su historial se conserva y no podrá usarse en pedidos nuevos.`,
+        : `¿Desactivar a ${cliente.nombre}? Permanecerá en el historial, pero no podrá seleccionarse en pedidos nuevos.`,
       [
         { text: 'Cancelar', style: 'cancel' },
         {
-          text: activar ? 'Reactivar' : 'Dar de baja',
+          text: activar ? 'Reactivar' : 'Desactivar',
           style: activar ? 'default' : 'destructive',
           onPress: () => void cambiarEstadoClienteDesdeApp(cliente, activar),
         },
@@ -438,7 +458,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
       setAviso(
         activo
           ? 'Cliente reactivado y disponible para nuevos pedidos.'
-          : 'Cliente dado de baja. Su historial permanece conservado.',
+          : 'Cliente desactivado. Su historial permanece conservado.',
       );
     } catch (e) {
       await manejarError(e);
@@ -615,19 +635,46 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
   async function abrirHistorialPedidos() {
     setHistorialVisible(true);
     setCargandoHistorial(true);
+    setHistorialMensaje('');
     setError('');
+
     try {
-      const [entregados, cancelados] = await Promise.all([
+      const [entregadosResultado, canceladosResultado] = await Promise.allSettled([
         listarPedidos(token, 'ENTREGADO', 1, 100),
         listarPedidos(token, 'CANCELADO', 1, 100),
       ]);
+
+      if (entregadosResultado.status === 'rejected') {
+        throw entregadosResultado.reason;
+      }
+
+      const cancelados =
+        canceladosResultado.status === 'fulfilled'
+          ? canceladosResultado.value.items
+          : [];
+
+      if (canceladosResultado.status === 'rejected') {
+        const errorCancelados = canceladosResultado.reason;
+        if (
+          errorCancelados instanceof ApiError &&
+          (errorCancelados.status === 400 || errorCancelados.status === 404)
+        ) {
+          setHistorialMensaje(
+            'Los pedidos entregados están disponibles. La consulta de anulados requiere la versión actual del backend.',
+          );
+        } else {
+          setHistorialMensaje(
+            'Los pedidos entregados están disponibles, pero no fue posible consultar los anulados.',
+          );
+        }
+      }
+
       setHistorialPedidos(
-        [...entregados.items, ...cancelados.items].sort(
+        [...entregadosResultado.value.items, ...cancelados].sort(
           (a, b) => new Date(b.creadoEn).getTime() - new Date(a.creadoEn).getTime(),
         ),
       );
     } catch (e) {
-      setHistorialVisible(false);
       await manejarError(e);
     } finally {
       setCargandoHistorial(false);
@@ -1144,14 +1191,11 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
       </View>
 
       {error || aviso ? (
-        <View pointerEvents="box-none" style={styles.toastZona}>
-          <View style={[styles.toast, error ? styles.toastError : styles.toastOk]}>
-            <Text style={error ? styles.toastErrorTexto : styles.toastOkTexto}>{error || aviso}</Text>
-            <Pressable onPress={() => (error ? setError('') : setAviso(''))}>
-              <Text style={error ? styles.toastErrorCerrar : styles.toastOkCerrar}>×</Text>
-            </Pressable>
-          </View>
-        </View>
+        <NotificacionEstado
+          tipo={error ? 'error' : 'exito'}
+          mensaje={error || aviso}
+          onCerrar={() => (error ? setError('') : setAviso(''))}
+        />
       ) : null}
 
       <ScrollView
@@ -1278,6 +1322,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
         visible={historialVisible}
         pedidos={historialPedidos}
         cargando={cargandoHistorial}
+        mensaje={historialMensaje}
         onCerrar={() => setHistorialVisible(false)}
       />
 
@@ -1304,6 +1349,56 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
           onCerrar={() => setMapaOperativo(null)}
         />
       ) : null}
+    </View>
+  );
+}
+
+function NotificacionEstado({
+  tipo,
+  mensaje,
+  onCerrar,
+}: {
+  tipo: 'error' | 'exito';
+  mensaje: string;
+  onCerrar: () => void;
+}) {
+  const esError = tipo === 'error';
+  return (
+    <View
+      accessibilityLiveRegion="polite"
+      style={[
+        styles.notificacion,
+        esError ? styles.notificacionError : styles.notificacionExito,
+      ]}
+    >
+      <View
+        style={[
+          styles.notificacionIcono,
+          esError ? styles.notificacionIconoError : styles.notificacionIconoExito,
+        ]}
+      >
+        <Text style={styles.notificacionIconoTexto}>{esError ? '!' : '✓'}</Text>
+      </View>
+      <View style={styles.flex}>
+        <Text
+          style={[
+            styles.notificacionTitulo,
+            esError ? styles.notificacionTituloError : styles.notificacionTituloExito,
+          ]}
+        >
+          {esError ? 'No se pudo completar' : 'Operación completada'}
+        </Text>
+        <Text style={styles.notificacionMensaje}>{mensaje}</Text>
+      </View>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Cerrar notificación"
+        hitSlop={10}
+        onPress={onCerrar}
+        style={styles.notificacionCerrar}
+      >
+        <Text style={styles.notificacionCerrarTexto}>×</Text>
+      </Pressable>
     </View>
   );
 }
@@ -2060,7 +2155,7 @@ function Clientes({
         <View style={styles.filtros}>
           {[
             ['ACTIVOS', 'Activos'],
-            ['INACTIVOS', 'De baja'],
+            ['INACTIVOS', 'Inactivos'],
             ['TODOS', 'Todos'],
           ].map(([valor, texto]) => (
             <Pressable
@@ -2139,8 +2234,8 @@ function Clientes({
                 ) : null}
               </View>
               <View style={styles.clienteBadges}>
-                <Text style={cliente.activo ? styles.estadoMiniOk : styles.estadoMiniBaja}>
-                  {cliente.activo ? 'Activo' : 'De baja'}
+                <Text style={cliente.activo ? styles.estadoMiniOk : styles.estadoMiniInactivo}>
+                  {cliente.activo ? 'Activo' : 'Inactivo'}
                 </Text>
                 <Text style={cliente.ubicacion ? styles.estadoMiniOk : styles.estadoMiniPendiente}>
                   {cliente.ubicacion ? 'GPS' : 'Sin GPS'}
@@ -2163,7 +2258,7 @@ function Clientes({
                   {cambiandoEstadoId === cliente.id
                     ? 'Procesando…'
                     : cliente.activo
-                      ? 'Dar de baja'
+                      ? 'Desactivar'
                       : 'Reactivar'}
                 </Text>
               </Pressable>
@@ -2918,33 +3013,51 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 16,
   },
-  toastZona: {
-    position: 'absolute',
-    top: 112,
-    left: 12,
-    right: 12,
-    zIndex: 50,
-    elevation: 12,
-  },
-  toast: {
-    borderRadius: 9,
-    paddingHorizontal: 13,
+  notificacion: {
+    marginHorizontal: 12,
+    marginTop: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    paddingHorizontal: 12,
     paddingVertical: 11,
     flexDirection: 'row',
-    gap: 10,
     alignItems: 'center',
-    borderWidth: 1,
-    shadowColor: '#000',
-    shadowOpacity: 0.13,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
+    gap: 10,
   },
-  toastError: { backgroundColor: '#fff4f1', borderColor: '#e1aaa0' },
-  toastOk: { backgroundColor: '#eef8f1', borderColor: '#acd0b8' },
-  toastErrorTexto: { color: '#9b3215', fontSize: 12, flex: 1, lineHeight: 17, fontWeight: '700' },
-  toastOkTexto: { color: '#286344', fontSize: 12, flex: 1, lineHeight: 17, fontWeight: '700' },
-  toastErrorCerrar: { color: '#9b3215', fontSize: 20, fontWeight: '900' },
-  toastOkCerrar: { color: '#286344', fontSize: 20, fontWeight: '900' },
+  notificacionError: {
+    backgroundColor: '#fff8f5',
+    borderColor: '#e4b9ac',
+  },
+  notificacionExito: {
+    backgroundColor: '#f4faf6',
+    borderColor: '#b8d7c2',
+  },
+  notificacionIcono: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  notificacionIconoError: { backgroundColor: '#a9472b' },
+  notificacionIconoExito: { backgroundColor: '#2d7a55' },
+  notificacionIconoTexto: { color: '#fff', fontSize: 15, fontWeight: '900' },
+  notificacionTitulo: { fontSize: 11, fontWeight: '900', letterSpacing: 0.2 },
+  notificacionTituloError: { color: '#89361f' },
+  notificacionTituloExito: { color: '#286344' },
+  notificacionMensaje: {
+    color: '#50504a',
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: 2,
+  },
+  notificacionCerrar: {
+    width: 30,
+    height: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  notificacionCerrarTexto: { color: '#66665e', fontSize: 22, lineHeight: 24, fontWeight: '700' },
   accionesPedido: { gap: 8 },
   botonMapa: {
     minHeight: 44,
@@ -3013,7 +3126,7 @@ const styles = StyleSheet.create({
   },
   botonHistorialTexto: { color: '#50504a', fontSize: 12, fontWeight: '800' },
   clienteBadges: { alignItems: 'flex-end', gap: 5 },
-  estadoMiniBaja: {
+  estadoMiniInactivo: {
     color: '#6f625d',
     backgroundColor: '#f1efed',
     borderRadius: 99,

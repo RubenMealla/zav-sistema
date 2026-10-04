@@ -78,15 +78,42 @@ export function perfil(token: string) {
 export function listarClientes(
   token: string,
   q = '',
-  activo: 'true' | 'false' | 'todos' = 'todos',
+  activo?: 'true' | 'false' | 'todos',
 ) {
-  const params = new URLSearchParams({ limit: '100', activo });
+  const params = new URLSearchParams({ limit: '100' });
   if (q.trim()) params.set('q', q.trim());
+  if (activo) params.set('activo', activo);
   return solicitud<Lista<Cliente>>(
     `/api/v1/clientes?${params.toString()}`,
     {},
     token,
   );
+}
+
+export async function listarDirectorioClientes(token: string, q = '') {
+  const activos = await listarClientes(token, q);
+  let inactivos: Lista<Cliente> | null = null;
+
+  try {
+    inactivos = await listarClientes(token, q, 'false');
+  } catch (error) {
+    // Compatibilidad temporal: una API anterior puede no conocer el filtro activo.
+    if (!(error instanceof ApiError && (error.status === 400 || error.status === 404))) {
+      throw error;
+    }
+  }
+
+  const porId = new Map<string, Cliente>();
+  for (const cliente of activos.items) porId.set(cliente.id, cliente);
+  for (const cliente of inactivos?.items ?? []) porId.set(cliente.id, cliente);
+  const items = [...porId.values()].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+
+  return {
+    items,
+    total: items.length,
+    page: 1,
+    limit: Math.max(100, items.length),
+  } satisfies Lista<Cliente>;
 }
 
 export function crearCliente(
@@ -131,6 +158,24 @@ export function listarPedidos(
     {},
     token,
   );
+}
+
+export async function listarPedidosActivos(token: string) {
+  const [registrados, distribucion] = await Promise.all([
+    listarPedidos(token, 'REGISTRADO', 1, 100),
+    listarPedidos(token, 'EN_DISTRIBUCION', 1, 100),
+  ]);
+
+  const items = [...registrados.items, ...distribucion.items].sort(
+    (a, b) => new Date(b.creadoEn).getTime() - new Date(a.creadoEn).getTime(),
+  );
+
+  return {
+    items,
+    total: items.length,
+    page: 1,
+    limit: Math.max(100, items.length),
+  } satisfies Lista<PedidoResumen>;
 }
 
 export function obtenerPedido(token: string, id: string) {

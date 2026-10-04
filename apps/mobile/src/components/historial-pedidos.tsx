@@ -42,11 +42,13 @@ export function HistorialPedidosModal({
   visible,
   pedidos,
   cargando,
+  mensaje,
   onCerrar,
 }: {
   visible: boolean;
   pedidos: PedidoResumen[];
   cargando: boolean;
+  mensaje?: string;
   onCerrar: () => void;
 }) {
   const [busqueda, setBusqueda] = useState('');
@@ -126,6 +128,13 @@ export function HistorialPedidosModal({
             </View>
             <Text style={styles.contador}>{filtrados.length} pedido(s) encontrados</Text>
           </View>
+
+          {mensaje ? (
+            <View style={styles.informacion}>
+              <Text style={styles.informacionTitulo}>Información del historial</Text>
+              <Text style={styles.informacionTexto}>{mensaje}</Text>
+            </View>
+          ) : null}
 
           {cargando ? (
             <View style={styles.cargando}>
@@ -240,6 +249,16 @@ const styles = StyleSheet.create({
   filtroTexto: { color: '#66665e', fontSize: 11, fontWeight: '700' },
   filtroTextoActivo: { color: '#b83b17' },
   contador: { color: '#717169', fontSize: 12 },
+  informacion: {
+    backgroundColor: '#f3f6f8',
+    borderWidth: 1,
+    borderColor: '#d7dfe4',
+    borderRadius: 9,
+    padding: 12,
+    gap: 3,
+  },
+  informacionTitulo: { color: '#38464f', fontSize: 11, fontWeight: '900' },
+  informacionTexto: { color: '#5c6870', fontSize: 12, lineHeight: 17 },
   cargando: { padding: 24, alignItems: 'center', gap: 8 },
   vacio: {
     backgroundColor: '#fff',
