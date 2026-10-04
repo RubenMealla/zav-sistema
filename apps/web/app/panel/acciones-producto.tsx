@@ -60,8 +60,8 @@ export function AccionesProducto({ producto }: { producto: ProductoEditable }) {
 
       <form action={darBajaProducto}>
         <input type="hidden" name="productoId" value={producto.id} />
-        <BotonEnviar className="boton boton-secundario" pendiente="Procesando…">
-          Dar de baja
+        <BotonEnviar className="boton boton-secundario boton-peligro-suave" pendiente="Procesando…">
+          Desactivar
         </BotonEnviar>
       </form>
     </div>

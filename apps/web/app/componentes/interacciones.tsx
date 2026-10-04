@@ -1,6 +1,6 @@
 'use client';
 
-import { useId, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { useFormStatus } from 'react-dom';
 import { Icono } from './icono';
 
@@ -89,6 +89,14 @@ export function Notificacion({
   mensaje: string;
 }) {
   const [visible, setVisible] = useState(true);
+
+  useEffect(() => {
+    const temporizador = window.setTimeout(
+      () => setVisible(false),
+      tipo === 'error' ? 6000 : 4200,
+    );
+    return () => window.clearTimeout(temporizador);
+  }, [tipo, mensaje]);
 
   if (!visible) return null;
 

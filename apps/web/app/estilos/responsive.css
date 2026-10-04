@@ -19,6 +19,7 @@
   .nav-movil .nav-item-activo { color: var(--marca-oscura); background: var(--marca-suave); border-bottom-color: var(--marca-oscura); }
   .nav-movil .nav-item-activo .nav-icono { color: inherit; }
   .vista-contenido { padding: 24px 20px 40px; }
+  .tabla-contenedor { max-height: none; }
 }
 @media (max-width: 600px) {
   .vista-contenido { padding: 24px 16px 40px; }
@@ -27,8 +28,10 @@
   .bienvenida-sello { display: none; }
   .metrica-card { padding: 16px 12px; gap: 8px; }
   .metrica-icono { display: none; }
-  .metrica-card strong { font-size: 28px; }
-  .card-cabecera { padding: 20px; align-items: stretch; flex-direction: column; gap: 18px; }
+  .metrica-card strong { font-size: 27px; }
+  .accesos-grid { grid-template-columns: 1fr; }
+  .acceso-rapido:last-child:nth-child(odd) { grid-column: auto; }
+  .card-cabecera { padding: 18px; align-items: stretch; flex-direction: column; gap: 18px; }
   .card-cabecera>.boton { width: 100%; }
   .form-grid { grid-template-columns: 1fr; }
   .campo input, .campo select, .filtro-inline select { font-size: 16px; }
@@ -40,4 +43,7 @@
   .filtro-inline select { flex: 1 1 180px; }
   .filtro-inline .boton { flex: 1; }
   .toast { right: 16px; bottom: 16px; }
+  .tabla-contenedor { margin-inline: -1px; }
+  th { padding: 11px 14px; }
+  td { padding: 13px 14px; }
 }
