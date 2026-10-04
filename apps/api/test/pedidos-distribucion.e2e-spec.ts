@@ -554,7 +554,8 @@ describe('Pedidos y distribucion E3 (e2e)', () => {
   it('permite al Administrador auditar el pedido y el Vendedor responsable', async () => {
     const auditoria = await prepararProducto(`QA-AUD-${randomUUID().slice(0, 8)}`, 2);
     const clienteId = await crearCliente(`AUD-${randomUUID().slice(0, 8)}`);
-    const pedido = await crearPedido(clienteId, auditoria.productoId, 1).expect(201);
+    const pedido = await crearPedido(clienteId, auditoria.productoId, 1);
+    expect(pedido.status).toBe(201);
 
     const respuesta = await request(app.getHttpServer())
       .get('/api/v1/admin/pedidos?limit=50')
