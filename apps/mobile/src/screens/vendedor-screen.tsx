@@ -790,10 +790,10 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
     }
   }
 
-  async function ejecutarRetiroSeleccionados() {
+  async function ejecutarRetiroSeleccionados(ids: string[]) {
     const registrados = pedidos.filter(
       (pedido) =>
-        pedidosSeleccionados.includes(pedido.id) &&
+        ids.includes(pedido.id) &&
         pedido.estado === 'REGISTRADO',
     );
 
@@ -831,10 +831,10 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
     }
   }
 
-  function confirmarRetiroSeleccionados() {
+  function confirmarRetiroSeleccionados(ids: string[]) {
     const cantidad = pedidos.filter(
       (pedido) =>
-        pedidosSeleccionados.includes(pedido.id) &&
+        ids.includes(pedido.id) &&
         pedido.estado === 'REGISTRADO',
     ).length;
 
@@ -851,7 +851,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
         {
           text: 'Confirmar retiro',
           onPress: () => {
-            void ejecutarRetiroSeleccionados();
+            void ejecutarRetiroSeleccionados(ids);
           },
         },
       ],
@@ -959,7 +959,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
             onPlanificarTodosActual={(ids) => void planificarTodosDesdeUbicacionActual(ids)}
             onPlanificarDespacho={(ids) => void generarPlanificacion('DESPACHO', ids)}
             onPlanificarActual={(ids) => void generarPlanificacion('ACTUAL', ids)}
-            onRetirarSeleccionados={confirmarRetiroSeleccionados}
+            onRetirarSeleccionados={(ids) => confirmarRetiroSeleccionados(ids)}
             onCancelarPlan={() => {
               setPlanificacion(null);
               setPedidosSeleccionados([]);
@@ -1132,7 +1132,7 @@ function Pedidos({
   onPlanificarTodosActual: (ids: string[]) => void;
   onPlanificarDespacho: (ids: string[]) => void;
   onPlanificarActual: (ids: string[]) => void;
-  onRetirarSeleccionados: () => void;
+  onRetirarSeleccionados: (ids: string[]) => void;
   onCancelarPlan: () => void;
   onMover: (indice: number, direccion: -1 | 1) => void;
   onRetirar: (pedido: PedidoResumen) => void;
@@ -1179,13 +1179,20 @@ function Pedidos({
     (pedido) => pedido.estado !== 'ENTREGADO' && pedido.destinoGps === null,
   );
 
+  const idsVisibles = new Set(pedidosVisibles.map((pedido) => pedido.id));
   const idsSeleccionadosPlanificables = seleccionados.filter((id) => {
     const pedido = pedidoPorId.get(id);
-    return Boolean(pedido && pedido.estado !== 'ENTREGADO' && pedido.destinoGps);
+    return Boolean(
+      idsVisibles.has(id) &&
+      pedido &&
+      pedido.estado !== 'ENTREGADO' &&
+      pedido.destinoGps,
+    );
   });
-  const cantidadSeleccionadosRegistrados = seleccionados.filter(
-    (id) => pedidoPorId.get(id)?.estado === 'REGISTRADO',
-  ).length;
+  const idsSeleccionadosRegistrados = seleccionados.filter(
+    (id) => idsVisibles.has(id) && pedidoPorId.get(id)?.estado === 'REGISTRADO',
+  );
+  const cantidadSeleccionadosRegistrados = idsSeleccionadosRegistrados.length;
   const puedePlanificar = idsSeleccionadosPlanificables.length >= 2;
 
   const idsPlan = new Set(planificacion?.paradas.map((parada) => parada.pedidoId) ?? []);
@@ -1428,7 +1435,7 @@ function Pedidos({
           {cantidadSeleccionadosRegistrados > 0 ? (
             <Pressable
               disabled={retirando}
-              onPress={onRetirarSeleccionados}
+              onPress={() => onRetirarSeleccionados(idsSeleccionadosRegistrados)}
               style={[styles.botonMapa, retirando && styles.deshabilitado]}
             >
               <Text style={styles.botonMapaTexto}>
@@ -1484,7 +1491,7 @@ function Pedidos({
             {cantidadSeleccionadosRegistrados > 0 ? (
               <Pressable
                 disabled={retirando}
-                onPress={onRetirarSeleccionados}
+                onPress={() => onRetirarSeleccionados(idsSeleccionadosRegistrados)}
                 style={[styles.botonMapa, retirando && styles.deshabilitado]}
               >
                 <Text style={styles.botonMapaTexto}>
