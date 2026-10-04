@@ -790,6 +790,53 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
     }
   }
 
+  async function agregarPedidosAlPlan(ids: string[]) {
+    if (!planificacion?.paradas.length) return;
+
+    const existentes = planificacion.paradas.map((parada) => parada.pedidoId);
+    const combinados = [...new Set([...existentes, ...ids])].filter((pedidoId) => {
+      const pedido = pedidos.find((item) => item.id === pedidoId);
+      return Boolean(pedido && pedido.estado !== 'ENTREGADO' && pedido.destinoGps);
+    });
+
+    if (combinados.length === existentes.length) {
+      setAviso('No hay pedidos nuevos con ubicación para añadir al recorrido.');
+      return;
+    }
+
+    setPlanificando(true);
+    setError('');
+    setAviso('');
+    try {
+      const permiso = await Location.requestForegroundPermissionsAsync();
+      if (permiso.status !== 'granted') {
+        setError('Se necesita permiso de ubicación para recalcular el recorrido.');
+        return;
+      }
+
+      const posicion = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+      const actualizada = await planificarReparto(token, {
+        pedidoIds: combinados,
+        origenTipo: 'ACTUAL',
+        origenLatitud: posicion.coords.latitude,
+        origenLongitud: posicion.coords.longitude,
+      });
+
+      setPlanificacion(actualizada);
+      setPedidosSeleccionados([]);
+      setMapaOperativo(null);
+      setAviso(
+        `${combinados.length - existentes.length} pedido(s) nuevo(s) añadidos y recorrido recalculado desde tu ubicación.`,
+      );
+    } catch (e) {
+      await manejarError(e);
+    } finally {
+      setPlanificando(false);
+    }
+  }
+
   async function ejecutarRetiroSeleccionados(ids: string[]) {
     const registrados = pedidos.filter(
       (pedido) =>
@@ -977,6 +1024,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
               })
             }
             onActualizarUbicacionPlan={() => void actualizarPlanDesdeUbicacionActual()}
+            onAgregarPedidosAlPlan={(ids) => void agregarPedidosAlPlan(ids)}
             onCargarMas={() => void cargarMasPedidos()}
           />
         ) : null}
@@ -1117,6 +1165,7 @@ function Pedidos({
   onVerMapaPedido,
   onVerMapaPlan,
   onActualizarUbicacionPlan,
+  onAgregarPedidosAlPlan,
   onCargarMas,
 }: {
   pedidos: PedidoResumen[];
@@ -1140,6 +1189,7 @@ function Pedidos({
   onVerMapaPedido: (pedido: PedidoResumen) => void;
   onVerMapaPlan: () => void;
   onActualizarUbicacionPlan: () => void;
+  onAgregarPedidosAlPlan: (ids: string[]) => void;
   onCargarMas: () => void;
 }) {
   const [busqueda, setBusqueda] = useState('');
@@ -1200,6 +1250,12 @@ function Pedidos({
     .map((parada) => pedidoPorId.get(parada.pedidoId))
     .filter((pedido): pedido is PedidoResumen => Boolean(pedido) && pedido!.estado !== 'ENTREGADO');
   const otrosPedidos = pedidosVisibles.filter((pedido) => !idsPlan.has(pedido.id));
+  const nuevosParaPlan = pedidosPeriodo.filter(
+    (pedido) =>
+      pedido.estado !== 'ENTREGADO' &&
+      pedido.destinoGps !== null &&
+      !idsPlan.has(pedido.id),
+  );
 
   function tarjetaPedido(pedido: PedidoResumen, indicePlan?: number) {
     const enPlan = indicePlan !== undefined;
@@ -1267,7 +1323,7 @@ function Pedidos({
         {pedido.destinoGps ? (
           <Pressable onPress={() => onVerMapaPedido(pedido)} style={styles.botonMapa}>
             <Text style={styles.botonMapaTexto}>
-              {enPlan ? 'Ver esta parada en mapa' : 'Ver destino en mapa'}
+              {enPlan ? 'Ver parada en mapa' : 'Ver destino'}
             </Text>
           </Pressable>
         ) : (
@@ -1285,7 +1341,7 @@ function Pedidos({
 
         {pedido.estado === 'EN_DISTRIBUCION' ? (
           <BotonAccion
-            texto="Comprobar y confirmar entrega"
+            texto="Confirmar entrega"
             textoCargando="Obteniendo ubicación…"
             cargando={accionPedido === pedido.id}
             onPress={() => onEntregar(pedido)}
@@ -1303,7 +1359,7 @@ function Pedidos({
     <View style={styles.bloque}>
       <Titulo
         titulo="Pedidos"
-        descripcion="Hoy aparece primero. Desde aquí puedes seleccionar, organizar, retirar y entregar."
+        descripcion="Hoy primero · organiza, retira y entrega desde una sola vista."
       />
 
       <View style={styles.tarjeta}>
@@ -1365,51 +1421,41 @@ function Pedidos({
         </Text>
       </View>
 
-      {!planificacion && (planificablesVisibles.length || registradosVisibles.length) ? (
+      {!planificacion && planificablesVisibles.length ? (
         <View style={styles.tarjetaPlanControl}>
           <View style={styles.filaEntre}>
             <View style={styles.flex}>
-              <Text style={styles.tarjetaTitulo}>Acciones rápidas</Text>
+              <Text style={styles.tarjetaTitulo}>Acciones del día</Text>
               <Text style={styles.textoSecundario}>
-                {seleccionados.length} pedido(s) seleccionado(s).
+                {seleccionados.length
+                  ? `${seleccionados.length} seleccionado(s)`
+                  : `${planificablesVisibles.length} pedido(s) disponibles`}
               </Text>
             </View>
-            {seleccionados.length ? (
-              <Pressable onPress={() => onSeleccionarPedidos([])} style={styles.botonMapaCompacto}>
-                <Text style={styles.botonMapaTexto}>Limpiar</Text>
-              </Pressable>
-            ) : null}
+            <Pressable
+              onPress={() =>
+                onSeleccionarPedidos(
+                  seleccionados.length
+                    ? []
+                    : planificablesVisibles.map((pedido) => pedido.id),
+                )
+              }
+              style={styles.botonMapaCompacto}
+            >
+              <Text style={styles.botonMapaTexto}>
+                {seleccionados.length ? 'Limpiar' : 'Seleccionar visibles'}
+              </Text>
+            </Pressable>
           </View>
 
-          <View style={styles.filaWrap}>
-            {planificablesVisibles.length ? (
-              <Pressable
-                onPress={() => onSeleccionarPedidos(planificablesVisibles.map((pedido) => pedido.id))}
-                style={styles.botonAccionSecundario}
-              >
-                <Text style={styles.botonAccionSecundarioTexto}>
-                  Seleccionar pendientes ({planificablesVisibles.length})
-                </Text>
-              </Pressable>
-            ) : null}
-            {registradosVisibles.length ? (
-              <Pressable
-                onPress={() => onSeleccionarPedidos(registradosVisibles.map((pedido) => pedido.id))}
-                style={styles.botonAccionSecundario}
-              >
-                <Text style={styles.botonAccionSecundarioTexto}>
-                  Seleccionar registrados ({registradosVisibles.length})
-                </Text>
-              </Pressable>
-            ) : null}
-          </View>
-
-          {planificablesVisibles.length >= 2 ? (
+          {planificablesVisibles.length >= 2 && !seleccionados.length ? (
             <BotonAccion
-              texto={`Organizar visibles desde mi ubicación (${planificablesVisibles.length})`}
+              texto={`Organizar visibles (${planificablesVisibles.length})`}
               textoCargando="Calculando secuencia…"
               cargando={planificando}
-              onPress={() => onPlanificarTodosActual(planificablesVisibles.map((pedido) => pedido.id))}
+              onPress={() =>
+                onPlanificarTodosActual(planificablesVisibles.map((pedido) => pedido.id))
+              }
             />
           ) : null}
 
@@ -1420,14 +1466,14 @@ function Pedidos({
                 onPress={() => onPlanificarActual(idsSeleccionadosPlanificables)}
                 style={[styles.botonMapa, planificando && styles.deshabilitado]}
               >
-                <Text style={styles.botonMapaTexto}>Organizar seleccionados desde aquí</Text>
+                <Text style={styles.botonMapaTexto}>Organizar aquí</Text>
               </Pressable>
               <Pressable
                 disabled={planificando}
                 onPress={() => onPlanificarDespacho(idsSeleccionadosPlanificables)}
                 style={[styles.botonMapa, planificando && styles.deshabilitado]}
               >
-                <Text style={styles.botonMapaTexto}>Organizar desde ZAV</Text>
+                <Text style={styles.botonMapaTexto}>Desde ZAV</Text>
               </Pressable>
             </View>
           ) : null}
@@ -1445,10 +1491,6 @@ function Pedidos({
               </Text>
             </Pressable>
           ) : null}
-
-          <Text style={styles.textoSecundario}>
-            La entrega se confirma una por una porque cada pedido necesita su propia comprobación GPS puntual.
-          </Text>
         </View>
       ) : null}
 
@@ -1463,9 +1505,11 @@ function Pedidos({
           <View style={styles.tarjetaPlanControl}>
             <View style={styles.filaEntre}>
               <View style={styles.flex}>
-                <Text style={styles.tarjetaTitulo}>Recorrido activo · {pedidosPlan.length} parada(s)</Text>
+                <Text style={styles.tarjetaTitulo}>
+                  Recorrido activo · {pedidosPlan.length} parada(s)
+                </Text>
                 <Text style={styles.textoSecundario}>
-                  Aproximado: {formatearDistancia(planificacion.distanciaTotalAproximadaMetros)}
+                  {formatearDistancia(planificacion.distanciaTotalAproximadaMetros)} aprox.
                 </Text>
               </View>
               <Text style={styles.estadoMiniOk}>Activo</Text>
@@ -1474,19 +1518,46 @@ function Pedidos({
             <Pressable onPress={onVerMapaPlan} style={styles.mapaPreview}>
               <MapaReparto origen={planificacion.origen} paradas={planificacion.paradas} />
               <View style={styles.mapaPreviewEtiqueta}>
-                <Text style={styles.botonMapaTexto}>Abrir mapa completo</Text>
+                <Text style={styles.botonMapaTexto}>Mapa completo</Text>
               </View>
             </Pressable>
 
-            <Pressable
-              disabled={planificando}
-              onPress={onActualizarUbicacionPlan}
-              style={[styles.botonMapa, planificando && styles.deshabilitado]}
-            >
-              <Text style={styles.botonMapaTexto}>
-                {planificando ? 'Actualizando…' : 'Actualizar mi ubicación y reordenar'}
-              </Text>
-            </Pressable>
+            {nuevosParaPlan.length ? (
+              <View style={styles.nuevosPedidosPlan}>
+                <View style={styles.flex}>
+                  <Text style={styles.nuevosPedidosTitulo}>
+                    {nuevosParaPlan.length} pedido(s) fuera del recorrido
+                  </Text>
+                  <Text style={styles.textoSecundario}>
+                    Se recalculará desde tu ubicación actual.
+                  </Text>
+                </View>
+                <Pressable
+                  disabled={planificando}
+                  onPress={() => onAgregarPedidosAlPlan(nuevosParaPlan.map((pedido) => pedido.id))}
+                  style={[styles.botonMapaCompacto, planificando && styles.deshabilitado]}
+                >
+                  <Text style={styles.botonMapaTexto}>
+                    {planificando ? 'Añadiendo…' : 'Añadir'}
+                  </Text>
+                </Pressable>
+              </View>
+            ) : null}
+
+            <View style={styles.fila}>
+              <Pressable
+                disabled={planificando}
+                onPress={onActualizarUbicacionPlan}
+                style={[styles.botonMapa, planificando && styles.deshabilitado]}
+              >
+                <Text style={styles.botonMapaTexto}>
+                  {planificando ? 'Actualizando…' : 'Actualizar ubicación'}
+                </Text>
+              </Pressable>
+              <Pressable onPress={onCancelarPlan} style={styles.botonMapa}>
+                <Text style={styles.botonMapaTexto}>Finalizar organización</Text>
+              </Pressable>
+            </View>
 
             {cantidadSeleccionadosRegistrados > 0 ? (
               <Pressable
@@ -1497,14 +1568,10 @@ function Pedidos({
                 <Text style={styles.botonMapaTexto}>
                   {retirando
                     ? 'Registrando retiros…'
-                    : `Retirar registrados del recorrido (${cantidadSeleccionadosRegistrados})`}
+                    : `Retirar seleccionados (${cantidadSeleccionadosRegistrados})`}
                 </Text>
               </Pressable>
             ) : null}
-
-            <Pressable onPress={onCancelarPlan} style={styles.enlaceBoton}>
-              <Text style={styles.enlaceSecundario}>Cancelar organización</Text>
-            </Pressable>
           </View>
 
           {pedidosPlan.map((pedido, indice) => tarjetaPedido(pedido, indice))}
@@ -2187,6 +2254,21 @@ const styles = StyleSheet.create({
   tarjetaEdicion: {
     borderColor: '#d9a28f',
     backgroundColor: '#fffaf7',
+  },
+  nuevosPedidosPlan: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: '#f3f6f8',
+    borderWidth: 1,
+    borderColor: '#d7dfe4',
+    borderRadius: 8,
+    padding: 10,
+  },
+  nuevosPedidosTitulo: {
+    color: '#38464f',
+    fontSize: 12,
+    fontWeight: '800',
   },
   filaTituloPedido: {
     flexDirection: 'row',
