@@ -922,10 +922,19 @@ function Clientes({
   guardando,
   setNombre,
   setTelefono,
-  setDireccion,
   onAbrirMapa,
-  onEditarUbicacion,
   onGuardar,
+  clienteEditando,
+  editNombre,
+  editTelefono,
+  editDireccion,
+  editUbicacion,
+  setEditNombre,
+  setEditTelefono,
+  onEditar,
+  onCancelarEdicion,
+  onAbrirMapaEdicion,
+  onGuardarEdicion,
 }: {
   clientes: Cliente[];
   nombre: string;
@@ -935,16 +944,44 @@ function Clientes({
   guardando: boolean;
   setNombre: (v: string) => void;
   setTelefono: (v: string) => void;
-  setDireccion: (v: string) => void;
   onAbrirMapa: () => void;
-  onEditarUbicacion: (cliente: Cliente) => void;
   onGuardar: () => void;
+  clienteEditando: Cliente | null;
+  editNombre: string;
+  editTelefono: string;
+  editDireccion: string;
+  editUbicacion: PuntoGeografico | null;
+  setEditNombre: (v: string) => void;
+  setEditTelefono: (v: string) => void;
+  onEditar: (cliente: Cliente) => void;
+  onCancelarEdicion: () => void;
+  onAbrirMapaEdicion: () => void;
+  onGuardarEdicion: () => void;
 }) {
+  const [busqueda, setBusqueda] = useState('');
+  const [filtroUbicacion, setFiltroUbicacion] = useState<'TODOS' | 'CON' | 'SIN'>('TODOS');
+
+  const clientesVisibles = useMemo(() => {
+    const consulta = busqueda.trim().toLocaleLowerCase('es-BO');
+    return clientes.filter((cliente) => {
+      const coincide =
+        !consulta ||
+        cliente.nombre.toLocaleLowerCase('es-BO').includes(consulta) ||
+        (cliente.telefono ?? '').toLocaleLowerCase('es-BO').includes(consulta) ||
+        cliente.direccion.toLocaleLowerCase('es-BO').includes(consulta);
+      const coincideUbicacion =
+        filtroUbicacion === 'TODOS' ||
+        (filtroUbicacion === 'CON' && Boolean(cliente.ubicacion)) ||
+        (filtroUbicacion === 'SIN' && !cliente.ubicacion);
+      return coincide && coincideUbicacion;
+    });
+  }, [busqueda, clientes, filtroUbicacion]);
+
   return (
     <View style={styles.bloque}>
       <Titulo
         titulo="Clientes"
-        descripcion="Registra únicamente los datos necesarios para preparar y entregar pedidos."
+        descripcion="La ubicación se define en el mapa y es obligatoria para registrar pedidos nuevos."
       />
 
       <View style={styles.tarjeta}>
@@ -956,26 +993,24 @@ function Clientes({
           onChangeText={setTelefono}
           keyboardType="phone-pad"
         />
-        <Campo
-          label="Dirección"
-          value={direccion}
-          onChangeText={setDireccion}
-          multiline
-        />
+
+        {direccion && ubicacion ? (
+          <View style={styles.ubicacionResumen}>
+            <Text style={styles.ubicacionResumenTitulo}>Ubicación confirmada</Text>
+            <Text style={styles.direccion}>{direccion}</Text>
+          </View>
+        ) : (
+          <Text style={styles.textoSecundario}>
+            Aún no se definió el punto de entrega. El vendedor puede buscar una referencia o usar su ubicación actual.
+          </Text>
+        )}
+
         <Pressable onPress={onAbrirMapa} style={styles.botonMapa}>
           <Text style={styles.botonMapaTexto}>
             {ubicacion ? 'Revisar ubicación en mapa' : 'Definir ubicación en mapa'}
           </Text>
         </Pressable>
-        {ubicacion ? (
-          <Text style={styles.confirmado}>
-            Punto confirmado · {ubicacion.latitud.toFixed(6)}, {ubicacion.longitud.toFixed(6)}
-          </Text>
-        ) : (
-          <Text style={styles.textoSecundario}>
-            La ubicación no se guarda automáticamente. Debes confirmarla en el mapa.
-          </Text>
-        )}
+
         <BotonAccion
           texto="Guardar cliente"
           cargando={guardando}
@@ -983,27 +1018,120 @@ function Clientes({
         />
       </View>
 
-      <Text style={styles.contador}>{clientes.length} cliente(s) activo(s)</Text>
-      {clientes.map((cliente) => (
-        <View key={cliente.id} style={styles.tarjetaCompacta}>
-          <Text style={styles.tarjetaTitulo}>{cliente.nombre}</Text>
-          <Text style={styles.direccion}>{cliente.direccion}</Text>
-          {cliente.telefono ? (
-            <Text style={styles.textoSecundario}>{cliente.telefono}</Text>
-          ) : null}
-          <Text style={cliente.ubicacion ? styles.disponible : styles.textoSecundario}>
-            {cliente.ubicacion ? 'Ubicación de entrega confirmada' : 'Sin ubicación georreferenciada'}
-          </Text>
-          <Pressable
-            onPress={() => onEditarUbicacion(cliente)}
-            style={styles.botonMapaCompacto}
-          >
-            <Text style={styles.botonMapaTexto}>
-              {cliente.ubicacion ? 'Corregir ubicación' : 'Definir ubicación'}
-            </Text>
-          </Pressable>
+      <View style={styles.tarjeta}>
+        <Text style={styles.seccionTitulo}>Buscar y filtrar</Text>
+        <TextInput
+          value={busqueda}
+          onChangeText={setBusqueda}
+          placeholder="Nombre, teléfono o dirección"
+          placeholderTextColor="#8a8982"
+          style={styles.input}
+        />
+        <View style={styles.filtros}>
+          {[
+            ['TODOS', 'Todos'],
+            ['CON', 'Con ubicación'],
+            ['SIN', 'Sin ubicación'],
+          ].map(([valor, texto]) => (
+            <Pressable
+              key={valor}
+              onPress={() => setFiltroUbicacion(valor as 'TODOS' | 'CON' | 'SIN')}
+              style={[
+                styles.filtroChip,
+                filtroUbicacion === valor && styles.filtroChipActivo,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.filtroChipTexto,
+                  filtroUbicacion === valor && styles.filtroChipTextoActivo,
+                ]}
+              >
+                {texto}
+              </Text>
+            </Pressable>
+          ))}
         </View>
-      ))}
+        <Text style={styles.contador}>
+          Mostrando {clientesVisibles.length} de {clientes.length} cliente(s)
+        </Text>
+      </View>
+
+      {!clientesVisibles.length ? (
+        <Vacio texto="No hay clientes que coincidan con los filtros." />
+      ) : (
+        clientesVisibles.map((cliente) => {
+          const editando = clienteEditando?.id === cliente.id;
+
+          if (editando) {
+            return (
+              <View key={cliente.id} style={styles.tarjeta}>
+                <View style={styles.filaEntre}>
+                  <Text style={styles.seccionTitulo}>Editar cliente</Text>
+                  <Pressable onPress={onCancelarEdicion}>
+                    <Text style={styles.enlaceSecundario}>Cancelar</Text>
+                  </Pressable>
+                </View>
+
+                <Campo label="Nombre" value={editNombre} onChangeText={setEditNombre} />
+                <Campo
+                  label="Teléfono (opcional)"
+                  value={editTelefono}
+                  onChangeText={setEditTelefono}
+                  keyboardType="phone-pad"
+                />
+
+                {editDireccion && editUbicacion ? (
+                  <View style={styles.ubicacionResumen}>
+                    <Text style={styles.ubicacionResumenTitulo}>Ubicación actual</Text>
+                    <Text style={styles.direccion}>{editDireccion}</Text>
+                  </View>
+                ) : (
+                  <Text style={styles.alertaInline}>
+                    Este cliente todavía no tiene ubicación confirmada. Debes definirla para guardar los cambios.
+                  </Text>
+                )}
+
+                <Pressable onPress={onAbrirMapaEdicion} style={styles.botonMapa}>
+                  <Text style={styles.botonMapaTexto}>
+                    {editUbicacion ? 'Cambiar ubicación' : 'Definir ubicación'}
+                  </Text>
+                </Pressable>
+
+                <BotonAccion
+                  texto="Guardar cambios"
+                  cargando={guardando}
+                  onPress={onGuardarEdicion}
+                />
+
+                <Text style={styles.textoSecundario}>
+                  Los cambios se usarán en pedidos nuevos. Los pedidos ya registrados mantienen su dirección histórica.
+                </Text>
+              </View>
+            );
+          }
+
+          return (
+            <View key={cliente.id} style={styles.tarjetaCompacta}>
+              <View style={styles.filaEntre}>
+                <View style={styles.flex}>
+                  <Text style={styles.tarjetaTitulo}>{cliente.nombre}</Text>
+                  {cliente.telefono ? (
+                    <Text style={styles.textoSecundario}>{cliente.telefono}</Text>
+                  ) : null}
+                </View>
+                <Text style={cliente.ubicacion ? styles.estadoMiniOk : styles.estadoMiniPendiente}>
+                  {cliente.ubicacion ? 'Ubicado' : 'Sin GPS'}
+                </Text>
+              </View>
+              <Text style={styles.direccion}>{cliente.direccion}</Text>
+              <Pressable onPress={() => onEditar(cliente)} style={styles.botonMapaCompacto}>
+                <Text style={styles.botonMapaTexto}>Editar cliente</Text>
+              </Pressable>
+            </View>
+          );
+        })
+      )}
     </View>
   );
 }
