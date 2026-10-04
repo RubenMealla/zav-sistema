@@ -255,6 +255,43 @@ describe('Pedidos y distribucion E3 (e2e)', () => {
     });
   });
 
+  it('lista Pedidos por estado operativo sin romper los parametros SQL', async () => {
+    const producto = await prepararProducto(`QA-PED-FILTRO-${randomUUID().slice(0, 8)}`, 3);
+    const clienteId = await crearCliente(`FILTRO-${randomUUID().slice(0, 8)}`);
+    const creado = await crearPedido(clienteId, producto.productoId, 1);
+
+    expect(creado.status).toBe(201);
+
+    const registrados = await request(app.getHttpServer())
+      .get('/api/v1/pedidos?estado=REGISTRADO&limit=100')
+      .set('Authorization', `Bearer ${tokenVendedor}`)
+      .expect(200);
+
+    expect(
+      registrados.body.items.some((item: { id: string }) => item.id === creado.body.id),
+    ).toBe(true);
+
+    await request(app.getHttpServer())
+      .post(`/api/v1/pedidos/${creado.body.id}/retiro`)
+      .set('Authorization', `Bearer ${tokenVendedor}`)
+      .send({ operacionClave: randomUUID() })
+      .expect(201);
+
+    const distribucion = await request(app.getHttpServer())
+      .get('/api/v1/pedidos?estado=EN_DISTRIBUCION&limit=100')
+      .set('Authorization', `Bearer ${tokenVendedor}`)
+      .expect(200);
+
+    expect(
+      distribucion.body.items.some((item: { id: string }) => item.id === creado.body.id),
+    ).toBe(true);
+
+    await request(app.getHttpServer())
+      .get('/api/v1/pedidos/disponibilidad')
+      .set('Authorization', `Bearer ${tokenVendedor}`)
+      .expect(200);
+  });
+
   it('permite al Vendedor consultar productos y disponibilidad sin permisos de edicion', async () => {
     const productos = await request(app.getHttpServer())
       .get('/api/v1/productos?limit=100')

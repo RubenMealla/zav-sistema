@@ -268,7 +268,7 @@ export class PedidosService {
       filtro = `AND pe.estado IN ('REGISTRADO', 'EN_DISTRIBUCION')`;
     } else if (estado) {
       parametros.push(estado);
-      filtro = `AND pe.estado = ${parametros.length}`;
+      filtro = `AND pe.estado = $${parametros.length}`;
     }
     parametros.push(limit, (page - 1) * limit);
     const limitePos = parametros.length - 1;

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Animated,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -162,6 +163,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
   const [actualizando, setActualizando] = useState(false);
   const [error, setError] = useState('');
   const [aviso, setAviso] = useState('');
+  const [notificacionTop, setNotificacionTop] = useState(112);
   const [historialVisible, setHistorialVisible] = useState(false);
   const [historialPedidos, setHistorialPedidos] = useState<PedidoResumen[]>([]);
   const [cargandoHistorial, setCargandoHistorial] = useState(false);
@@ -200,17 +202,10 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
 
   const token = sesion.accessToken;
 
-  useEffect(() => {
-    if (!error) return;
-    const temporizador = setTimeout(() => setError(''), 5500);
-    return () => clearTimeout(temporizador);
-  }, [error]);
-
-  useEffect(() => {
-    if (!aviso) return;
-    const temporizador = setTimeout(() => setAviso(''), 3800);
-    return () => clearTimeout(temporizador);
-  }, [aviso]);
+  const cerrarNotificacion = useCallback(() => {
+    setError('');
+    setAviso('');
+  }, []);
 
   const manejarError = useCallback(
     async (e: unknown) => {
@@ -274,10 +269,10 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
         }
 
         if (errores.length) {
-          const nombres = errores.map(({ recurso }) => recurso).join(', ');
-          setError(
-            `No se pudo actualizar ${nombres}. El resto de la información permanece disponible; desliza hacia abajo para reintentar.`,
-          );
+          const detalle = errores
+            .map(({ recurso, error }) => `${recurso}: ${mensajeError(error)}`)
+            .join(' · ');
+          setError(`No se pudo actualizar ${detalle}`);
         }
       } finally {
         setCargando(false);
@@ -325,10 +320,10 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
       if (errorSesion) {
         await manejarError(errorSesion.error);
       } else if (errores.length) {
-        const nombres = errores.map(({ recurso }) => recurso).join(', ');
-        setError(
-          `No se pudo actualizar ${nombres}. El resto de la información permanece disponible; desliza hacia abajo para reintentar.`,
-        );
+        const detalle = errores
+          .map(({ recurso, error }) => `${recurso}: ${mensajeError(error)}`)
+          .join(' · ');
+        setError(`No se pudo actualizar ${detalle}`);
       }
 
       if (activa) setCargando(false);
@@ -1180,22 +1175,17 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
     });
   }
 
-  const productosConStock = useMemo(
-    () => disponibilidad.filter((item) => item.cantidadDisponible > 0),
-    [disponibilidad],
-  );
   const productosFormularioPedido = useMemo(() => {
-    if (!pedidoEditando) return productosConStock;
+    if (!pedidoEditando) return disponibilidad;
     const originales = new Map(
       pedidoEditando.detalles.map((detalle) => [detalle.productoId, detalle.cantidad]),
     );
-    return disponibilidad
-      .map((item) => ({
-        ...item,
-        cantidadDisponible: item.cantidadDisponible + (originales.get(item.productoId) ?? 0),
-      }))
-      .filter((item) => item.cantidadDisponible > 0);
-  }, [disponibilidad, pedidoEditando, productosConStock]);
+    return disponibilidad.map((item) => ({
+      ...item,
+      cantidadDisponible:
+        item.cantidadDisponible + (originales.get(item.productoId) ?? 0),
+    }));
+  }, [disponibilidad, pedidoEditando]);
 
   if (cargando) {
     return (
@@ -1218,7 +1208,12 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
         </Pressable>
       </View>
 
-      <View style={styles.tabs}>
+      <View
+        style={styles.tabs}
+        onLayout={({ nativeEvent }) =>
+          setNotificacionTop(nativeEvent.layout.y + nativeEvent.layout.height + 8)
+        }
+      >
         <Tab
           activo={seccion === 'pedidos'}
           texto="Pedidos"
@@ -1240,7 +1235,8 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
         <NotificacionEstado
           tipo={error ? 'error' : 'exito'}
           mensaje={error || aviso}
-          onCerrar={() => (error ? setError('') : setAviso(''))}
+          top={notificacionTop}
+          onCerrar={cerrarNotificacion}
         />
       ) : null}
 
@@ -1356,7 +1352,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
 
       <SelectorProductosPedidoModal
         visible={selectorProductosPedidoVisible}
-        productos={productosConStock}
+        productos={productosFormularioPedido}
         cantidades={cantidades}
         onCerrar={() => setSelectorProductosPedidoVisible(false)}
         onCambiarCantidad={(productoId, cantidad) =>
@@ -1402,49 +1398,92 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
 function NotificacionEstado({
   tipo,
   mensaje,
+  top,
   onCerrar,
 }: {
   tipo: 'error' | 'exito';
   mensaje: string;
+  top: number;
   onCerrar: () => void;
 }) {
   const esError = tipo === 'error';
+  const progreso = useRef(new Animated.Value(0)).current;
+  const cerrandoRef = useRef(false);
+
+  const cerrarAnimado = useCallback(() => {
+    if (cerrandoRef.current) return;
+    cerrandoRef.current = true;
+    Animated.timing(progreso, {
+      toValue: 0,
+      duration: 180,
+      useNativeDriver: true,
+    }).start(() => onCerrar());
+  }, [onCerrar, progreso]);
+
+  useEffect(() => {
+    cerrandoRef.current = false;
+    progreso.setValue(0);
+    Animated.spring(progreso, {
+      toValue: 1,
+      damping: 18,
+      stiffness: 220,
+      mass: 0.85,
+      useNativeDriver: true,
+    }).start();
+
+    const temporizador = setTimeout(cerrarAnimado, esError ? 5200 : 3800);
+    return () => clearTimeout(temporizador);
+  }, [cerrarAnimado, esError, mensaje, progreso]);
+
   return (
-    <View
-      accessibilityLiveRegion="polite"
-      style={[
-        styles.notificacion,
-        esError ? styles.notificacionError : styles.notificacionExito,
-      ]}
-    >
-      <View
+    <View pointerEvents="box-none" style={[styles.notificacionZona, { top }]}>
+      <Animated.View
+        accessibilityLiveRegion="polite"
         style={[
-          styles.notificacionIcono,
-          esError ? styles.notificacionIconoError : styles.notificacionIconoExito,
+          styles.notificacion,
+          esError ? styles.notificacionError : styles.notificacionExito,
+          {
+            opacity: progreso,
+            transform: [
+              {
+                translateY: progreso.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [-18, 0],
+                }),
+              },
+            ],
+          },
         ]}
       >
-        <Text style={styles.notificacionIconoTexto}>{esError ? '!' : '✓'}</Text>
-      </View>
-      <View style={styles.flex}>
-        <Text
+        <View
           style={[
-            styles.notificacionTitulo,
-            esError ? styles.notificacionTituloError : styles.notificacionTituloExito,
+            styles.notificacionIcono,
+            esError ? styles.notificacionIconoError : styles.notificacionIconoExito,
           ]}
         >
-          {esError ? 'No se pudo completar' : 'Operación completada'}
-        </Text>
-        <Text style={styles.notificacionMensaje}>{mensaje}</Text>
-      </View>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Cerrar notificación"
-        hitSlop={10}
-        onPress={onCerrar}
-        style={styles.notificacionCerrar}
-      >
-        <Text style={styles.notificacionCerrarTexto}>×</Text>
-      </Pressable>
+          <Text style={styles.notificacionIconoTexto}>{esError ? '!' : '✓'}</Text>
+        </View>
+        <View style={styles.flex}>
+          <Text
+            style={[
+              styles.notificacionTitulo,
+              esError ? styles.notificacionTituloError : styles.notificacionTituloExito,
+            ]}
+          >
+            {esError ? 'No se pudo completar' : 'Operación completada'}
+          </Text>
+          <Text style={styles.notificacionMensaje}>{mensaje}</Text>
+        </View>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Cerrar notificación"
+          hitSlop={10}
+          onPress={cerrarAnimado}
+          style={styles.notificacionCerrar}
+        >
+          <Text style={styles.notificacionCerrarTexto}>×</Text>
+        </Pressable>
+      </Animated.View>
     </View>
   );
 }
@@ -1799,7 +1838,7 @@ function Pedidos({
               onPress={() => setFiltroEstado(valor as 'TODOS' | PedidoResumen['estado'])}
               style={[
                 styles.filtroChip,
-                styles.filtroChipMitad,
+                styles.filtroChipTercio,
                 filtroEstado === valor && styles.filtroChipActivo,
               ]}
             >
@@ -2194,69 +2233,75 @@ function Clientes({
           style={styles.input}
         />
 
-        <Text style={styles.seccionTitulo}>Estado</Text>
-        <View style={styles.filtros}>
-          {[
-            ['ACTIVOS', 'Activos'],
-            ['INACTIVOS', 'Inactivos'],
-            ['TODOS', 'Todos'],
-          ].map(([valor, texto]) => (
-            <Pressable
-              key={valor}
-              onPress={() => {
-                setFiltroEstadoCliente(valor as 'TODOS' | 'ACTIVOS' | 'INACTIVOS');
-                setLimite(8);
-              }}
-              style={[styles.filtroChip, filtroEstadoCliente === valor && styles.filtroChipActivo]}
-            >
-              <Text style={[styles.filtroChipTexto, filtroEstadoCliente === valor && styles.filtroChipTextoActivo]}>
-                {texto}
-              </Text>
-            </Pressable>
-          ))}
+        <View style={styles.filtroLinea}>
+          <Text style={styles.filtroLineaTitulo}>Estado</Text>
+          <View style={styles.filtrosCompactos}>
+            {[
+              ['ACTIVOS', 'Activos'],
+              ['INACTIVOS', 'Inactivos'],
+              ['TODOS', 'Todos'],
+            ].map(([valor, texto]) => (
+              <Pressable
+                key={valor}
+                onPress={() => {
+                  setFiltroEstadoCliente(valor as 'TODOS' | 'ACTIVOS' | 'INACTIVOS');
+                  setLimite(8);
+                }}
+                style={[styles.filtroChip, filtroEstadoCliente === valor && styles.filtroChipActivo]}
+              >
+                <Text style={[styles.filtroChipTexto, filtroEstadoCliente === valor && styles.filtroChipTextoActivo]}>
+                  {texto}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
         </View>
 
-        <Text style={styles.seccionTitulo}>Ubicación</Text>
-        <View style={styles.filtros}>
-          {[
-            ['TODOS', 'Todos'],
-            ['CON', 'Con GPS'],
-            ['SIN', 'Sin GPS'],
-          ].map(([valor, texto]) => (
-            <Pressable
-              key={valor}
-              onPress={() => {
-                setFiltroUbicacion(valor as 'TODOS' | 'CON' | 'SIN');
-                setLimite(8);
-              }}
-              style={[styles.filtroChip, filtroUbicacion === valor && styles.filtroChipActivo]}
-            >
-              <Text style={[styles.filtroChipTexto, filtroUbicacion === valor && styles.filtroChipTextoActivo]}>
-                {texto}
-              </Text>
-            </Pressable>
-          ))}
+        <View style={styles.filtroLinea}>
+          <Text style={styles.filtroLineaTitulo}>Ubicación</Text>
+          <View style={styles.filtrosCompactos}>
+            {[
+              ['TODOS', 'Todos'],
+              ['CON', 'Con GPS'],
+              ['SIN', 'Sin GPS'],
+            ].map(([valor, texto]) => (
+              <Pressable
+                key={valor}
+                onPress={() => {
+                  setFiltroUbicacion(valor as 'TODOS' | 'CON' | 'SIN');
+                  setLimite(8);
+                }}
+                style={[styles.filtroChip, filtroUbicacion === valor && styles.filtroChipActivo]}
+              >
+                <Text style={[styles.filtroChipTexto, filtroUbicacion === valor && styles.filtroChipTextoActivo]}>
+                  {texto}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
         </View>
 
-        <Text style={styles.seccionTitulo}>Orden</Text>
-        <View style={styles.filtros}>
-          {[
-            ['AZ', 'A → Z'],
-            ['ZA', 'Z → A'],
-          ].map(([valor, texto]) => (
-            <Pressable
-              key={valor}
-              onPress={() => {
-                setOrden(valor as 'AZ' | 'ZA');
-                setLimite(8);
-              }}
-              style={[styles.filtroChip, orden === valor && styles.filtroChipActivo]}
-            >
-              <Text style={[styles.filtroChipTexto, orden === valor && styles.filtroChipTextoActivo]}>
-                {texto}
-              </Text>
-            </Pressable>
-          ))}
+        <View style={styles.filtroLinea}>
+          <Text style={styles.filtroLineaTitulo}>Orden</Text>
+          <View style={styles.filtrosCompactos}>
+            {[
+              ['AZ', 'A → Z'],
+              ['ZA', 'Z → A'],
+            ].map(([valor, texto]) => (
+              <Pressable
+                key={valor}
+                onPress={() => {
+                  setOrden(valor as 'AZ' | 'ZA');
+                  setLimite(8);
+                }}
+                style={[styles.filtroChip, orden === valor && styles.filtroChipActivo]}
+              >
+                <Text style={[styles.filtroChipTexto, orden === valor && styles.filtroChipTextoActivo]}>
+                  {texto}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
         </View>
 
         <Text style={styles.contador}>
@@ -2269,33 +2314,39 @@ function Clientes({
       ) : (
         clientesMostrados.map((cliente) => (
           <View key={cliente.id} style={styles.tarjetaCompacta}>
-            <View style={styles.filaEntre}>
-              <View style={styles.flex}>
-                <Text style={styles.tarjetaTitulo}>{cliente.nombre}</Text>
-                {cliente.telefono ? (
-                  <Text style={styles.textoSecundario}>{cliente.telefono}</Text>
-                ) : null}
-              </View>
-              <View style={styles.clienteBadges}>
-                <Text style={cliente.activo ? styles.estadoMiniOk : styles.estadoMiniInactivo}>
-                  {cliente.activo ? 'Activo' : 'Inactivo'}
-                </Text>
-                <Text style={cliente.ubicacion ? styles.estadoMiniOk : styles.estadoMiniPendiente}>
-                  {cliente.ubicacion ? 'GPS' : 'Sin GPS'}
-                </Text>
-              </View>
+            <View>
+              <Text style={styles.tarjetaTitulo}>{cliente.nombre}</Text>
+              {cliente.telefono ? (
+                <Text style={styles.textoSecundario}>{cliente.telefono}</Text>
+              ) : null}
+            </View>
+            <View style={styles.clienteBadges}>
+              <Text style={cliente.activo ? styles.estadoMiniOk : styles.estadoMiniInactivo}>
+                {cliente.activo ? 'Activo' : 'Inactivo'}
+              </Text>
+              <Text style={cliente.ubicacion ? styles.estadoMiniOk : styles.estadoMiniPendiente}>
+                {cliente.ubicacion ? 'GPS' : 'Sin GPS'}
+              </Text>
             </View>
             <Text style={styles.direccion}>{cliente.direccion}</Text>
             <View style={styles.fila}>
               {cliente.activo ? (
-                <Pressable onPress={() => onEditar(cliente)} style={[styles.botonMapaCompacto, styles.flex]}>
-                  <Text style={styles.botonMapaTexto}>Editar</Text>
+                <Pressable
+                  onPress={() => onEditar(cliente)}
+                  style={[styles.botonAccionSecundario, styles.flex, styles.botonEditar]}
+                >
+                  <Text style={styles.botonEditarTexto}>Editar</Text>
                 </Pressable>
               ) : null}
               <Pressable
                 disabled={cambiandoEstadoId === cliente.id}
                 onPress={() => onCambiarEstado(cliente)}
-                style={[styles.botonAccionSecundario, styles.flex, cambiandoEstadoId === cliente.id && styles.deshabilitado]}
+                style={[
+                  styles.botonAccionSecundario,
+                  styles.flex,
+                  cliente.activo ? styles.botonDesactivar : styles.botonReactivar,
+                  cambiandoEstadoId === cliente.id && styles.deshabilitado,
+                ]}
               >
                 <Text style={cliente.activo ? styles.botonAnularTexto : styles.botonReactivarTexto}>
                   {cambiandoEstadoId === cliente.id
@@ -2377,6 +2428,9 @@ function NuevoPedido({
     0,
   );
   const sinUbicacion = clientes.filter((cliente) => !cliente.ubicacion).length;
+  const productosConDisponibilidad = productos.filter(
+    (producto) => producto.cantidadDisponible > 0,
+  ).length;
 
   function quitarProducto(productoId: string) {
     setCantidades({ ...cantidades, [productoId]: '' });
@@ -2469,9 +2523,17 @@ function NuevoPedido({
 
         {!productos.length ? (
           <Text style={styles.alertaInline}>
-            No hay productos disponibles en Venta y Despacho.
+            No se cargó ningún producto activo. Actualiza la pantalla; si el aviso persiste, la disponibilidad del backend requiere revisión.
           </Text>
-        ) : null}
+        ) : productosConDisponibilidad === 0 ? (
+          <Text style={styles.alertaInline}>
+            Hay {productos.length} producto(s) activos, pero ninguno tiene stock disponible en Venta y Despacho.
+          </Text>
+        ) : (
+          <Text style={styles.textoSecundario}>
+            {productosConDisponibilidad} de {productos.length} producto(s) con stock disponible.
+          </Text>
+        )}
 
         {!seleccionados.length ? (
           <Text style={styles.textoSecundario}>
@@ -2685,8 +2747,8 @@ const styles = StyleSheet.create({
   tabActivo: { borderBottomColor: '#b83b17' },
   tabTexto: { color: '#717169', fontSize: 12, fontWeight: '700' },
   tabTextoActivo: { color: '#b83b17' },
-  contenido: { padding: 16, paddingBottom: 72 },
-  bloque: { gap: 12 },
+  contenido: { padding: 14, paddingBottom: 72 },
+  bloque: { gap: 10 },
   separadorReparto: {
     height: 1,
     backgroundColor: '#ddddd5',
@@ -2700,17 +2762,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderWidth: 1,
     borderColor: '#ddddd5',
-    borderRadius: 9,
-    padding: 15,
-    gap: 12,
+    borderRadius: 10,
+    padding: 13,
+    gap: 10,
   },
   tarjetaCompacta: {
     backgroundColor: '#fff',
     borderWidth: 1,
     borderColor: '#ddddd5',
-    borderRadius: 8,
-    padding: 14,
-    gap: 5,
+    borderRadius: 9,
+    padding: 12,
+    gap: 7,
   },
   tarjetaPlan: {
     borderColor: '#d9a28f',
@@ -2772,7 +2834,7 @@ const styles = StyleSheet.create({
     paddingTop: 5,
   },
   botonSeleccion: {
-    minHeight: 38,
+    minHeight: 42,
     borderWidth: 1,
     borderColor: '#c6c5bd',
     borderRadius: 7,
@@ -2787,7 +2849,9 @@ const styles = StyleSheet.create({
   },
   botonSeleccionTexto: {
     color: '#66665e',
-    fontSize: 11,
+    fontSize: 12,
+    lineHeight: 16,
+    textAlign: 'center',
     fontWeight: '800',
   },
   botonSeleccionTextoActivo: {
@@ -2795,7 +2859,7 @@ const styles = StyleSheet.create({
   },
   botonOrdenAncho: {
     flex: 1,
-    minHeight: 38,
+    minHeight: 42,
     borderWidth: 1,
     borderColor: '#c6c5bd',
     borderRadius: 7,
@@ -2824,7 +2888,12 @@ const styles = StyleSheet.create({
   direccion: { color: '#50504a', fontSize: 13, lineHeight: 19 },
   filaEntre: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
   flex: { flex: 1 },
-  resumenPedido: { flexDirection: 'row', gap: 30 },
+  resumenPedido: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 18,
+    justifyContent: 'space-between',
+  },
   datoEtiqueta: {
     color: '#717169',
     fontSize: 10,
@@ -2840,7 +2909,7 @@ const styles = StyleSheet.create({
   estadoTexto: { color: '#50504a', fontSize: 10, fontWeight: '800' },
   boton: {
     minHeight: 46,
-    borderRadius: 7,
+    borderRadius: 8,
     backgroundColor: '#b83b17',
     alignItems: 'center',
     justifyContent: 'center',
@@ -2848,7 +2917,13 @@ const styles = StyleSheet.create({
   },
   botonPresionado: { backgroundColor: '#963011' },
   botonEntrega: { backgroundColor: '#2d7a55' },
-  botonTexto: { color: '#fff', fontWeight: '800', fontSize: 14 },
+  botonTexto: {
+    color: '#fff',
+    fontWeight: '800',
+    fontSize: 13,
+    lineHeight: 18,
+    textAlign: 'center',
+  },
   botonCargandoFila: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2901,13 +2976,21 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     alignItems: 'center',
   },
+  filtroChipTercio: {
+    flexBasis: '30%',
+    flexGrow: 1,
+    alignItems: 'center',
+  },
   filtroChip: {
+    minHeight: 34,
     borderWidth: 1,
     borderColor: '#c6c5bd',
     backgroundColor: '#fff',
     borderRadius: 99,
-    paddingHorizontal: 11,
-    paddingVertical: 7,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   filtroChipActivo: {
     borderColor: '#b83b17',
@@ -3056,9 +3139,14 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 16,
   },
+  notificacionZona: {
+    position: 'absolute',
+    left: 10,
+    right: 10,
+    zIndex: 100,
+    elevation: 24,
+  },
   notificacion: {
-    marginHorizontal: 12,
-    marginTop: 10,
     borderRadius: 10,
     borderWidth: 1,
     paddingHorizontal: 12,
@@ -3106,22 +3194,30 @@ const styles = StyleSheet.create({
     minHeight: 44,
     borderWidth: 1,
     borderColor: '#b83b17',
-    borderRadius: 7,
+    borderRadius: 8,
     paddingHorizontal: 12,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#fff',
     flex: 1,
   },
-  botonMapaTexto: { color: '#b83b17', fontWeight: '800', fontSize: 12 },
+  botonMapaTexto: {
+    color: '#b83b17',
+    fontWeight: '800',
+    fontSize: 12,
+    lineHeight: 16,
+    textAlign: 'center',
+  },
   botonMapaCompacto: {
-    alignSelf: 'flex-start',
+    minHeight: 40,
     borderWidth: 1,
     borderColor: '#b83b17',
-    borderRadius: 6,
-    paddingHorizontal: 10,
+    borderRadius: 8,
+    paddingHorizontal: 11,
     paddingVertical: 7,
     backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   fila: { flexDirection: 'row', gap: 8 },
   filaWrap: {
@@ -3130,10 +3226,10 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   botonAccionSecundario: {
-    minHeight: 40,
+    minHeight: 42,
     borderWidth: 1,
     borderColor: '#c6c5bd',
-    borderRadius: 7,
+    borderRadius: 8,
     backgroundColor: '#fff',
     paddingHorizontal: 11,
     alignItems: 'center',
@@ -3141,11 +3237,35 @@ const styles = StyleSheet.create({
   },
   botonAccionSecundarioTexto: {
     color: '#50504a',
-    fontSize: 11,
+    fontSize: 12,
+    lineHeight: 16,
+    textAlign: 'center',
     fontWeight: '800',
   },
-  botonAnularTexto: { color: '#a1322c', fontSize: 11, fontWeight: '800' },
-  botonReactivarTexto: { color: '#286344', fontSize: 11, fontWeight: '800' },
+  botonEditar: { borderColor: '#d59b87' },
+  botonEditarTexto: {
+    color: '#9b3215',
+    fontSize: 12,
+    lineHeight: 16,
+    textAlign: 'center',
+    fontWeight: '800',
+  },
+  botonDesactivar: { borderColor: '#dfb4ad' },
+  botonReactivar: { borderColor: '#b8d7c2' },
+  botonAnularTexto: {
+    color: '#a1322c',
+    fontSize: 12,
+    lineHeight: 16,
+    textAlign: 'center',
+    fontWeight: '800',
+  },
+  botonReactivarTexto: {
+    color: '#286344',
+    fontSize: 12,
+    lineHeight: 16,
+    textAlign: 'center',
+    fontWeight: '800',
+  },
   accionPendiente: {
     alignSelf: 'flex-start',
     fontSize: 10,
@@ -3158,8 +3278,8 @@ const styles = StyleSheet.create({
   accionPendienteRetiro: { color: '#8a5a08', backgroundColor: '#fff4cf' },
   accionPendienteEntrega: { color: '#286344', backgroundColor: '#eaf4ed' },
   botonHistorial: {
-    minHeight: 38,
-    borderRadius: 7,
+    minHeight: 42,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: '#c6c5bd',
     backgroundColor: '#fff',
@@ -3167,8 +3287,38 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  botonHistorialTexto: { color: '#50504a', fontSize: 12, fontWeight: '800' },
-  clienteBadges: { alignItems: 'flex-end', gap: 5 },
+  botonHistorialTexto: {
+    color: '#50504a',
+    fontSize: 12,
+    lineHeight: 16,
+    textAlign: 'center',
+    fontWeight: '800',
+  },
+  clienteBadges: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 6,
+  },
+  filtroLinea: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  filtroLineaTitulo: {
+    width: 62,
+    color: '#66665e',
+    fontSize: 10,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  filtrosCompactos: {
+    flex: 1,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
   estadoMiniInactivo: {
     color: '#6f625d',
     backgroundColor: '#f1efed',
