@@ -613,10 +613,6 @@ export function MapaRepartoModal({
 }) {
   const [enfoque, setEnfoque] = useState<string | null>(enfoquePedidoId);
 
-  useEffect(() => {
-    if (visible) setEnfoque(enfoquePedidoId);
-  }, [enfoquePedidoId, visible]);
-
   const paradaActual =
     paradas.find((parada) => parada.pedidoId === enfoque) ?? null;
 
