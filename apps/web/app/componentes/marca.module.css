@@ -6,11 +6,11 @@
   background: transparent;
 }
 
-.marca svg {
+.marca img {
   display: block;
   width: 100%;
   height: 100%;
-  overflow: visible;
+  object-fit: contain;
 }
 
 .compacta {
