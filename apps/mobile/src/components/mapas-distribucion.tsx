@@ -260,11 +260,12 @@ export function SelectorUbicacionMapa({
     setError('');
     try {
       const direccionMapa = await resolverDireccionInversa(punto);
-      let direccionFinal = limpiarDireccion(direccion.trim());
-
-      if (!direccionFinal || esPlusCode(direccionFinal)) {
-        direccionFinal = direccionMapa;
-      }
+      const direccionEscrita = limpiarDireccion(direccion.trim());
+      const direccionFinal =
+        direccionMapa ||
+        (direccionEscrita && !esPlusCode(direccionEscrita)
+          ? direccionEscrita
+          : '');
 
       if (!direccionFinal) {
         setError(
@@ -419,7 +420,7 @@ export function SelectorUbicacionMapa({
             </Text>
             <Text style={styles.ayuda}>
               {punto
-                ? 'Puedes mover el mapa para ajustar el destino. Las coordenadas se guardan internamente.'
+                ? 'Puedes mover el mapa para ajustar el destino. Al confirmar, la dirección se actualizará según el punto final.'
                 : 'Busca una dirección o usa “Mi ubicación” para fijar el punto de entrega.'}
             </Text>
           </View>
