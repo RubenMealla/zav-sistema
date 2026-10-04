@@ -297,3 +297,45 @@ Las acciones “Seleccionar pendientes” y “Seleccionar registrados” podía
 La tarjeta de recorrido activo también se compactó y agrupa en una misma fila Actualizar ubicación / Finalizar organización.
 
 **Estado:** IMPLEMENTADO EN CÓDIGO / PENDIENTE DE REVALIDAR EN ANDROID.
+
+
+## Sexta validación física · cierre de operación y trazabilidad
+
+**Evidencia reportada por el estudiante el 4 de octubre de 2026:** la quinta versión fue validada físicamente y el flujo principal funciona correctamente. Se solicitaron los últimos cambios antes de cerrar la rama E3.
+
+### Hallazgo F-21 · Pedidos entregados saturaban la operación activa
+
+**Corrección en código:** la pantalla principal de Pedidos consulta únicamente `REGISTRADO` y `EN_DISTRIBUCION`. Un botón **Historial** abre una interfaz de pantalla completa con Safe Area, búsqueda y filtros propios para `ENTREGADO` y `CANCELADO`.
+
+**Estado:** IMPLEMENTADO EN CÓDIGO / PENDIENTE DE REVALIDAR EN EL APK DEL HEAD FINAL.
+
+### Hallazgo F-22 · estados operativos poco diferenciados
+
+**Corrección en código:** las tarjetas `REGISTRADO` se identifican como **Pendiente de retiro** con acento ámbar; las `EN_DISTRIBUCION` como **Listo para confirmar entrega** con acento verde. La acción de entrega utiliza además una jerarquía visual distinta.
+
+**Estado:** IMPLEMENTADO EN CÓDIGO / PENDIENTE DE REVALIDAR EN ANDROID.
+
+### Hallazgo F-23 · alertas persistentes e inconsistentes
+
+**Corrección en código:** mensajes informativos y errores operativos utilizan avisos flotantes temporales que se retiran automáticamente; los diálogos modales se reservan para decisiones que requieren confirmación explícita, por ejemplo retirar, entregar, dar de baja o anular.
+
+**Estado:** IMPLEMENTADO EN CÓDIGO / QA móvil superó lint y TypeScript en una ejecución previa; PENDIENTE DE QA FINAL DEL HEAD Y VALIDACIÓN FÍSICA.
+
+### Hallazgo F-24 · alta/baja de Cliente
+
+**Decisión:** se adopta una única **baja lógica** mediante el campo `activo` existente. El Cliente no se borra físicamente, permanece en el directorio bajo el filtro **De baja**, no puede utilizarse en Pedidos nuevos y puede reactivarse.
+
+**Estado:** IMPLEMENTADO EN API, móvil y pruebas E2E / PENDIENTE DE QA FINAL DEL HEAD.
+
+### Hallazgo F-25 · Pedido registrado incorrectamente
+
+**Decisión:** no se aplica borrado lógico genérico al Pedido. Se permite **Editar** o **Anular** únicamente mientras el estado sea `REGISTRADO`. La anulación cambia el estado a `CANCELADO`, conserva fecha/motivo y libera el compromiso de stock. Un Pedido retirado o entregado queda protegido contra estas operaciones.
+
+**Estado:** IMPLEMENTADO EN API, móvil, migración y E2E / PENDIENTE DE QA FINAL DEL HEAD.
+
+### Incidencias reales detectadas durante QA
+
+1. Se detectó y corrigió un parámetro SQL incompleto en el filtro de Pedidos por estado.
+2. La primera ejecución E2E de esta ronda reveló que la base aislada no incluía aún la nueva migración de cancelación; el setup se actualizó para ejecutar la misma migración antes de las pruebas.
+
+Estas incidencias se conservan como evidencia real y no se presentan como resultados exitosos.
