@@ -188,3 +188,76 @@ El formulario de alta permanecía arriba y la edición se desplegaba dentro de l
 ### Trazabilidad de usuario
 
 **CONFIRMADO EN CÓDIGO Y QA:** cada Pedido registra `vendedor_id` desde el JWT del usuario autenticado; los movimientos RETIRO y ENTREGA registran `usuario_id`. Se añadió una consulta administrativa de solo lectura y prueba E2E para verificar que el Administrador puede identificar al Vendedor responsable y que un VENDEDOR no puede usar la ruta administrativa.
+
+
+## Cuarta validación física · refinamiento previo al cierre E3
+
+**Evidencia reportada por el estudiante el 4 de octubre de 2026:** el flujo principal de la aplicación móvil funciona correctamente en Android. Antes de fusionar E3 a `main`, se detectaron mejoras de eficiencia y representación cartográfica.
+
+### Hallazgo F-11 · alta consecutiva de Pedidos interrumpida
+
+Después de registrar un Pedido, la app cambiaba automáticamente a Pedidos. Esto obligaba a volver a Nuevo pedido para cada alta consecutiva.
+
+**Corrección en código:** la pantalla permanece en Nuevo pedido, limpia Cliente/cantidades/observación, actualiza disponibilidad y vuelve al inicio del formulario.
+
+**Estado:** IMPLEMENTADO EN CÓDIGO / PENDIENTE DE REVALIDAR EN ANDROID.
+
+### Hallazgo F-12 · selección mediante listas extensas
+
+Con decenas de Clientes o productos, la selección mediante tarjetas consecutivas incrementaba el desplazamiento y el tiempo de operación.
+
+**Corrección en código:** se implementaron selectores de pantalla completa, buscables y virtualizados. El formulario conserva únicamente el Cliente y los productos elegidos. El directorio de Clientes muestra inicialmente 8 coincidencias, incorpora búsqueda, filtro de GPS y orden A–Z/Z–A.
+
+**Aclaración:** el Pedido selecciona productos, no lotes físicos. La asignación de lotes continúa en el retiro mediante FEFO.
+
+**Estado:** IMPLEMENTADO EN CÓDIGO / PENDIENTE DE REVALIDAR EN ANDROID.
+
+### Hallazgo F-13 · marcadores de Pedidos superpuestos
+
+En una planificación de cinco Pedidos se observó que un número podía quedar oculto por otro marcador. Un Pedido ubicado en el mismo punto que el origen también podía quedar cubierto.
+
+**Corrección en código:** todas las paradas se mantienen en la secuencia y los marcadores reciben una separación visual determinista en píxeles sin modificar sus coordenadas reales. El mapa ofrece además chips con todas las paradas numeradas, de modo que una parada no depende exclusivamente de que su marcador sea visible.
+
+**Estado:** IMPLEMENTADO EN CÓDIGO / PENDIENTE DE REVALIDAR CON PARADAS COINCIDENTES Y CERCANAS EN ANDROID.
+
+### Hallazgo F-14 · apertura de mapa desde un Pedido
+
+La acción individual podía abrir una vista demasiado general y además esperaba una captura GPS antes de mostrar el mapa.
+
+**Corrección en código:** `Ver destino en mapa` abre inmediatamente el destino enfocado. Si el Pedido pertenece al recorrido activo, abre el recorrido completo pero enfocado en esa parada. El mapa general conserva la vista de todas las paradas.
+
+**Estado:** IMPLEMENTADO EN CÓDIGO / PENDIENTE DE REVALIDAR EN ANDROID.
+
+### Hallazgo F-15 · percepción de doble toque
+
+Algunas acciones que esperaban GPS o red no daban suficiente retroalimentación inmediata y podían parecer no ejecutadas.
+
+**Corrección en código:** los botones muestran estados explícitos como “Obteniendo ubicación…” o “Registrando retiro…”, y se bloquean ejecuciones concurrentes de la misma operación para evitar taps duplicados.
+
+**Estado:** IMPLEMENTADO EN CÓDIGO / PENDIENTE DE REVALIDAR EN ANDROID.
+
+### Hallazgo F-16 · Pedidos históricos dominaban la vista diaria
+
+Al ingresar a Pedidos se mostraba el historial completo cargado, lo que dificultaba la operación del día.
+
+**Corrección en código:** el periodo inicial es `Hoy · Bolivia`, calculado con `America/La_Paz`, con alternativa `Todo el historial`. Se conservan filtros por estado, búsqueda y carga paginada del historial.
+
+**Estado:** IMPLEMENTADO EN CÓDIGO / PENDIENTE DE REVALIDAR EN ANDROID.
+
+### Hallazgo F-17 · retiro repetitivo de varios Pedidos
+
+Con varios Pedidos Registrados, retirar uno por uno añade interacciones innecesarias.
+
+**Corrección en código:** la selección múltiple permite seleccionar Registrados visibles y ejecutar retiro múltiple con la API idempotente existente.
+
+**Decisión:** no se implementó entrega múltiple. Cada entrega requiere su captura GPS puntual y comprobación propia; utilizar una sola posición para varios destinos invalidaría la evidencia geográfica.
+
+**Estado:** IMPLEMENTADO EN CÓDIGO / retiro múltiple ya cubierto por E2E; PENDIENTE DE REVALIDAR LA NUEVA INTERFAZ EN ANDROID.
+
+## Referencia de comparación UX
+
+La revisión técnica que fundamenta estos cambios se documenta en:
+
+`docs/investigacion/revision-ux-movil-pedidos-distribucion-e3.md`
+
+Se utilizaron fuentes oficiales de Route4Me, Onfleet, Shopify POS y MapLibre React Native. La revisión sirve para justificar patrones de interacción; no implica que ZAV replique el alcance funcional de esas plataformas.
