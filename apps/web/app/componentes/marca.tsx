@@ -24,7 +24,7 @@ export function Marca({
               <feFuncA type="linear" slope="3" intercept="-0.28" />
             </feComponentTransfer>
           </filter>
-          <mask id="zav-contenido" maskUnits="userSpaceOnUse" x="0" y="0" width="1080" height="1080" maskType="alpha">
+          <mask id="zav-contenido" maskUnits="userSpaceOnUse" x="0" y="0" width="1080" height="1080" style={{ maskType: 'alpha' }}>
             <image
               href="/marca/logo-zav.jpg"
               x="0"
