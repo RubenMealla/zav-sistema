@@ -208,6 +208,25 @@ El orden sugerido no modifica el estado de los Pedidos.
 
 El planificador de reparto dejó de presentarse como una pestaña independiente y se integra en **Pedidos**. El bloque permanece visible para explicar el estado del reparto; la secuenciación se habilita cuando existen al menos dos pedidos pendientes con destino georreferenciado. Los pedidos históricos sin GPS se identifican explícitamente y los entregados no participan en una nueva salida.
 
+### 7.5 Operación unificada de Pedidos
+
+La aplicación móvil no presenta Reparto como un módulo independiente. La sección **Pedidos** integra selección, secuenciación geográfica, retiro, consulta en mapa y confirmación de entrega.
+
+Cuando existe una secuencia activa:
+- las paradas son las mismas tarjetas operativas de Pedido;
+- una entrega confirmada se retira del plan activo;
+- la ubicación puntual capturada en esa entrega pasa a ser el nuevo origen de referencia;
+- el Vendedor puede actualizar su ubicación y solicitar nuevamente el orden sugerido de las paradas restantes;
+- el mapa manipulable se abre en pantalla completa para evitar conflicto de gestos con el desplazamiento vertical.
+
+La vista previa cartográfica no representa navegación vial giro a giro.
+
+### 7.6 Trazabilidad por Vendedor
+
+Todo Pedido conserva el `vendedor_id` obtenido de la sesión JWT. Las acciones que generan movimientos de inventario registran además `usuario_id`. Esta asociación es obligatoria y permite auditar quién registró y ejecutó las operaciones.
+
+El Administrador dispone de una consulta de solo lectura de Pedidos con Vendedor responsable. La futura Venta Directa deberá conservar la misma regla de trazabilidad.
+
 ## 8. RF-11 — Entrega con comprobación geográfica
 
 Para un Pedido `EN_DISTRIBUCION`, la pantalla muestra:
