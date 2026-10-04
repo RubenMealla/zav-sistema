@@ -106,8 +106,16 @@ export async function obtenerDisponibilidad(token: string) {
   return respuesta.items;
 }
 
-export function listarPedidos(token: string, estado?: string) {
-  const params = new URLSearchParams({ limit: '100' });
+export function listarPedidos(
+  token: string,
+  estado?: string,
+  page = 1,
+  limit = 100,
+) {
+  const params = new URLSearchParams({
+    page: String(page),
+    limit: String(limit),
+  });
   if (estado) params.set('estado', estado);
   return solicitud<Lista<PedidoResumen>>(
     `/api/v1/pedidos?${params.toString()}`,
