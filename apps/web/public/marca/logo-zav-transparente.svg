@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" role="img" aria-labelledby="titulo descripcion">
+  <title id="titulo">ZAV Fiambres y Embutidos</title>
+  <desc id="descripcion">Marca ZAV con silueta naranja y letras blancas sobre fondo transparente.</desc>
+  <defs>
+    <filter id="extraer" x="-5%" y="-5%" width="110%" height="110%" color-interpolation-filters="sRGB">
+      <feColorMatrix type="luminanceToAlpha"/>
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="3" intercept="-0.28"/>
+      </feComponentTransfer>
+    </filter>
+    <mask id="contenido" maskUnits="userSpaceOnUse" x="0" y="0" width="1080" height="1080" mask-type="alpha">
+      <image href="/marca/logo-zav.jpg" x="0" y="0" width="1080" height="1080" preserveAspectRatio="xMidYMid meet" filter="url(#extraer)"/>
+    </mask>
+  </defs>
+  <image href="/marca/logo-zav.jpg" x="0" y="0" width="1080" height="1080" preserveAspectRatio="xMidYMid meet" mask="url(#contenido)"/>
+</svg>

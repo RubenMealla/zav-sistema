@@ -2,7 +2,6 @@ import Image from 'next/image';
 import styles from './marca.module.css';
 
 export function Marca({
-  etiqueta = false,
   grande = false,
   compacta = false,
 }: {
@@ -19,13 +18,14 @@ export function Marca({
   return (
     <span className={clases}>
       <Image
-        src={etiqueta ? '/marca/etiqueta-zav.png' : '/marca/logo-zav.jpg'}
+        src="/marca/logo-zav-transparente.svg"
         alt="ZAV · Fiambres y embutidos"
         loading="eager"
         fetchPriority={grande ? 'high' : undefined}
-        width={etiqueta ? 1254 : 1080}
-        height={etiqueta ? 1254 : 1080}
-        sizes={grande ? '(max-width: 600px) 260px, 360px' : compacta ? '56px' : '120px'}
+        width={1080}
+        height={1080}
+        sizes={grande ? '(max-width: 600px) 240px, 340px' : compacta ? '54px' : '96px'}
+        unoptimized
       />
     </span>
   );

@@ -4,6 +4,7 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { randomUUID } from 'node:crypto';
 import { Icono } from '../componentes/icono';
+import { MapaUbicacion } from '../componentes/mapa-ubicacion';
 import { BotonEnviar, Modal, Notificacion } from '../componentes/interacciones';
 import {
   cambiarCondicionLote,
@@ -121,6 +122,11 @@ export default async function Panel({
     mensaje?: string;
     historialLoteId?: string;
     historialCondicionLoteId?: string;
+    productoQ?: string;
+    productoActivo?: string;
+    loteProductoId?: string;
+    loteVigencia?: string;
+    pedidoEstado?: string;
   }>;
 }) {
   const token = (await cookies()).get('zav_acceso')?.value;
@@ -145,6 +151,22 @@ export default async function Panel({
     const necesitaProductos = vista === 'resumen' || vista === 'productos' || vista === 'lotes';
     const necesitaLotes = vista !== 'productos';
 
+    const productoParametros = new URLSearchParams({ limit: vista === 'productos' ? '50' : '100' });
+    if (vista === 'productos' && parametros.productoQ?.trim()) {
+      productoParametros.set('q', parametros.productoQ.trim());
+    }
+    if (vista === 'productos' && parametros.productoActivo && ['true', 'false'].includes(parametros.productoActivo)) {
+      productoParametros.set('activo', parametros.productoActivo);
+    } else if (vista !== 'productos') {
+      productoParametros.set('activo', 'true');
+    }
+
+    const loteParametros = new URLSearchParams({ limit: '50' });
+    if (vista === 'lotes' && parametros.loteProductoId) loteParametros.set('productoId', parametros.loteProductoId);
+    if (vista === 'lotes' && parametros.loteVigencia && ['vigente', 'vencido'].includes(parametros.loteVigencia)) {
+      loteParametros.set('vigencia', parametros.loteVigencia);
+    }
+
     const [
       respuestaPerfil,
       respuestaProductos,
@@ -155,10 +177,10 @@ export default async function Panel({
     ] = await Promise.all([
         consultar<Perfil>('/api/v1/auth/me', token),
         necesitaProductos
-          ? consultar<Pagina<Producto>>('/api/v1/productos?limit=30', token)
+          ? consultar<Pagina<Producto>>(`/api/v1/productos?${productoParametros.toString()}`, token)
           : Promise.resolve(vacia<Producto>()),
         necesitaLotes
-          ? consultar<Pagina<Lote>>('/api/v1/lotes?limit=30', token)
+          ? consultar<Pagina<Lote>>(`/api/v1/lotes?${loteParametros.toString()}`, token)
           : Promise.resolve(vacia<Lote>()),
         vista === 'movimientos' && parametros.historialLoteId
           ? consultar<Pagina<Movimiento>>(
@@ -184,7 +206,11 @@ export default async function Panel({
     condiciones = respuestaCondiciones;
     ventaDespacho = respuestaVentaDespacho;
     if (vista === 'pedidos') {
-      pedidos = await consultar<Pagina<PedidoAuditoria>>('/api/v1/admin/pedidos?limit=50', token);
+      const pedidoParametros = new URLSearchParams({ limit: '50' });
+      if (parametros.pedidoEstado && ['REGISTRADO', 'EN_DISTRIBUCION', 'ENTREGADO', 'CANCELADO'].includes(parametros.pedidoEstado)) {
+        pedidoParametros.set('estado', parametros.pedidoEstado);
+      }
+      pedidos = await consultar<Pagina<PedidoAuditoria>>(`/api/v1/admin/pedidos?${pedidoParametros.toString()}`, token);
     }
   } catch {
     return (
@@ -293,43 +319,10 @@ export default async function Panel({
                 ) : (
                   <form action={configurarGeorreferenciaDespacho} className="formulario">
                     <input type="hidden" name="ubicacionId" value={ventaDespacho.datos.id} />
-                    <div className="form-grid">
-                      <label className="campo">
-                        Latitud
-                        <input
-                          name="latitud"
-                          type="number"
-                          min={-90}
-                          max={90}
-                          step="0.000001"
-                          required
-                          defaultValue={ventaDespacho.datos.ubicacion?.latitud ?? ''}
-                          placeholder="-21.000000"
-                        />
-                      </label>
-                      <label className="campo">
-                        Longitud
-                        <input
-                          name="longitud"
-                          type="number"
-                          min={-180}
-                          max={180}
-                          step="0.000001"
-                          required
-                          defaultValue={ventaDespacho.datos.ubicacion?.longitud ?? ''}
-                          placeholder="-64.000000"
-                        />
-                      </label>
-                    </div>
-                    <p className="nota-card">
-                      <Icono nombre="ubicacion" tamano={15} />
-                      {ventaDespacho.datos.ubicacion
-                        ? `Configurado: ${ventaDespacho.datos.ubicacion.latitud.toFixed(6)}, ${ventaDespacho.datos.ubicacion.longitud.toFixed(6)}`
-                        : 'Pendiente de configurar con la ubicación real de ZAV. No se ha inventado ninguna coordenada.'}
-                    </p>
-                    <div className="modal-acciones">
-                      <BotonEnviar>Guardar punto de despacho</BotonEnviar>
-                    </div>
+                    <MapaUbicacion
+                      latitud={ventaDespacho.datos.ubicacion?.latitud ?? null}
+                      longitud={ventaDespacho.datos.ubicacion?.longitud ?? null}
+                    />
                   </form>
                 )}
               </section>
@@ -359,12 +352,32 @@ export default async function Panel({
                 </Modal>
               </div>
 
+              <form method="get" className="barra-filtros filtros-principales">
+                <input type="hidden" name="vista" value="productos" />
+                <label className="filtro-campo filtro-busqueda">
+                  <span>Buscar</span>
+                  <input name="productoQ" defaultValue={parametros.productoQ ?? ''} placeholder="Código o nombre del producto" />
+                </label>
+                <label className="filtro-campo">
+                  <span>Estado</span>
+                  <select name="productoActivo" defaultValue={parametros.productoActivo ?? ''}>
+                    <option value="">Todos</option>
+                    <option value="true">Activos</option>
+                    <option value="false">Inactivos</option>
+                  </select>
+                </label>
+                <div className="filtros-acciones">
+                  <button type="submit" className="boton boton-secundario">Aplicar filtros</button>
+                  <Link className="boton boton-terciario" href="/panel?vista=productos">Limpiar</Link>
+                </div>
+              </form>
+
               {productos.estado !== 200 ? (
                 <div className="estado-vacio estado-error"><Icono nombre="alerta" /><p>No se pudo consultar la lista de productos (HTTP {productos.estado}).</p></div>
               ) : (
                 <div className="tabla-contenedor" role="region" tabIndex={0} aria-label="Productos registrados; tabla desplazable">
                   <table><caption className="solo-lectores">Productos registrados</caption>
-                    <thead><tr><th scope="col">Código</th><th scope="col">Producto</th><th scope="col">Familia</th><th scope="col">Presentación</th><th scope="col">Peso</th><th scope="col">Precio</th><th scope="col">Estado</th><th scope="col">Acciones</th></tr></thead>
+                    <thead><tr><th scope="col">Código</th><th scope="col">Producto</th><th scope="col">Familia</th><th scope="col">Presentación</th><th scope="col" className="numero">Peso</th><th scope="col" className="numero">Precio</th><th scope="col">Estado</th><th scope="col" className="acciones-columna">Acciones</th></tr></thead>
                     <tbody>
                       {itemsProductos.length === 0 ? (
                         <tr><td colSpan={8}><div className="tabla-vacia"><strong>Todavía no hay productos registrados.</strong><span>Usa «Nuevo producto» para registrar la primera presentación.</span></div></td></tr>
@@ -377,7 +390,7 @@ export default async function Panel({
                           <td className="numero">{producto.pesoGramos} g</td>
                           <td className="numero"><strong>Bs {producto.precioBob}</strong></td>
                           <td><span className={producto.activo ? 'badge badge-verde' : 'badge badge-neutro'}>{producto.activo ? 'ACTIVO' : 'INACTIVO'}</span></td>
-                          <td><AccionesProducto producto={producto} /></td>
+                          <td className="acciones-columna"><AccionesProducto producto={producto} /></td>
                         </tr>
                       ))}
                     </tbody>
@@ -410,6 +423,31 @@ export default async function Panel({
                   </form>
                 </Modal>
               </div>
+
+              <form method="get" className="barra-filtros filtros-principales">
+                <input type="hidden" name="vista" value="lotes" />
+                <label className="filtro-campo filtro-busqueda">
+                  <span>Producto</span>
+                  <select name="loteProductoId" defaultValue={parametros.loteProductoId ?? ''}>
+                    <option value="">Todos los productos</option>
+                    {itemsProductos.map((producto) => (
+                      <option key={producto.id} value={producto.id}>{producto.codigo} · {producto.nombre}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="filtro-campo">
+                  <span>Vigencia</span>
+                  <select name="loteVigencia" defaultValue={parametros.loteVigencia ?? ''}>
+                    <option value="">Todos</option>
+                    <option value="vigente">Vigentes</option>
+                    <option value="vencido">Vencidos</option>
+                  </select>
+                </label>
+                <div className="filtros-acciones">
+                  <button type="submit" className="boton boton-secundario">Aplicar filtros</button>
+                  <Link className="boton boton-terciario" href="/panel?vista=lotes">Limpiar</Link>
+                </div>
+              </form>
 
               {lotes.estado !== 200 ? (
                 <div className="estado-vacio estado-error"><Icono nombre="alerta" /><p>No se pudo consultar la lista de lotes (HTTP {lotes.estado}).</p></div>
@@ -514,6 +552,24 @@ export default async function Panel({
                 </div>
               </div>
 
+              <form method="get" className="barra-filtros filtros-principales filtros-pedidos">
+                <input type="hidden" name="vista" value="pedidos" />
+                <label className="filtro-campo">
+                  <span>Estado del pedido</span>
+                  <select name="pedidoEstado" defaultValue={parametros.pedidoEstado ?? ''}>
+                    <option value="">Todos los estados</option>
+                    <option value="REGISTRADO">Registrado</option>
+                    <option value="EN_DISTRIBUCION">En distribución</option>
+                    <option value="ENTREGADO">Entregado</option>
+                    <option value="CANCELADO">Cancelado</option>
+                  </select>
+                </label>
+                <div className="filtros-acciones">
+                  <button type="submit" className="boton boton-secundario">Aplicar filtro</button>
+                  <Link className="boton boton-terciario" href="/panel?vista=pedidos">Limpiar</Link>
+                </div>
+              </form>
+
               {pedidos.estado !== 200 ? (
                 <div className="estado-vacio estado-error">
                   <Icono nombre="alerta" />
@@ -533,8 +589,8 @@ export default async function Panel({
                           <th scope="col">Cliente</th>
                           <th scope="col">Vendedor</th>
                           <th scope="col">Estado</th>
-                          <th scope="col">Unidades</th>
-                          <th scope="col">Total</th>
+                          <th scope="col" className="numero">Unidades</th>
+                          <th scope="col" className="numero">Total</th>
                           <th scope="col">Destino</th>
                         </tr>
                       </thead>
@@ -560,9 +616,11 @@ export default async function Panel({
                               <span className={
                                 pedido.estado === 'ENTREGADO'
                                   ? 'badge badge-verde'
-                                  : pedido.estado === 'EN_DISTRIBUCION'
-                                    ? 'badge badge-azul'
-                                    : 'badge badge-ambar'
+                                  : pedido.estado === 'CANCELADO'
+                                    ? 'badge badge-rojo'
+                                    : pedido.estado === 'EN_DISTRIBUCION'
+                                      ? 'badge badge-azul'
+                                      : 'badge badge-ambar'
                               }>
                                 {pedido.estado === 'EN_DISTRIBUCION' ? 'EN DISTRIBUCIÓN' : pedido.estado}
                               </span>

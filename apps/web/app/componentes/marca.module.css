@@ -1,27 +1,22 @@
 .marca {
   display: block;
   flex: none;
-  width: 120px;
-  height: 72px;
-  overflow: hidden;
-  background: #090908;
+  width: 96px;
+  aspect-ratio: 1;
+  background: transparent;
 }
 
 .marca img {
   display: block;
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  object-position: center;
+  object-fit: contain;
 }
 
 .compacta {
-  width: 56px;
-  height: 56px;
+  width: 54px;
 }
 
 .grande {
-  width: min(100%, 360px);
-  height: auto;
-  aspect-ratio: 1;
+  width: min(100%, 340px);
 }
