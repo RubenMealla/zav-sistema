@@ -81,6 +81,13 @@ for (const ancho of [390, 768, 1440]) {
       await expect(modal).not.toBeVisible();
       await expect(abrir).toBeFocused();
     }
+    await navegacion.getByRole('link', { name: 'Pedidos', exact: true }).click();
+    await expect(navegacion.getByRole('link', { name: 'Pedidos', exact: true })).toHaveAttribute('aria-current', 'page');
+    await expect(page.getByRole('heading', { name: 'Pedidos', exact: true })).toBeVisible();
+    await expect(page.getByRole('table', { name: 'Auditoría de pedidos' })).toBeVisible();
+    await sinDesborde(page);
+    await captura(page, `identidad-pedidos-${ancho}.png`);
+
     await page.getByRole('button', { name: 'Cerrar sesión', exact: true }).filter({ visible: true }).click();
     await expect(page).toHaveURL(/\/acceso$/);
     await page.goto('/panel');

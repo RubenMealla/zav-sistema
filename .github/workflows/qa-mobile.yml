@@ -1,0 +1,45 @@
+name: QA mobile
+
+on:
+  push:
+    branches:
+      - "desarrollo/**"
+      - "correccion/**"
+      - "pruebas/**"
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: qa-mobile-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verificar-mobile:
+    name: Verificar app móvil
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.4.2
+          run_install: false
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+
+      - name: Verificar lint móvil
+        run: pnpm --filter @zav/mobile lint
+
+      - name: Verificar TypeScript móvil
+        run: pnpm --filter @zav/mobile exec tsc --noEmit

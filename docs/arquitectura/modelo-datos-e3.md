@@ -40,6 +40,8 @@ Esta regla permite reservar pedidos sin duplicar el saldo físico. Cuando un ped
 
 `REGISTRADO → EN_DISTRIBUCION → ENTREGADO`.
 
+Antes del retiro se admite `REGISTRADO → CANCELADO`. La anulación conserva fecha y motivo y no borra el Pedido.
+
 No se permiten saltos directos a Entregado. El retiro y la entrega usan claves de operación persistidas para impedir duplicar la transición ante reintentos.
 
 El retiro asigna lotes con criterio FEFO entre lotes `LIBERADO`, vigentes y con saldo en `VENTA_DESPACHO`. La entrega registra una captura GPS puntual; no existe seguimiento continuo.
@@ -75,8 +77,34 @@ Cliente, Pedido y DetallePedido no se declararán en producción hasta aplicar l
 - Un lote liberado con stock comprometido no puede bloquearse si dejaría pedidos sin cobertura.
 - Un lote nuevo inicia `RETENIDO`.
 - La baja de Producto es lógica.
+- La baja de Cliente es lógica mediante `activo`; el registro y sus Pedidos históricos se conservan.
+- Un Pedido `REGISTRADO` puede corregirse o pasar a `CANCELADO`; después del retiro no se edita ni se anula.
 - Ubicacion permanece parametrizable para permitir nuevas áreas o custodias.
 
 ## Evidencia de regresión
 
 Durante la primera ejecución de QA de esta iteración, NestJS no pudo construir `PedidosModule` porque `JwtAuthGuard` requería `UsuarioEntityRepository` en el contexto del módulo. La ejecución falló antes de los casos E2E. Se corrigió importando `TypeOrmModule.forFeature([UsuarioEntity])` y la regresión posterior obtuvo 11/11 pruebas unitarias y 18/18 E2E. Este fallo real se conserva como evidencia del apartado 2.8.
+
+
+## Extensión geográfica propuesta para distribución
+
+**Estado:** PROPUESTO / PENDIENTE DE IMPLEMENTAR. La especificación completa está en `docs/arquitectura/geolocalizacion-distribucion-e3.md`.
+
+Se mantienen las ocho entidades principales. No se crea una entidad Ruta.
+
+Cambios propuestos:
+
+- **Cliente:** `latitud`, `longitud`, `ubicacion_confirmada_en`.
+- **Ubicacion:** coordenadas opcionales para `AREA_FISICA`; `VENTA_DESPACHO` se utilizará como origen geográfico del reparto. `CUSTODIA_LOGICA` no representa un punto fijo.
+- **Pedido:** snapshot de destino mediante `destino_latitud` y `destino_longitud`; la posición real de entrega continúa en `entrega_latitud` y `entrega_longitud`; se propone registrar además precisión, distancia respecto al destino y observación cuando corresponda.
+
+La planificación de varios pedidos se calculará bajo demanda y no se persistirá como una novena entidad. Se propone ordenar por proximidad mediante distancia Haversine y heurística de vecino más cercano. El resultado será una sugerencia editable, no una ruta óptima.
+
+
+## Decisión de cierre E3 · integridad histórica
+
+**Cliente:** se reutiliza el atributo `activo` ya existente. Esta es la única representación de alta/baja del Cliente; no se incorpora un segundo mecanismo de soft delete.
+
+**Pedido:** no se elimina. `CANCELADO` representa una anulación de negocio y conserva `cancelado_en` y `cancelacion_motivo`. Esta distinción evita presentar como “borrado” una operación que debe permanecer disponible para auditoría.
+
+**Justificación de defensa:** el Cliente es un maestro reutilizable y puede dejar de operar sin desaparecer; el Pedido es una transacción y, si fue registrado incorrectamente, debe quedar evidencia de su anulación. Una vez que el Pedido genera movimientos de inventario mediante Retiro, la trazabilidad física prevalece y se bloquea la corrección destructiva.

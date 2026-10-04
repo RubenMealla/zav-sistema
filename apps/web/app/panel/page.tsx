@@ -5,7 +5,13 @@ import { redirect } from 'next/navigation';
 import { randomUUID } from 'node:crypto';
 import { Icono } from '../componentes/icono';
 import { BotonEnviar, Modal, Notificacion } from '../componentes/interacciones';
-import { cambiarCondicionLote, registrarLote, registrarProducto, registrarTraslado } from './acciones';
+import {
+  cambiarCondicionLote,
+  configurarGeorreferenciaDespacho,
+  registrarLote,
+  registrarProducto,
+  registrarTraslado,
+} from './acciones';
 import { AccionesProducto } from './acciones-producto';
 
 const API = process.env.API_BASE_URL ?? 'http://localhost:3001';
@@ -43,6 +49,25 @@ type EventoCondicion = {
 };
 type Pagina<T> = { items: T[]; total: number };
 type Perfil = { nombre: string; identificador: string; rol: string };
+type PedidoAuditoria = {
+  id: string;
+  estado: 'REGISTRADO' | 'EN_DISTRIBUCION' | 'ENTREGADO' | 'CANCELADO';
+  direccionEntrega: string;
+  creadoEn: string;
+  retiradoEn: string | null;
+  entregadoEn: string | null;
+  cliente: { id: string; nombre: string };
+  vendedor: { id: string; nombre: string; identificador: string };
+  unidades: number;
+  totalBob: string;
+};
+type VentaDespacho = {
+  id: string;
+  codigo: string;
+  nombre: string;
+  clase: string;
+  ubicacion: { latitud: number; longitud: number } | null;
+};
 const mensajes: Record<string, string> = {
   codigo: 'Ya existe un producto con ese código.',
   'lote-duplicado': 'El código de lote o la clave de operación ya está registrado.',
@@ -55,6 +80,7 @@ const mensajes: Record<string, string> = {
   lote: 'No se registró el lote. Comprueba fechas, ubicación y cantidad.',
   traslado: 'No se registró el traslado. Revisa lote, ubicaciones y cantidad.',
   condicion: 'No se cambió la condición del lote. Revisa los datos.',
+  'despacho-geo': 'No se pudo guardar la ubicación geográfica de Venta y Despacho.',
 };
 
 const mensajesOk: Record<string, string> = {
@@ -64,6 +90,7 @@ const mensajesOk: Record<string, string> = {
   lote: 'Lote e ingreso inicial registrados correctamente.',
   traslado: 'Traslado registrado correctamente.',
   condicion: 'Condición del lote actualizada correctamente.',
+  'despacho-geo': 'Ubicación geográfica de Venta y Despacho actualizada.',
 };
 
 async function consultar<T>(ruta: string, token: string): Promise<{ estado: number; datos?: T }> {
@@ -111,13 +138,21 @@ export default async function Panel({
   let lotes = vacia<Lote>();
   let movimientos: { estado: number; datos?: Pagina<Movimiento> } | undefined;
   let condiciones: { estado: number; datos?: Pagina<EventoCondicion> } | undefined;
+  let ventaDespacho: { estado: number; datos?: VentaDespacho } | undefined;
+  let pedidos = vacia<PedidoAuditoria>();
 
   try {
     const necesitaProductos = vista === 'resumen' || vista === 'productos' || vista === 'lotes';
     const necesitaLotes = vista !== 'productos';
 
-    const [respuestaPerfil, respuestaProductos, respuestaLotes, respuestaMovimientos, respuestaCondiciones] =
-      await Promise.all([
+    const [
+      respuestaPerfil,
+      respuestaProductos,
+      respuestaLotes,
+      respuestaMovimientos,
+      respuestaCondiciones,
+      respuestaVentaDespacho,
+    ] = await Promise.all([
         consultar<Perfil>('/api/v1/auth/me', token),
         necesitaProductos
           ? consultar<Pagina<Producto>>('/api/v1/productos?limit=30', token)
@@ -137,6 +172,9 @@ export default async function Panel({
               token,
             )
           : Promise.resolve(undefined),
+        vista === 'resumen'
+          ? consultar<VentaDespacho>('/api/v1/ubicaciones/venta-despacho', token)
+          : Promise.resolve(undefined),
       ]);
 
     perfil = respuestaPerfil;
@@ -144,6 +182,10 @@ export default async function Panel({
     lotes = respuestaLotes;
     movimientos = respuestaMovimientos;
     condiciones = respuestaCondiciones;
+    ventaDespacho = respuestaVentaDespacho;
+    if (vista === 'pedidos') {
+      pedidos = await consultar<Pagina<PedidoAuditoria>>('/api/v1/admin/pedidos?limit=50', token);
+    }
   } catch {
     return (
       <main className="error-pagina">
@@ -162,6 +204,7 @@ export default async function Panel({
   const itemsLotes = lotes.datos?.items ?? [];
   const itemsMovimientos = movimientos?.datos?.items ?? [];
   const itemsCondiciones = condiciones?.datos?.items ?? [];
+  const itemsPedidos = pedidos.datos?.items ?? [];
   const loteHistorial = itemsLotes.find((lote) => lote.id === parametros.historialLoteId);
   const loteHistorialCondicion = itemsLotes.find((lote) => lote.id === parametros.historialCondicionLoteId);
   const lotesLiberados = itemsLotes.filter((lote) => lote.condicion === 'LIBERADO').length;
@@ -215,6 +258,7 @@ export default async function Panel({
                     <Link href="/panel?vista=lotes" className="acceso-rapido"><span><Icono nombre="lote" /></span><div><strong>Lotes</strong><p>Revisa existencias y vencimientos.</p></div><b>→</b></Link>
                     <Link href="/panel?vista=condiciones" className="acceso-rapido"><span><Icono nombre="condicion" /></span><div><strong>Condiciones</strong><p>Libera, bloquea y audita.</p></div><b>→</b></Link>
                     <Link href="/panel?vista=movimientos" className="acceso-rapido"><span><Icono nombre="movimiento" /></span><div><strong>Movimientos</strong><p>Registra traslados y consulta historial.</p></div><b>→</b></Link>
+                    <Link href="/panel?vista=pedidos" className="acceso-rapido"><span><Icono nombre="historial" /></span><div><strong>Pedidos</strong><p>Revisa operaciones y vendedor responsable.</p></div><b>→</b></Link>
                   </div>
                 </section>
 
@@ -228,6 +272,67 @@ export default async function Panel({
                   <p className="nota-card"><Icono nombre="escudo" tamano={15} /> La condición comercial es independiente de la ubicación física.</p>
                 </section>
               </div>
+
+              <section className="card card-modulo">
+                <div className="card-cabecera">
+                  <div>
+                    <span className="eyebrow">DISTRIBUCIÓN / ORIGEN</span>
+                    <h2>Punto de Venta y Despacho</h2>
+                    <p>
+                      Este punto se usa como origen cuando el Vendedor solicita una secuencia
+                      geográfica de reparto.
+                    </p>
+                  </div>
+                </div>
+
+                {ventaDespacho?.estado !== 200 || !ventaDespacho.datos ? (
+                  <div className="estado-vacio estado-error">
+                    <Icono nombre="alerta" />
+                    <p>No se pudo consultar la ubicación de Venta y Despacho.</p>
+                  </div>
+                ) : (
+                  <form action={configurarGeorreferenciaDespacho} className="formulario">
+                    <input type="hidden" name="ubicacionId" value={ventaDespacho.datos.id} />
+                    <div className="form-grid">
+                      <label className="campo">
+                        Latitud
+                        <input
+                          name="latitud"
+                          type="number"
+                          min={-90}
+                          max={90}
+                          step="0.000001"
+                          required
+                          defaultValue={ventaDespacho.datos.ubicacion?.latitud ?? ''}
+                          placeholder="-21.000000"
+                        />
+                      </label>
+                      <label className="campo">
+                        Longitud
+                        <input
+                          name="longitud"
+                          type="number"
+                          min={-180}
+                          max={180}
+                          step="0.000001"
+                          required
+                          defaultValue={ventaDespacho.datos.ubicacion?.longitud ?? ''}
+                          placeholder="-64.000000"
+                        />
+                      </label>
+                    </div>
+                    <p className="nota-card">
+                      <Icono nombre="ubicacion" tamano={15} />
+                      {ventaDespacho.datos.ubicacion
+                        ? `Configurado: ${ventaDespacho.datos.ubicacion.latitud.toFixed(6)}, ${ventaDespacho.datos.ubicacion.longitud.toFixed(6)}`
+                        : 'Pendiente de configurar con la ubicación real de ZAV. No se ha inventado ninguna coordenada.'}
+                    </p>
+                    <div className="modal-acciones">
+                      <BotonEnviar>Guardar punto de despacho</BotonEnviar>
+                    </div>
+                  </form>
+                )}
+              </section>
             </>
           )}
 
@@ -397,6 +502,82 @@ export default async function Panel({
                 )}
               </section>
             </div>
+          )}
+
+          {vista === 'pedidos' && (
+            <section className="card card-modulo">
+              <div className="card-cabecera">
+                <div>
+                  <span className="eyebrow">AUDITORÍA COMERCIAL</span>
+                  <h2>Pedidos registrados</h2>
+                  <p>Cada pedido conserva el Vendedor autenticado que lo registró y sus cambios de estado.</p>
+                </div>
+              </div>
+
+              {pedidos.estado !== 200 ? (
+                <div className="estado-vacio estado-error">
+                  <Icono nombre="alerta" />
+                  <p>No se pudo consultar la auditoría de pedidos (HTTP {pedidos.estado}).</p>
+                </div>
+              ) : (
+                <>
+                  <p className="alcance-datos">
+                    Mostrando {itemsPedidos.length} de {pedidos.datos?.total ?? 0} pedido(s), máximo 50 por consulta.
+                  </p>
+                  <div className="tabla-contenedor" role="region" tabIndex={0} aria-label="Pedidos registrados; tabla desplazable">
+                    <table>
+                      <caption className="solo-lectores">Auditoría de pedidos</caption>
+                      <thead>
+                        <tr>
+                          <th scope="col">Fecha</th>
+                          <th scope="col">Cliente</th>
+                          <th scope="col">Vendedor</th>
+                          <th scope="col">Estado</th>
+                          <th scope="col">Unidades</th>
+                          <th scope="col">Total</th>
+                          <th scope="col">Destino</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {itemsPedidos.length === 0 ? (
+                          <tr>
+                            <td colSpan={7}>
+                              <div className="tabla-vacia">Todavía no hay pedidos registrados.</div>
+                            </td>
+                          </tr>
+                        ) : itemsPedidos.map((pedido) => (
+                          <tr key={pedido.id}>
+                            <td className="dato-nowrap">
+                              <time dateTime={pedido.creadoEn}>{fechaBolivia(pedido.creadoEn)}</time>
+                            </td>
+                            <td><strong>{pedido.cliente.nombre}</strong></td>
+                            <td>
+                              <strong>{pedido.vendedor.nombre}</strong>
+                              <br />
+                              <small>{pedido.vendedor.identificador}</small>
+                            </td>
+                            <td>
+                              <span className={
+                                pedido.estado === 'ENTREGADO'
+                                  ? 'badge badge-verde'
+                                  : pedido.estado === 'EN_DISTRIBUCION'
+                                    ? 'badge badge-azul'
+                                    : 'badge badge-ambar'
+                              }>
+                                {pedido.estado === 'EN_DISTRIBUCION' ? 'EN DISTRIBUCIÓN' : pedido.estado}
+                              </span>
+                            </td>
+                            <td className="numero"><strong>{pedido.unidades}</strong></td>
+                            <td className="numero"><strong>Bs {pedido.totalBob}</strong></td>
+                            <td>{pedido.direccionEntrega}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
+            </section>
           )}
 
           {vista === 'movimientos' && (

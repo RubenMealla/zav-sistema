@@ -25,6 +25,12 @@ export class UbicacionEntity {
   @Column({ name: 'permite_venta', type: 'boolean' })
   permiteVenta!: boolean;
 
+  @Column({ type: 'numeric', precision: 9, scale: 6, nullable: true })
+  latitud!: string | null;
+
+  @Column({ type: 'numeric', precision: 9, scale: 6, nullable: true })
+  longitud!: string | null;
+
   @Column({ name: 'activa', type: 'boolean', default: true })
   activa!: boolean;
 }

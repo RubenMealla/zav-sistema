@@ -90,3 +90,27 @@ export async function cambiarCondicionLote(formulario: FormData) {
   }
   redirect(`/panel?vista=condiciones&error=${estado === 409 ? 'condicion-conflicto' : estado === 'conexion' ? 'conexion' : 'condicion'}`);
 }
+
+
+export async function configurarGeorreferenciaDespacho(formulario: FormData) {
+  const ubicacionId = String(formulario.get('ubicacionId') ?? '');
+  const latitud = Number(formulario.get('latitud'));
+  const longitud = Number(formulario.get('longitud'));
+
+  if (!ubicacionId || !Number.isFinite(latitud) || !Number.isFinite(longitud)) {
+    redirect('/panel?vista=resumen&error=despacho-geo');
+  }
+
+  const estado = await enviar(
+    `/api/v1/ubicaciones/${encodeURIComponent(ubicacionId)}/georreferencia`,
+    { latitud, longitud },
+    'PATCH',
+  );
+  if (estado === 401 || estado === 403) redirect('/acceso?error=sesion');
+  if (estado === 200) redirect('/panel?vista=resumen&mensaje=despacho-geo');
+  redirect(
+    `/panel?vista=resumen&error=${
+      estado === 'conexion' ? 'conexion' : 'despacho-geo'
+    }`,
+  );
+}
