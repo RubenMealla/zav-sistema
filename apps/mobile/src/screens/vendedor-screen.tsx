@@ -549,6 +549,15 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
     );
   }
 
+  function seleccionarTodosPlanificables() {
+    const ids = pedidos
+      .filter((pedido) => pedido.estado !== 'ENTREGADO' && pedido.destinoGps !== null)
+      .map((pedido) => pedido.id);
+    setPedidosSeleccionados(ids);
+    setPlanificacion(null);
+    setError('');
+  }
+
   async function generarPlanificacion(origen: 'DESPACHO' | 'ACTUAL') {
     if (pedidosSeleccionados.length < 2) {
       setError('Selecciona al menos dos pedidos georreferenciados para planificar.');
@@ -750,6 +759,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
               planificando={planificando}
               retirando={retirandoSeleccionados}
               onAlternar={alternarPedidoPlanificacion}
+              onSeleccionarTodos={seleccionarTodosPlanificables}
               onPlanificarDespacho={() => void generarPlanificacion('DESPACHO')}
               onPlanificarActual={() => void generarPlanificacion('ACTUAL')}
               onRetirarSeleccionados={confirmarRetiroSeleccionados}
@@ -1143,6 +1153,7 @@ function Reparto({
   planificando,
   retirando,
   onAlternar,
+  onSeleccionarTodos,
   onPlanificarDespacho,
   onPlanificarActual,
   onRetirarSeleccionados,
@@ -1154,74 +1165,123 @@ function Reparto({
   planificando: boolean;
   retirando: boolean;
   onAlternar: (id: string) => void;
+  onSeleccionarTodos: () => void;
   onPlanificarDespacho: () => void;
   onPlanificarActual: () => void;
   onRetirarSeleccionados: () => void;
   onMover: (indice: number, direccion: -1 | 1) => void;
 }) {
-  const disponibles = pedidos.filter(
-    (pedido) =>
-      pedido.estado !== 'ENTREGADO' &&
-      pedido.destinoGps !== null,
-  );
-
-  // Con un solo pedido no hace falta un planificador separado: las acciones
-  // de retiro, navegación y entrega permanecen directamente en su tarjeta.
-  if (disponibles.length < 2) return null;
+  const pendientes = pedidos.filter((pedido) => pedido.estado !== 'ENTREGADO');
+  const disponibles = pendientes.filter((pedido) => pedido.destinoGps !== null);
+  const sinGps = pendientes.filter((pedido) => pedido.destinoGps === null);
+  const puedePlanificar = disponibles.length >= 2 && seleccionados.length >= 2;
 
   return (
     <View style={styles.bloque}>
       <View style={styles.separadorReparto} />
       <Titulo
         titulo="Organizar reparto"
-        descripcion="Cuando tienes dos o más pedidos con ubicación confirmada, puedes sugerir un orden de visita y ajustarlo manualmente."
+        descripcion="Compara dos o más pedidos pendientes y genera una secuencia sugerida por cercanía. Puedes reordenarla antes de salir."
       />
 
-      {!disponibles.length ? (
-        <Vacio texto="No hay pedidos pendientes con destino georreferenciado." />
-      ) : (
-        disponibles.map((pedido) => {
-          const activo = seleccionados.includes(pedido.id);
-          return (
-            <Pressable
-              key={pedido.id}
-              onPress={() => onAlternar(pedido.id)}
-              style={[styles.opcion, activo && styles.opcionActiva]}
-            >
-              <View style={styles.filaEntre}>
-                <View style={styles.flex}>
-                  <Text style={[styles.opcionTitulo, activo && styles.opcionTituloActiva]}>
-                    {pedido.cliente.nombre}
-                  </Text>
-                  <Text style={styles.opcionSubtitulo}>{pedido.direccionEntrega}</Text>
-                </View>
-                <Text style={styles.seleccionMarca}>{activo ? '✓' : '+'}</Text>
-              </View>
+      <View style={styles.tarjeta}>
+        <View style={styles.filaEntre}>
+          <View style={styles.flex}>
+            <Text style={styles.tarjetaTitulo}>Pedidos planificables</Text>
+            <Text style={styles.textoSecundario}>
+              {disponibles.length} con ubicación · {sinGps.length} sin ubicación · {pendientes.length} pendiente(s)
+            </Text>
+          </View>
+          {disponibles.length >= 2 ? (
+            <Pressable onPress={onSeleccionarTodos} style={styles.botonMapaCompacto}>
+              <Text style={styles.botonMapaTexto}>Seleccionar todos</Text>
             </Pressable>
-          );
-        })
-      )}
+          ) : null}
+        </View>
 
-      <Text style={styles.textoSecundario}>
-        Seleccionados: {seleccionados.length}. Se requieren al menos 2.
-      </Text>
+        {pendientes.length === 0 ? (
+          <Text style={styles.textoSecundario}>
+            No hay pedidos pendientes. Los pedidos entregados quedan solo como historial.
+          </Text>
+        ) : disponibles.length < 2 ? (
+          <Text style={styles.alertaInline}>
+            Se necesitan al menos dos pedidos pendientes con GPS para comparar cercanía y sugerir un orden.
+          </Text>
+        ) : (
+          <Text style={styles.textoSecundario}>
+            Toca los pedidos que quieras incluir. Para una salida completa puedes seleccionar todos los elegibles.
+          </Text>
+        )}
 
-      <View style={styles.fila}>
-        <Pressable
-          disabled={planificando}
-          onPress={onPlanificarDespacho}
-          style={styles.botonMapa}
-        >
-          <Text style={styles.botonMapaTexto}>Desde ZAV</Text>
-        </Pressable>
-        <Pressable
-          disabled={planificando}
-          onPress={onPlanificarActual}
-          style={styles.botonMapa}
-        >
-          <Text style={styles.botonMapaTexto}>Desde mi ubicación</Text>
-        </Pressable>
+        {sinGps.length ? (
+          <Text style={styles.alertaInline}>
+            {sinGps.map((pedido) => pedido.cliente.nombre).join(', ')}: sin destino GPS en este pedido histórico.
+          </Text>
+        ) : null}
       </View>
+
+      {disponibles.map((pedido) => {
+        const activo = seleccionados.includes(pedido.id);
+        return (
+          <Pressable
+            key={pedido.id}
+            onPress={() => onAlternar(pedido.id)}
+            style={[styles.opcion, activo && styles.opcionActiva]}
+          >
+            <View style={styles.filaEntre}>
+              <View style={styles.flex}>
+                <Text style={[styles.opcionTitulo, activo && styles.opcionTituloActiva]}>
+                  {pedido.cliente.nombre}
+                </Text>
+                <Text style={styles.opcionSubtitulo}>{pedido.direccionEntrega}</Text>
+                <Text style={styles.textoSecundario}>
+                  {estadoLegible(pedido.estado)}
+                </Text>
+              </View>
+              <Text style={styles.seleccionMarca}>{activo ? '✓' : '+'}</Text>
+            </View>
+          </Pressable>
+        );
+      })}
+
+      {disponibles.length >= 2 ? (
+        <>
+          <Text style={styles.textoSecundario}>
+            Seleccionados: {seleccionados.length}. Se requieren al menos 2.
+          </Text>
+
+          <View style={styles.fila}>
+            <Pressable
+              disabled={!puedePlanificar || planificando}
+              onPress={onPlanificarActual}
+              style={[styles.botonMapa, (!puedePlanificar || planificando) && styles.deshabilitado]}
+            >
+              <Text style={styles.botonMapaTexto}>Sugerir desde mi ubicación</Text>
+            </Pressable>
+            <Pressable
+              disabled={!puedePlanificar || planificando}
+              onPress={onPlanificarDespacho}
+              style={[styles.botonMapa, (!puedePlanificar || planificando) && styles.deshabilitado]}
+            >
+              <Text style={styles.botonMapaTexto}>Sugerir desde ZAV</Text>
+            </Pressable>
+          </View>
+
+          {seleccionados.some((id) =>
+            pedidos.some((pedido) => pedido.id === id && pedido.estado === 'REGISTRADO'),
+          ) ? (
+            <Pressable
+              disabled={retirando}
+              onPress={onRetirarSeleccionados}
+              style={[styles.botonMapa, retirando && styles.deshabilitado]}
+            >
+              <Text style={styles.botonMapaTexto}>
+                {retirando ? 'Registrando retiros…' : 'Retirar seleccionados para reparto'}
+              </Text>
+            </Pressable>
+          ) : null}
+        </>
+      ) : null}
 
       {planificando ? <ActivityIndicator color="#b83b17" /> : null}
 
@@ -1253,14 +1313,17 @@ function Reparto({
                   <Pressable
                     disabled={indice === 0}
                     onPress={() => onMover(indice, -1)}
-                    style={styles.botonOrden}
+                    style={[styles.botonOrden, indice === 0 && styles.deshabilitado]}
                   >
                     <Text style={styles.botonOrdenTexto}>↑</Text>
                   </Pressable>
                   <Pressable
                     disabled={indice === planificacion.paradas.length - 1}
                     onPress={() => onMover(indice, 1)}
-                    style={styles.botonOrden}
+                    style={[
+                      styles.botonOrden,
+                      indice === planificacion.paradas.length - 1 && styles.deshabilitado,
+                    ]}
                   >
                     <Text style={styles.botonOrdenTexto}>↓</Text>
                   </Pressable>
