@@ -448,20 +448,26 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
   }
 
   async function ejecutarRetiro(id: string) {
+    const claveAccion = `retiro:${id}`;
+    if (accionesEnCursoRef.current.has(claveAccion)) return;
+    accionesEnCursoRef.current.add(claveAccion);
+
     setAccionPedido(id);
     setError('');
+    setAviso('');
     try {
       await retirarPedido(token, id, uuidV4());
       await cargar(false);
-      Alert.alert('Productos en reparto', 'El pedido pasó a En distribución bajo tu custodia.');
+      setAviso('Pedido retirado. Los productos pasaron a distribución bajo tu custodia.');
     } catch (e) {
       await manejarError(e);
     } finally {
+      accionesEnCursoRef.current.delete(claveAccion);
       setAccionPedido(null);
     }
   }
 
-  async function abrirMapaPedido(pedido: PedidoResumen) {
+  function abrirMapaPedido(pedido: PedidoResumen) {
     if (!pedido.destinoGps) {
       setError('Este pedido no tiene un destino georreferenciado.');
       return;
@@ -474,58 +480,42 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
       : null;
 
     if (planActual) {
-      setMapaOperativo(planActual);
+      setMapaOperativo({
+        origen: planActual.origen,
+        paradas: planActual.paradas,
+        enfoquePedidoId: pedido.id,
+      });
+      setError('');
       return;
     }
 
-    setAccionPedido(pedido.id);
+    setMapaOperativo({
+      origen: null,
+      enfoquePedidoId: pedido.id,
+      paradas: [
+        {
+          pedidoId: pedido.id,
+          clienteId: pedido.cliente.id,
+          clienteNombre: pedido.cliente.nombre,
+          direccionEntrega: pedido.direccionEntrega,
+          latitud: pedido.destinoGps.latitud,
+          longitud: pedido.destinoGps.longitud,
+          orden: 1,
+          distanciaDesdeAnteriorMetros: 0,
+        },
+      ],
+    });
     setError('');
-    try {
-      const permiso = await Location.requestForegroundPermissionsAsync();
-      if (permiso.status !== 'granted') {
-        setError('Se necesita permiso de ubicación para mostrar tu posición junto al destino.');
-        return;
-      }
-
-      const posicion = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-      });
-      const origen = {
-        latitud: posicion.coords.latitude,
-        longitud: posicion.coords.longitude,
-        tipo: 'ACTUAL' as const,
-      };
-      const distancia = distanciaMetros(origen, pedido.destinoGps);
-      setMapaOperativo({
-        algoritmo: 'VECINO_MAS_CERCANO_HAVERSINE',
-        naturaleza: 'SECUENCIA_GEOGRAFICA_SUGERIDA',
-        origen,
-        distanciaTotalAproximadaMetros: Math.round(distancia),
-        paradas: [
-          {
-            pedidoId: pedido.id,
-            clienteId: pedido.cliente.id,
-            clienteNombre: pedido.cliente.nombre,
-            direccionEntrega: pedido.direccionEntrega,
-            latitud: pedido.destinoGps.latitud,
-            longitud: pedido.destinoGps.longitud,
-            orden: 1,
-            distanciaDesdeAnteriorMetros: Math.round(distancia),
-          },
-        ],
-        limitacion:
-          'Vista geográfica de referencia. No representa navegación vial giro a giro.',
-      });
-    } catch (e) {
-      await manejarError(e);
-    } finally {
-      setAccionPedido(null);
-    }
   }
 
   async function entregar(pedido: PedidoResumen) {
+    const claveAccion = `gps-entrega:${pedido.id}`;
+    if (accionesEnCursoRef.current.has(claveAccion)) return;
+    accionesEnCursoRef.current.add(claveAccion);
+
     setAccionPedido(pedido.id);
     setError('');
+    setAviso('');
     try {
       const servicios = await Location.hasServicesEnabledAsync();
       if (!servicios) {
@@ -590,6 +580,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
     } catch (e) {
       await manejarError(e);
     } finally {
+      accionesEnCursoRef.current.delete(claveAccion);
       setAccionPedido(null);
     }
   }
@@ -600,8 +591,13 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
     longitud: number,
     precisionMetros?: number,
   ) {
+    const claveAccion = `confirmar-entrega:${id}`;
+    if (accionesEnCursoRef.current.has(claveAccion)) return;
+    accionesEnCursoRef.current.add(claveAccion);
+
     setAccionPedido(id);
     setError('');
+    setAviso('');
     try {
       const entrega = await entregarPedidoConComprobacion(token, id, {
         operacionClave: uuidV4(),
@@ -641,6 +637,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
     } catch (e) {
       await manejarError(e);
     } finally {
+      accionesEnCursoRef.current.delete(claveAccion);
       setAccionPedido(null);
     }
   }
@@ -652,20 +649,13 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
     );
   }
 
-  function seleccionarTodosPlanificables() {
-    const ids = pedidos
-      .filter((pedido) => pedido.estado !== 'ENTREGADO' && pedido.destinoGps !== null)
-      .map((pedido) => pedido.id);
-    setPedidosSeleccionados(ids);
+  function seleccionarPedidos(ids: string[]) {
+    setPedidosSeleccionados([...new Set(ids)]);
     setPlanificacion(null);
     setError('');
   }
 
-  async function planificarTodosDesdeUbicacionActual() {
-    const ids = pedidos
-      .filter((pedido) => pedido.estado !== 'ENTREGADO' && pedido.destinoGps !== null)
-      .map((pedido) => pedido.id);
-
+  async function planificarTodosDesdeUbicacionActual(ids: string[]) {
     if (ids.length < 2) {
       setError('Se necesitan al menos dos pedidos pendientes con ubicación confirmada.');
       return;
@@ -793,13 +783,16 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
       );
 
       await cargar(false);
+      setPedidosSeleccionados((actuales) =>
+        actuales.filter((id) => !registrados.some((pedido) => pedido.id === id)),
+      );
 
       const detalle =
         resultado.fallidos === 0
           ? `${resultado.exitosos} pedido(s) pasaron a reparto.`
           : `${resultado.exitosos} retiro(s) correctos y ${resultado.fallidos} con observaciones.`;
 
-      Alert.alert('Retiro para reparto', detalle);
+      setAviso(detalle);
     } catch (e) {
       await manejarError(e);
     } finally {
