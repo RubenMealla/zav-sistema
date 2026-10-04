@@ -23,7 +23,7 @@ describe('geografia: normalizacion de resultados', () => {
     expect(direccion).not.toContain('+');
   });
 
-  it('descarta resultados fuera de Bolivia y prioriza coincidencias de Tarija', () => {
+  it('descarta resultados fuera de Tarija y prioriza barrios/calles frente a edificios', () => {
     const resultados = combinarResultados(
       [
         {
@@ -47,6 +47,15 @@ describe('geografia: normalizacion de resultados', () => {
           lon: -66.15,
         },
         {
+          address_line1: 'Kinder Senac',
+          city: 'Tarija',
+          state: 'Departamento de Tarija',
+          country_code: 'bo',
+          result_type: 'building',
+          lat: -21.53,
+          lon: -64.76,
+        },
+        {
           address_line1: 'Sénac',
           city: 'Annecy',
           state: 'Auvergne-Rhône-Alpes',
@@ -66,8 +75,13 @@ describe('geografia: normalizacion de resultados', () => {
         paisCodigo: 'bo',
       }),
     );
-    expect(resultados.every((resultado) => resultado.paisCodigo === 'bo')).toBe(
-      true,
-    );
+    expect(resultados[1].principal).toBe('Kinder Senac');
+    expect(
+      resultados.every((resultado) =>
+        [resultado.departamento, resultado.ciudad, resultado.secundaria]
+          .filter(Boolean)
+          .some((valor) => String(valor).toLowerCase().includes('tarija')),
+      ),
+    ).toBe(true);
   });
 });
