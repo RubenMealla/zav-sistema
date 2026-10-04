@@ -13,6 +13,7 @@ import {
   Modal,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -444,25 +445,43 @@ export function SelectorUbicacionMapa({
 }
 
 type MapaRepartoProps = {
-  origen: PuntoGeografico;
+  origen: PuntoGeografico | null;
   paradas: PlanificacionParada[];
   interactivo?: boolean;
   expandido?: boolean;
+  enfoquePedidoId?: string | null;
+  onEnfocarPedido?: (pedidoId: string) => void;
 };
+
+function offsetVisualParada(orden: number): [number, number] {
+  const angulo = ((orden * 137.508) * Math.PI) / 180;
+  const radio = 12 + ((orden - 1) % 3) * 3;
+  return [
+    Math.round(Math.cos(angulo) * radio),
+    Math.round(Math.sin(angulo) * radio),
+  ];
+}
 
 export function MapaReparto({
   origen,
   paradas,
   interactivo = false,
   expandido = false,
+  enfoquePedidoId = null,
+  onEnfocarPedido,
 }: MapaRepartoProps) {
   const coordenadas = useMemo(
     () =>
       [
-        [origen.longitud, origen.latitud],
-        ...paradas.map((p) => [p.longitud, p.latitud]),
-      ] as [number, number][],
+        ...(origen ? [[origen.longitud, origen.latitud] as [number, number]] : []),
+        ...paradas.map((p) => [p.longitud, p.latitud] as [number, number]),
+      ],
     [origen, paradas],
+  );
+
+  const paradaEnfocada = useMemo(
+    () => paradas.find((parada) => parada.pedidoId === enfoquePedidoId) ?? null,
+    [enfoquePedidoId, paradas],
   );
 
   const linea = useMemo(
@@ -488,6 +507,29 @@ export function MapaReparto({
     ] as [number, number, number, number];
   }, [coordenadas]);
 
+  const camaraInicial = useMemo(() => {
+    if (paradaEnfocada) {
+      return {
+        center: [paradaEnfocada.longitud, paradaEnfocada.latitud] as [number, number],
+        zoom: 16.5,
+        padding: { top: 64, right: 44, bottom: 64, left: 44 },
+      };
+    }
+
+    if (coordenadas.length === 1) {
+      return {
+        center: coordenadas[0],
+        zoom: 16,
+        padding: { top: 52, right: 44, bottom: 52, left: 44 },
+      };
+    }
+
+    return {
+      bounds: limites,
+      padding: { top: 52, right: 44, bottom: 52, left: 44 },
+    };
+  }, [coordenadas, limites, paradaEnfocada]);
+
   if (!paradas.length) return null;
 
   return (
@@ -502,42 +544,55 @@ export function MapaReparto({
         touchRotate={false}
         touchPitch={false}
       >
-        <Camera
-          initialViewState={{
-            bounds: limites,
-            padding: { top: 36, right: 36, bottom: 36, left: 36 },
-          }}
-        />
+        <Camera initialViewState={camaraInicial} />
 
-        <GeoJSONSource id="secuencia-reparto" data={linea}>
-          <Layer
-            id="secuencia-reparto-linea"
-            type="line"
-            paint={{
-              'line-color': '#b83b17',
-              'line-width': 4,
-              'line-opacity': 0.82,
-            } as never}
-          />
-        </GeoJSONSource>
+        {coordenadas.length >= 2 ? (
+          <GeoJSONSource id="secuencia-reparto" data={linea}>
+            <Layer
+              id="secuencia-reparto-linea"
+              type="line"
+              paint={{
+                'line-color': '#b83b17',
+                'line-width': 4,
+                'line-opacity': 0.78,
+              } as never}
+            />
+          </GeoJSONSource>
+        ) : null}
 
-        <Marker id="origen" lngLat={[origen.longitud, origen.latitud]}>
-          <View style={[styles.marcador, styles.marcadorOrigen]}>
-            <Text style={styles.marcadorTexto}>Z</Text>
-          </View>
-        </Marker>
-
-        {paradas.map((parada) => (
-          <Marker
-            key={parada.pedidoId}
-            id={parada.pedidoId}
-            lngLat={[parada.longitud, parada.latitud]}
-          >
-            <View style={styles.marcador}>
-              <Text style={styles.marcadorTexto}>{parada.orden}</Text>
+        {origen ? (
+          <Marker id="origen" lngLat={[origen.longitud, origen.latitud]}>
+            <View style={[styles.marcador, styles.marcadorOrigen]}>
+              <Text style={styles.marcadorTexto}>Z</Text>
             </View>
           </Marker>
-        ))}
+        ) : null}
+
+        {paradas.map((parada) => {
+          const enfocada = parada.pedidoId === enfoquePedidoId;
+          return (
+            <Marker
+              key={parada.pedidoId}
+              id={parada.pedidoId}
+              lngLat={[parada.longitud, parada.latitud]}
+              offset={offsetVisualParada(parada.orden)}
+              onPress={
+                interactivo && onEnfocarPedido
+                  ? () => onEnfocarPedido(parada.pedidoId)
+                  : undefined
+              }
+            >
+              <View
+                style={[
+                  styles.marcador,
+                  enfocada && styles.marcadorEnfocado,
+                ]}
+              >
+                <Text style={styles.marcadorTexto}>{parada.orden}</Text>
+              </View>
+            </Marker>
+          );
+        })}
       </Map>
     </View>
   );
@@ -547,36 +602,103 @@ export function MapaRepartoModal({
   visible,
   origen,
   paradas,
+  enfoquePedidoId = null,
   onCerrar,
 }: {
   visible: boolean;
-  origen: PuntoGeografico;
+  origen: PuntoGeografico | null;
   paradas: PlanificacionParada[];
+  enfoquePedidoId?: string | null;
   onCerrar: () => void;
 }) {
+  const [enfoque, setEnfoque] = useState<string | null>(enfoquePedidoId);
+
+  useEffect(() => {
+    if (visible) setEnfoque(enfoquePedidoId);
+  }, [enfoquePedidoId, visible]);
+
+  const paradaActual =
+    paradas.find((parada) => parada.pedidoId === enfoque) ?? null;
+
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onCerrar}>
       <SafeAreaView style={styles.modalMapaPlan} edges={['top', 'bottom']}>
         <View style={styles.cabeceraMapaPlan}>
           <View style={styles.flex}>
             <Text style={styles.eyebrow}>PEDIDOS · MAPA</Text>
-            <Text style={styles.tituloMapaPlan}>Recorrido de entrega</Text>
+            <Text style={styles.tituloMapaPlan}>
+              {paradaActual
+                ? `Parada ${paradaActual.orden} · ${paradaActual.clienteNombre}`
+                : `Recorrido · ${paradas.length} parada(s)`}
+            </Text>
           </View>
           <Pressable onPress={onCerrar} style={styles.secundarioCompacto}>
             <Text style={styles.secundarioTexto}>Cerrar</Text>
           </Pressable>
         </View>
+
+        {paradas.length > 1 ? (
+          <View style={styles.barraParadas}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.barraParadasContenido}
+            >
+              <Pressable
+                onPress={() => setEnfoque(null)}
+                style={[styles.chipMapa, enfoque === null && styles.chipMapaActivo]}
+              >
+                <Text
+                  style={[
+                    styles.chipMapaTexto,
+                    enfoque === null && styles.chipMapaTextoActivo,
+                  ]}
+                >
+                  Ruta completa
+                </Text>
+              </Pressable>
+              {paradas.map((parada) => {
+                const activa = enfoque === parada.pedidoId;
+                return (
+                  <Pressable
+                    key={parada.pedidoId}
+                    onPress={() => setEnfoque(parada.pedidoId)}
+                    style={[styles.chipMapa, activa && styles.chipMapaActivo]}
+                  >
+                    <Text
+                      style={[
+                        styles.chipMapaTexto,
+                        activa && styles.chipMapaTextoActivo,
+                      ]}
+                    >
+                      {parada.orden}. {parada.clienteNombre}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </View>
+        ) : null}
+
         <View style={styles.mapaPlanCuerpo}>
           <MapaReparto
+            key={enfoque ?? 'ruta-completa'}
             origen={origen}
             paradas={paradas}
+            enfoquePedidoId={enfoque}
+            onEnfocarPedido={setEnfoque}
             interactivo
             expandido
           />
         </View>
         <View style={styles.mapaPlanAyuda}>
           <Text style={styles.ayuda}>
-            Usa uno o dos dedos para mover y acercar el mapa. La línea representa la secuencia sugerida entre paradas, no una ruta vial optimizada.
+            {paradaActual
+              ? 'Vista enfocada en este pedido. Toca “Ruta completa” para volver al recorrido.'
+              : 'Todos los números corresponden al orden de entrega. Los marcadores usan una separación visual mínima para que dos pedidos cercanos no se oculten.'}
+          </Text>
+          <Text style={styles.ayuda}>
+            La línea representa la secuencia geográfica sugerida, no navegación vial giro a giro.
           </Text>
         </View>
       </SafeAreaView>
@@ -793,6 +915,36 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     marginTop: 3,
   },
+  barraParadas: {
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddddd5',
+  },
+  barraParadasContenido: {
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    gap: 7,
+  },
+  chipMapa: {
+    minHeight: 34,
+    borderWidth: 1,
+    borderColor: '#c6c5bd',
+    borderRadius: 99,
+    paddingHorizontal: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+  },
+  chipMapaActivo: {
+    borderColor: '#b83b17',
+    backgroundColor: '#fdf0e9',
+  },
+  chipMapaTexto: {
+    color: '#66665e',
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  chipMapaTextoActivo: { color: '#9b3215' },
   mapaPlanCuerpo: {
     flex: 1,
     backgroundColor: '#ecebe5',
@@ -816,5 +968,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   marcadorOrigen: { backgroundColor: '#20201e' },
+  marcadorEnfocado: {
+    backgroundColor: '#286344',
+    borderColor: '#fff',
+    transform: [{ scale: 1.14 }],
+  },
   marcadorTexto: { color: '#fff', fontSize: 11, fontWeight: '900' },
 });
