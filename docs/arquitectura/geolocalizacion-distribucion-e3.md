@@ -55,6 +55,23 @@ La clave de Geoapify permanece únicamente en el servidor. Si el proveedor no es
 
 El sistema delega la navegación giro a giro a una aplicación/servicio externo de mapas mediante un enlace al destino confirmado. ZAV no implementa un motor propio de navegación y el mapa embebido no se presenta como navegación vial.
 
+### 2.5 Alcance geográfico de búsqueda
+
+**Decisión implementada:** la búsqueda y el autocompletado de direcciones se restringen a **Bolivia** mediante el filtro del proveedor geográfico. Dentro del país, se priorizan coincidencias de **Tarija** porque corresponde al contexto operativo actual del proyecto, sin impedir seleccionar direcciones de otros departamentos bolivianos.
+
+La interfaz solicita sugerencias a partir de dos caracteres y muestra hasta ocho coincidencias relevantes de calles, barrios, zonas, localidades o referencias. No se afirma que la fuente posea un catálogo exhaustivo de todos los barrios y calles del país: la cobertura depende de los datos disponibles en OpenStreetMap/Geoapify.
+
+Para evitar confusión del usuario final, las coordenadas y códigos geográficos auxiliares permanecen como datos técnicos internos. La dirección visible prioriza calle, barrio/zona, ciudad y departamento cuando esos datos están disponibles.
+
+### 2.6 Compatibilidad física Android
+
+Durante la primera validación en un teléfono Android se observó solapamiento del modal con las barras del sistema y un mapa en blanco después de conceder permiso de ubicación. Se aplicaron dos correcciones:
+
+- SafeAreaProvider + SafeAreaView en el modal y contenedores principales;
+- androidView="texture" en MapLibre dentro del Modal, utilizando TextureView para evitar problemas de composición con la superficie nativa del mapa.
+
+Estas correcciones permanecen **PENDIENTES DE REVALIDAR EN DISPOSITIVO FÍSICO** hasta instalar el siguiente APK.
+
 ### 2.4 Secuenciación de entregas
 
 Se implementa una **secuenciación geográfica sugerida por proximidad**, no una “ruta óptima”.
@@ -178,6 +195,10 @@ La aplicación muestra:
 - controles para mover una parada arriba/abajo.
 
 El orden sugerido no modifica el estado de los Pedidos.
+
+### 7.4 Integración con la sección Pedidos
+
+El planificador de reparto dejó de presentarse como una pestaña independiente. Se integra en **Pedidos** y solo aparece cuando existen al menos dos pedidos pendientes con destino georreferenciado. Para un único pedido se mantienen directamente las acciones de retiro, navegación y entrega, evitando una sección sin utilidad operativa.
 
 ## 8. RF-11 — Entrega con comprobación geográfica
 
