@@ -107,13 +107,21 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleRelease --no-daemon
 
-      - name: Verificar firma y bundle JavaScript
+      - name: Verificar identidad, versión, firma y bundle JavaScript
         working-directory: apps/mobile/android
         shell: bash
         run: |
           APK="app/build/outputs/apk/release/app-release.apk"
           test -f "$APK"
           unzip -l "$APK" | grep -q "assets/index.android.bundle"
+
+          AAPT="$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -n 1)"
+          test -n "$AAPT"
+          BADGING="$("$AAPT" dump badging "$APK")"
+          printf '%s\n' "$BADGING"
+
+          printf '%s\n' "$BADGING" | grep -F "package: name='bo.zav.gestion.vendedor' versionCode='10000' versionName='1.0.0'"
+          printf '%s\n' "$BADGING" | grep -F "application-label:'ZAV Vendedor'"
 
           APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
           test -n "$APKSIGNER"
@@ -124,7 +132,7 @@ jobs:
       - name: Guardar APK autónomo
         uses: actions/upload-artifact@v4
         with:
-          name: zav-vendedor-e3-apk-standalone
+          name: zav-vendedor-1.0.0-apk-standalone
           path: |
             apps/mobile/android/app/build/outputs/apk/release/app-release.apk
             apps/mobile/android/app/build/outputs/apk/release/app-release.apk.sha256

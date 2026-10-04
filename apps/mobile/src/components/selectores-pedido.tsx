@@ -152,29 +152,22 @@ export function SelectorProductosPedidoModal({
     return productos
       .filter(
         (producto) =>
-          !q ||
-          normalizar(producto.nombre).includes(q) ||
-          normalizar(producto.codigo).includes(q) ||
-          normalizar(producto.familia).includes(q) ||
-          normalizar(producto.presentacion).includes(q),
+          producto.cantidadDisponible > 0 &&
+          (!q ||
+            normalizar(producto.nombre).includes(q) ||
+            normalizar(producto.codigo).includes(q) ||
+            normalizar(producto.familia).includes(q) ||
+            normalizar(producto.presentacion).includes(q)),
       )
       .sort((a, b) => {
         const aSeleccionado = cantidadNumerica(cantidades[a.productoId]) > 0 ? 0 : 1;
         const bSeleccionado = cantidadNumerica(cantidades[b.productoId]) > 0 ? 0 : 1;
-        const aDisponible = a.cantidadDisponible > 0 ? 0 : 1;
-        const bDisponible = b.cantidadDisponible > 0 ? 0 : 1;
         return (
           aSeleccionado - bSeleccionado ||
-          aDisponible - bDisponible ||
           a.nombre.localeCompare(b.nombre, 'es')
         );
       });
   }, [busqueda, cantidades, productos]);
-
-  const disponibles = useMemo(
-    () => productos.filter((producto) => producto.cantidadDisponible > 0).length,
-    [productos],
-  );
 
   const resumen = useMemo(() => {
     let productosSeleccionados = 0;
@@ -238,7 +231,7 @@ export function SelectorProductosPedidoModal({
             returnKeyType="search"
           />
           <Text style={styles.contador}>
-            {filtrados.length} producto(s) · {disponibles} con stock
+            {filtrados.length} producto(s) con stock
           </Text>
         </View>
 
@@ -252,22 +245,15 @@ export function SelectorProductosPedidoModal({
           ListEmptyComponent={
             <View style={styles.vacio}>
               <Text style={styles.subtitulo}>
-                No hay productos activos que coincidan.
+                No hay productos con stock que coincidan.
               </Text>
             </View>
           }
           renderItem={({ item }) => {
             const cantidad = cantidades[item.productoId] ?? '';
             const seleccionada = cantidadNumerica(cantidad) > 0;
-            const sinStock = item.cantidadDisponible <= 0;
             return (
-              <View
-                style={[
-                  styles.item,
-                  seleccionada && styles.itemActivo,
-                  sinStock && styles.itemSinStock,
-                ]}
-              >
+              <View style={[styles.item, seleccionada && styles.itemActivo]}>
                 <View style={styles.filaEntre}>
                   <View style={styles.flex}>
                     <Text
@@ -281,10 +267,8 @@ export function SelectorProductosPedidoModal({
                     <Text style={styles.itemMeta}>
                       {item.codigo} · {item.presentacion} · Bs {item.precioBob}
                     </Text>
-                    <Text style={sinStock ? styles.stockAgotado : styles.stock}>
-                      {sinStock
-                        ? 'Sin stock disponible en Venta y Despacho'
-                        : `Disponible: ${item.cantidadDisponible}`}
+                    <Text style={styles.stock}>
+                      Disponible: {item.cantidadDisponible}
                     </Text>
                   </View>
                 </View>
@@ -292,9 +276,8 @@ export function SelectorProductosPedidoModal({
                 <View style={styles.cantidadFila}>
                   <Pressable
                     accessibilityLabel={`Restar una unidad de ${item.nombre}`}
-                    disabled={sinStock}
                     onPress={() => sumar(item, -1)}
-                    style={[styles.cantidadBoton, sinStock && styles.deshabilitado]}
+                    style={styles.cantidadBoton}
                   >
                     <Text style={styles.cantidadBotonTexto}>−</Text>
                   </Pressable>
@@ -302,7 +285,6 @@ export function SelectorProductosPedidoModal({
                     accessibilityLabel={`Cantidad de ${item.nombre}`}
                     keyboardType="number-pad"
                     value={cantidad}
-                    editable={!sinStock}
                     onChangeText={(valor) => cambiar(item, valor)}
                     placeholder="0"
                     placeholderTextColor="#8a8982"
@@ -311,9 +293,8 @@ export function SelectorProductosPedidoModal({
                   />
                   <Pressable
                     accessibilityLabel={`Sumar una unidad de ${item.nombre}`}
-                    disabled={sinStock}
                     onPress={() => sumar(item, 1)}
-                    style={[styles.cantidadBoton, sinStock && styles.deshabilitado]}
+                    style={styles.cantidadBoton}
                   >
                     <Text style={styles.cantidadBotonTexto}>+</Text>
                   </Pressable>
@@ -401,14 +382,12 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   itemActivo: { borderColor: '#b83b17', backgroundColor: '#fff8f4' },
-  itemSinStock: { backgroundColor: '#f5f4f1', opacity: 0.82 },
   filaEntre: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
   itemTitulo: { color: '#262622', fontSize: 15, fontWeight: '800' },
   itemTituloActivo: { color: '#9b3215' },
   itemMeta: { color: '#717169', fontSize: 11, lineHeight: 16, marginTop: 3 },
   itemDireccion: { color: '#50504a', fontSize: 12, lineHeight: 17, marginTop: 4 },
   stock: { color: '#286344', fontSize: 11, fontWeight: '800', marginTop: 4 },
-  stockAgotado: { color: '#7a6d68', fontSize: 11, fontWeight: '800', marginTop: 4 },
   estado: {
     borderWidth: 1,
     borderColor: '#c6c5bd',
@@ -420,7 +399,6 @@ const styles = StyleSheet.create({
   estadoTexto: { color: '#66665e', fontSize: 10, fontWeight: '800' },
   estadoTextoActivo: { color: '#b83b17' },
   cantidadFila: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-end' },
-  deshabilitado: { opacity: 0.45 },
   cantidadBoton: {
     width: 42,
     height: 42,
