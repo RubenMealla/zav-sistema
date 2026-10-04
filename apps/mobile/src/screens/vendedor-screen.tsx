@@ -558,8 +558,25 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
     setError('');
   }
 
-  async function generarPlanificacion(origen: 'DESPACHO' | 'ACTUAL') {
-    if (pedidosSeleccionados.length < 2) {
+  async function planificarTodosDesdeUbicacionActual() {
+    const ids = pedidos
+      .filter((pedido) => pedido.estado !== 'ENTREGADO' && pedido.destinoGps !== null)
+      .map((pedido) => pedido.id);
+
+    if (ids.length < 2) {
+      setError('Se necesitan al menos dos pedidos pendientes con ubicación confirmada.');
+      return;
+    }
+
+    setPedidosSeleccionados(ids);
+    await generarPlanificacion('ACTUAL', ids);
+  }
+
+  async function generarPlanificacion(
+    origen: 'DESPACHO' | 'ACTUAL',
+    pedidoIds: string[] = pedidosSeleccionados,
+  ) {
+    if (pedidoIds.length < 2) {
       setError('Selecciona al menos dos pedidos georreferenciados para planificar.');
       return;
     }
@@ -570,7 +587,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
       if (origen === 'DESPACHO') {
         setPlanificacion(
           await planificarReparto(token, {
-            pedidoIds: pedidosSeleccionados,
+            pedidoIds,
             origenTipo: 'DESPACHO',
           }),
         );
@@ -587,7 +604,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
       });
       setPlanificacion(
         await planificarReparto(token, {
-          pedidoIds: pedidosSeleccionados,
+          pedidoIds,
           origenTipo: 'ACTUAL',
           origenLatitud: posicion.coords.latitude,
           origenLongitud: posicion.coords.longitude,
@@ -745,13 +762,6 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
       >
         {seccion === 'pedidos' ? (
           <>
-            <Pedidos
-              pedidos={pedidos}
-              accionPedido={accionPedido}
-              onRetirar={retirar}
-              onEntregar={entregar}
-              onNavegar={(pedido) => void abrirNavegacion(pedido)}
-            />
             <Reparto
               pedidos={pedidos}
               seleccionados={pedidosSeleccionados}
@@ -760,10 +770,18 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
               retirando={retirandoSeleccionados}
               onAlternar={alternarPedidoPlanificacion}
               onSeleccionarTodos={seleccionarTodosPlanificables}
+              onPlanificarTodosActual={() => void planificarTodosDesdeUbicacionActual()}
               onPlanificarDespacho={() => void generarPlanificacion('DESPACHO')}
               onPlanificarActual={() => void generarPlanificacion('ACTUAL')}
               onRetirarSeleccionados={confirmarRetiroSeleccionados}
               onMover={moverParada}
+            />
+            <Pedidos
+              pedidos={pedidos}
+              accionPedido={accionPedido}
+              onRetirar={retirar}
+              onEntregar={entregar}
+              onNavegar={(pedido) => void abrirNavegacion(pedido)}
             />
           </>
         ) : null}
@@ -1226,6 +1244,7 @@ function Reparto({
   retirando,
   onAlternar,
   onSeleccionarTodos,
+  onPlanificarTodosActual,
   onPlanificarDespacho,
   onPlanificarActual,
   onRetirarSeleccionados,
@@ -1238,6 +1257,7 @@ function Reparto({
   retirando: boolean;
   onAlternar: (id: string) => void;
   onSeleccionarTodos: () => void;
+  onPlanificarTodosActual: () => void;
   onPlanificarDespacho: () => void;
   onPlanificarActual: () => void;
   onRetirarSeleccionados: () => void;
@@ -1250,10 +1270,9 @@ function Reparto({
 
   return (
     <View style={styles.bloque}>
-      <View style={styles.separadorReparto} />
       <Titulo
         titulo="Organizar reparto"
-        descripcion="Compara dos o más pedidos pendientes y genera una secuencia sugerida por cercanía. Puedes reordenarla antes de salir."
+        descripcion="Primero organiza los pedidos por cercanía; debajo queda el listado operativo e historial."
       />
 
       <View style={styles.tarjeta}>
@@ -1289,6 +1308,19 @@ function Reparto({
           <Text style={styles.alertaInline}>
             {sinGps.map((pedido) => pedido.cliente.nombre).join(', ')}: sin destino GPS en este pedido histórico.
           </Text>
+        ) : null}
+
+        {disponibles.length >= 2 ? (
+          <>
+            <BotonAccion
+              texto={planificando ? 'Calculando secuencia…' : 'Organizar todos desde mi ubicación'}
+              cargando={planificando}
+              onPress={onPlanificarTodosActual}
+            />
+            <Text style={styles.textoSecundario}>
+              Esta acción solo propone un orden por proximidad; no cambia el estado de los pedidos.
+            </Text>
+          </>
         ) : null}
       </View>
 
