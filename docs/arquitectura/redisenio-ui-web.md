@@ -133,3 +133,33 @@ También incorporé un conjunto pequeño de iconos SVG propios dentro del códig
 Este rediseño corresponde a las funciones implementadas hasta inventario.
 
 Las vistas futuras de clientes, pedidos, distribución y catálogo público deberán respetar el mismo sistema de navegación y componentes, pero no se consideran implementadas en esta iteración.
+
+
+## Consolidación visual posterior — Issue #39
+
+La rama `mejora/ui-web-consolidada` continúa el trabajo de interfaz sobre el `main` actual sin sustituir la evidencia del rediseño original.
+
+### Landing pública extendida
+
+La portada contempla cuatro bloques públicos:
+
+1. Catálogo / Productos.
+2. Promociones.
+3. Noticias / Información.
+4. Nosotros / Identidad ZAV.
+
+Las tres primeras secciones se controlan mediante:
+
+```env
+ZAV_LANDING_EXTENDIDA=true
+```
+
+La configuración permite revisar y desarrollar la experiencia pública sin afirmar que Catálogo, Promociones o Noticias están implementados cuando aún no existe su contenido o administración definitiva.
+
+En producción la variable debe permanecer ausente o en `false` hasta que el alcance funcional correspondiente esté validado. Para QA y preview de la rama de consolidación se habilita en `true`.
+
+### Dirección visual
+
+La consolidación evita patrones repetitivos de tarjetas e iconos genéricos. Se adoptan composiciones editoriales asimétricas, jerarquía tipográfica y ritmos distintos para Catálogo, Promociones, Noticias y Nosotros.
+
+Las referencias visuales externas sirven únicamente para estudiar patrones de composición; no se copian imágenes, textos, identidad ni layouts distintivos de terceros.
