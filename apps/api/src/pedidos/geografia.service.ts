@@ -160,10 +160,26 @@ function normalizarResultado(resultado: GeoapifyResultado) {
 }
 
 function esTarija(resultado: ReturnType<typeof normalizarResultado>): boolean {
-  if (!resultado) return false;
+  if (!resultado || resultado.paisCodigo !== 'bo') return false;
   return [resultado.departamento, resultado.ciudad, resultado.secundaria]
     .filter((valor): valor is string => Boolean(valor))
     .some((valor) => valor.toLocaleLowerCase('es-BO').includes('tarija'));
+}
+
+function prioridadTipo(tipo: string): number {
+  const prioridades: Record<string, number> = {
+    suburb: 0,
+    district: 1,
+    neighbourhood: 2,
+    street: 3,
+    city: 4,
+    town: 5,
+    village: 6,
+    locality: 7,
+    amenity: 8,
+    building: 9,
+  };
+  return prioridades[tipo] ?? 10;
 }
 
 function combinarResultados(
@@ -173,13 +189,17 @@ function combinarResultados(
   const mapa = new Map<string, NonNullable<ReturnType<typeof normalizarResultado>>>();
   for (const bruto of [...prioritarios, ...generales]) {
     const resultado = normalizarResultado(bruto);
-    if (!resultado || resultado.paisCodigo !== 'bo') continue;
+    if (!resultado || !esTarija(resultado)) continue;
     const clave = `${resultado.latitud.toFixed(5)}:${resultado.longitud.toFixed(5)}:${resultado.direccion.toLocaleLowerCase('es-BO')}`;
     if (!mapa.has(clave)) mapa.set(clave, resultado);
   }
 
   return [...mapa.values()]
-    .sort((a, b) => Number(esTarija(b)) - Number(esTarija(a)))
+    .sort((a, b) => {
+      const porTipo = prioridadTipo(a.tipo) - prioridadTipo(b.tipo);
+      if (porTipo !== 0) return porTipo;
+      return a.direccion.localeCompare(b.direccion, 'es-BO');
+    })
     .slice(0, 8);
 }
 
@@ -236,7 +256,7 @@ export class GeografiaService {
     }
   }
 
-  private async buscarEnBolivia(
+  private async buscarEnTarija(
     ruta: 'search' | 'autocomplete',
     consulta: string,
   ) {
@@ -261,18 +281,17 @@ export class GeografiaService {
 
   async geocodificar(entrada: unknown) {
     const consulta = consultaDireccion(entrada);
-    const resultados = await this.buscarEnBolivia('search', consulta);
+    const resultados = await this.buscarEnTarija('search', consulta);
     return {
       proveedor: 'GEOAPIFY',
-      alcance: 'BOLIVIA',
-      prioridad: 'TARIJA',
+      alcance: 'TARIJA_BOLIVIA',
       resultados,
     };
   }
 
   async autocompletar(entrada: unknown) {
     const consulta = consultaDireccion(entrada);
-    const resultados = await this.buscarEnBolivia('autocomplete', consulta);
+    const resultados = await this.buscarEnTarija('autocomplete', consulta);
     return {
       proveedor: 'GEOAPIFY',
       alcance: 'BOLIVIA',
@@ -291,17 +310,18 @@ export class GeografiaService {
     });
     const normalizado = cuerpo.results?.map(normalizarResultado).find(Boolean) ?? null;
 
-    if (normalizado?.paisCodigo && normalizado.paisCodigo !== 'bo') {
+    if (!normalizado || !esTarija(normalizado)) {
       throw new BadRequestException(
-        'El punto seleccionado debe estar dentro de Bolivia.',
+        'El punto seleccionado debe estar dentro del departamento de Tarija, Bolivia.',
       );
     }
 
     return {
       proveedor: 'GEOAPIFY',
-      alcance: 'BOLIVIA',
-      direccion: normalizado?.direccion ?? null,
-      paisCodigo: normalizado?.paisCodigo ?? null,
+      alcance: 'TARIJA_BOLIVIA',
+      direccion: normalizado.direccion,
+      paisCodigo: normalizado.paisCodigo,
+      departamento: normalizado.departamento,
     };
   }
 
