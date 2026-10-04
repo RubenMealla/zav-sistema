@@ -1542,10 +1542,6 @@ function Clientes({
   const formDireccion = editando ? editDireccion : direccion;
   const formUbicacion = editando ? editUbicacion : ubicacion;
 
-  useEffect(() => {
-    setLimite(8);
-  }, [busqueda, filtroUbicacion, orden]);
-
   const clientesFiltrados = useMemo(() => {
     const consulta = busqueda.trim().toLocaleLowerCase('es-BO');
     return clientes
@@ -1653,7 +1649,10 @@ function Clientes({
 
         <TextInput
           value={busqueda}
-          onChangeText={setBusqueda}
+          onChangeText={(valor) => {
+            setBusqueda(valor);
+            setLimite(8);
+          }}
           placeholder="Nombre, teléfono o dirección"
           placeholderTextColor="#8a8982"
           style={styles.input}
@@ -1668,7 +1667,10 @@ function Clientes({
           ].map(([valor, texto]) => (
             <Pressable
               key={valor}
-              onPress={() => setFiltroUbicacion(valor as 'TODOS' | 'CON' | 'SIN')}
+              onPress={() => {
+                setFiltroUbicacion(valor as 'TODOS' | 'CON' | 'SIN');
+                setLimite(8);
+              }}
               style={[styles.filtroChip, filtroUbicacion === valor && styles.filtroChipActivo]}
             >
               <Text style={[styles.filtroChipTexto, filtroUbicacion === valor && styles.filtroChipTextoActivo]}>
@@ -1686,7 +1688,10 @@ function Clientes({
           ].map(([valor, texto]) => (
             <Pressable
               key={valor}
-              onPress={() => setOrden(valor as 'AZ' | 'ZA')}
+              onPress={() => {
+                setOrden(valor as 'AZ' | 'ZA');
+                setLimite(8);
+              }}
               style={[styles.filtroChip, orden === valor && styles.filtroChipActivo]}
             >
               <Text style={[styles.filtroChipTexto, orden === valor && styles.filtroChipTextoActivo]}>
