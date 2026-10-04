@@ -768,10 +768,19 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
             guardando={guardandoCliente}
             setNombre={setClienteNombre}
             setTelefono={setClienteTelefono}
-            setDireccion={setClienteDireccion}
             onAbrirMapa={abrirMapaNuevoCliente}
-            onEditarUbicacion={abrirMapaClienteExistente}
             onGuardar={guardarCliente}
+            clienteEditando={clienteEditando}
+            editNombre={clienteEditNombre}
+            editTelefono={clienteEditTelefono}
+            editDireccion={clienteEditDireccion}
+            editUbicacion={clienteEditUbicacion}
+            setEditNombre={setClienteEditNombre}
+            setEditTelefono={setClienteEditTelefono}
+            onEditar={iniciarEdicionCliente}
+            onCancelarEdicion={cancelarEdicionCliente}
+            onAbrirMapaEdicion={abrirMapaEdicionCliente}
+            onGuardarEdicion={() => void guardarEdicionCliente()}
           />
         ) : null}
 
@@ -795,18 +804,11 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
         <SelectorUbicacionMapa
           visible
           token={token}
-          direccionInicial={clienteEditandoUbicacion?.direccion ?? clienteDireccion}
-          puntoInicial={
-            clienteEditandoUbicacion?.ubicacion
-              ? {
-                  latitud: clienteEditandoUbicacion.ubicacion.latitud,
-                  longitud: clienteEditandoUbicacion.ubicacion.longitud,
-                }
-              : clienteUbicacion
-          }
+          direccionInicial={mapaParaEdicion ? clienteEditDireccion : clienteDireccion}
+          puntoInicial={mapaParaEdicion ? clienteEditUbicacion : clienteUbicacion}
           onCancelar={() => {
             setSelectorUbicacionVisible(false);
-            setClienteEditandoUbicacion(null);
+            setMapaParaEdicion(false);
           }}
           onConfirmar={(valor) => void confirmarUbicacionMapa(valor)}
         />
