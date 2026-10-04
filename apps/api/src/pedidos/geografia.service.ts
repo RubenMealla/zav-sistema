@@ -60,8 +60,8 @@ function consultaDireccion(valor: unknown): string {
     throw new BadRequestException('q es obligatorio.');
   }
   const consulta = valor.trim();
-  if (consulta.length < 3 || consulta.length > 200) {
-    throw new BadRequestException('q debe contener entre 3 y 200 caracteres.');
+  if (consulta.length < 2 || consulta.length > 200) {
+    throw new BadRequestException('q debe contener entre 2 y 200 caracteres.');
   }
   return consulta;
 }
