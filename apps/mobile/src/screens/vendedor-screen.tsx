@@ -133,6 +133,9 @@ function recalcularSecuencia(
 export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
   const [seccion, setSeccion] = useState<Seccion>('pedidos');
   const [pedidos, setPedidos] = useState<PedidoResumen[]>([]);
+  const [totalPedidos, setTotalPedidos] = useState(0);
+  const [paginaPedidos, setPaginaPedidos] = useState(1);
+  const [cargandoMasPedidos, setCargandoMasPedidos] = useState(false);
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [disponibilidad, setDisponibilidad] = useState<Disponibilidad[]>([]);
   const [cargando, setCargando] = useState(true);
@@ -199,6 +202,8 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
       try {
         const [p, c, d] = await consultarDatos();
         setPedidos(p.items);
+        setTotalPedidos(p.total);
+        setPaginaPedidos(p.page);
         setClientes(c.items);
         setDisponibilidad(d);
       } catch (e) {
@@ -237,6 +242,30 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
   async function refrescar() {
     setActualizando(true);
     await cargar(false);
+  }
+
+  async function cargarMasPedidos() {
+    if (cargandoMasPedidos || pedidos.length >= totalPedidos) return;
+
+    setCargandoMasPedidos(true);
+    setError('');
+    try {
+      const siguientePagina = paginaPedidos + 1;
+      const respuesta = await listarPedidos(token, undefined, siguientePagina);
+      setPedidos((actuales) => {
+        const ids = new Set(actuales.map((pedido) => pedido.id));
+        return [
+          ...actuales,
+          ...respuesta.items.filter((pedido) => !ids.has(pedido.id)),
+        ];
+      });
+      setTotalPedidos(respuesta.total);
+      setPaginaPedidos(respuesta.page);
+    } catch (e) {
+      await manejarError(e);
+    } finally {
+      setCargandoMasPedidos(false);
+    }
   }
 
   async function guardarCliente() {
@@ -916,6 +945,8 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
         {seccion === 'pedidos' ? (
           <Pedidos
             pedidos={pedidos}
+            totalPedidos={totalPedidos}
+            cargandoMasPedidos={cargandoMasPedidos}
             seleccionados={pedidosSeleccionados}
             planificacion={planificacion}
             planificando={planificando}
@@ -944,6 +975,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
               })
             }
             onActualizarUbicacionPlan={() => void actualizarPlanDesdeUbicacionActual()}
+            onCargarMas={() => void cargarMasPedidos()}
           />
         ) : null}
 
@@ -1063,6 +1095,8 @@ function Tab({
 
 function Pedidos({
   pedidos,
+  totalPedidos,
+  cargandoMasPedidos,
   seleccionados,
   planificacion,
   planificando,
@@ -1081,8 +1115,11 @@ function Pedidos({
   onVerMapaPedido,
   onVerMapaPlan,
   onActualizarUbicacionPlan,
+  onCargarMas,
 }: {
   pedidos: PedidoResumen[];
+  totalPedidos: number;
+  cargandoMasPedidos: boolean;
   seleccionados: string[];
   planificacion: PlanificacionReparto | null;
   planificando: boolean;
@@ -1101,6 +1138,7 @@ function Pedidos({
   onVerMapaPedido: (pedido: PedidoResumen) => void;
   onVerMapaPlan: () => void;
   onActualizarUbicacionPlan: () => void;
+  onCargarMas: () => void;
 }) {
   const [busqueda, setBusqueda] = useState('');
   const [filtroEstado, setFiltroEstado] = useState<'TODOS' | PedidoResumen['estado']>('TODOS');
@@ -1481,6 +1519,20 @@ function Pedidos({
               </>
             )
           : null}
+
+      {pedidos.length < totalPedidos ? (
+        <Pressable
+          disabled={cargandoMasPedidos}
+          onPress={onCargarMas}
+          style={[styles.botonMapa, cargandoMasPedidos && styles.deshabilitado]}
+        >
+          <Text style={styles.botonMapaTexto}>
+            {cargandoMasPedidos
+              ? 'Cargando más pedidos…'
+              : `Cargar más historial · ${pedidos.length} de ${totalPedidos}`}
+          </Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
