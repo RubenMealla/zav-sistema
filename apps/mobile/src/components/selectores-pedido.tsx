@@ -147,10 +147,6 @@ export function SelectorProductosPedidoModal({
 }) {
   const [busqueda, setBusqueda] = useState('');
 
-  useEffect(() => {
-    if (!visible) setBusqueda('');
-  }, [visible]);
-
   const filtrados = useMemo(() => {
     const q = normalizar(busqueda);
     return productos
