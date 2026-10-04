@@ -1,9 +1,8 @@
 import * as Location from 'expo-location';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Linking,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -36,7 +35,7 @@ import type {
   Sesion,
 } from '@/lib/tipos';
 import { uuidV4 } from '@/lib/uuid';
-import { MapaReparto, SelectorUbicacionMapa } from '@/components/mapas-distribucion';
+import { MapaReparto, MapaRepartoModal, SelectorUbicacionMapa } from '@/components/mapas-distribucion';
 
 type Seccion = 'pedidos' | 'nuevo' | 'clientes';
 
@@ -136,6 +135,8 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
   const [planificacion, setPlanificacion] = useState<PlanificacionReparto | null>(null);
   const [planificando, setPlanificando] = useState(false);
   const [retirandoSeleccionados, setRetirandoSeleccionados] = useState(false);
+  const [mapaOperativo, setMapaOperativo] = useState<PlanificacionReparto | null>(null);
+  const scrollPrincipalRef = useRef<ScrollView>(null);
 
   const token = sesion.accessToken;
 
@@ -265,6 +266,9 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
         : null,
     );
     setError('');
+    requestAnimationFrame(() => {
+      scrollPrincipalRef.current?.scrollTo({ y: 0, animated: true });
+    });
   }
 
   function cancelarEdicionCliente() {
@@ -425,19 +429,66 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
     }
   }
 
-  async function abrirNavegacion(pedido: PedidoResumen) {
+  async function abrirMapaPedido(pedido: PedidoResumen) {
     if (!pedido.destinoGps) {
       setError('Este pedido no tiene un destino georreferenciado.');
       return;
     }
-    const destino = `${pedido.destinoGps.latitud},${pedido.destinoGps.longitud}`;
-    const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destino)}`;
-    const disponible = await Linking.canOpenURL(url);
-    if (!disponible) {
-      setError('No se pudo abrir la aplicación de mapas.');
+
+    const planActual = planificacion?.paradas.some(
+      (parada) => parada.pedidoId === pedido.id,
+    )
+      ? planificacion
+      : null;
+
+    if (planActual) {
+      setMapaOperativo(planActual);
       return;
     }
-    await Linking.openURL(url);
+
+    setAccionPedido(pedido.id);
+    setError('');
+    try {
+      const permiso = await Location.requestForegroundPermissionsAsync();
+      if (permiso.status !== 'granted') {
+        setError('Se necesita permiso de ubicación para mostrar tu posición junto al destino.');
+        return;
+      }
+
+      const posicion = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+      const origen = {
+        latitud: posicion.coords.latitude,
+        longitud: posicion.coords.longitude,
+        tipo: 'ACTUAL' as const,
+      };
+      const distancia = distanciaMetros(origen, pedido.destinoGps);
+      setMapaOperativo({
+        algoritmo: 'VECINO_MAS_CERCANO_HAVERSINE',
+        naturaleza: 'SECUENCIA_GEOGRAFICA_SUGERIDA',
+        origen,
+        distanciaTotalAproximadaMetros: Math.round(distancia),
+        paradas: [
+          {
+            pedidoId: pedido.id,
+            clienteId: pedido.cliente.id,
+            clienteNombre: pedido.cliente.nombre,
+            direccionEntrega: pedido.direccionEntrega,
+            latitud: pedido.destinoGps.latitud,
+            longitud: pedido.destinoGps.longitud,
+            orden: 1,
+            distanciaDesdeAnteriorMetros: Math.round(distancia),
+          },
+        ],
+        limitacion:
+          'Vista geográfica de referencia. No representa navegación vial giro a giro.',
+      });
+    } catch (e) {
+      await manejarError(e);
+    } finally {
+      setAccionPedido(null);
+    }
   }
 
   async function entregar(pedido: PedidoResumen) {
@@ -528,6 +579,26 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
       });
       await cargar(false);
 
+      setPedidosSeleccionados((actuales) => actuales.filter((pedidoId) => pedidoId !== id));
+      setPlanificacion((actual) => {
+        if (!actual) return actual;
+        const restantes = actual.paradas.filter((parada) => parada.pedidoId !== id);
+        if (!restantes.length) return null;
+        const origen = {
+          latitud,
+          longitud,
+          tipo: 'ACTUAL' as const,
+        };
+        const recalculadas = recalcularSecuencia(origen, restantes);
+        return {
+          ...actual,
+          origen,
+          paradas: recalculadas.paradas,
+          distanciaTotalAproximadaMetros: recalculadas.total,
+        };
+      });
+      setMapaOperativo(null);
+
       const distancia = entrega.entregaGps?.distanciaDestinoMetros;
       Alert.alert(
         'Entrega registrada',
@@ -617,6 +688,55 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
     }
   }
 
+  async function actualizarPlanDesdeUbicacionActual() {
+    if (!planificacion?.paradas.length) return;
+
+    setPlanificando(true);
+    setError('');
+    try {
+      const permiso = await Location.requestForegroundPermissionsAsync();
+      if (permiso.status !== 'granted') {
+        setError('Se necesita permiso de ubicación para actualizar el recorrido.');
+        return;
+      }
+      const posicion = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+      const origen = {
+        latitud: posicion.coords.latitude,
+        longitud: posicion.coords.longitude,
+        tipo: 'ACTUAL' as const,
+      };
+
+      if (planificacion.paradas.length === 1) {
+        const recalculadas = recalcularSecuencia(origen, planificacion.paradas);
+        setPlanificacion((actual) =>
+          actual
+            ? {
+                ...actual,
+                origen,
+                paradas: recalculadas.paradas,
+                distanciaTotalAproximadaMetros: recalculadas.total,
+              }
+            : actual,
+        );
+        return;
+      }
+
+      const actualizada = await planificarReparto(token, {
+        pedidoIds: planificacion.paradas.map((parada) => parada.pedidoId),
+        origenTipo: 'ACTUAL',
+        origenLatitud: origen.latitud,
+        origenLongitud: origen.longitud,
+      });
+      setPlanificacion(actualizada);
+    } catch (e) {
+      await manejarError(e);
+    } finally {
+      setPlanificando(false);
+    }
+  }
+
   async function ejecutarRetiroSeleccionados() {
     const registrados = pedidos.filter(
       (pedido) =>
@@ -641,8 +761,6 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
       );
 
       await cargar(false);
-      setPlanificacion(null);
-      setPedidosSeleccionados([]);
 
       const detalle =
         resultado.fallidos === 0
@@ -754,6 +872,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
       ) : null}
 
       <ScrollView
+        ref={scrollPrincipalRef}
         contentContainerStyle={styles.contenido}
         keyboardShouldPersistTaps="handled"
         refreshControl={
@@ -761,29 +880,26 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
         }
       >
         {seccion === 'pedidos' ? (
-          <>
-            <Reparto
-              pedidos={pedidos}
-              seleccionados={pedidosSeleccionados}
-              planificacion={planificacion}
-              planificando={planificando}
-              retirando={retirandoSeleccionados}
-              onAlternar={alternarPedidoPlanificacion}
-              onSeleccionarTodos={seleccionarTodosPlanificables}
-              onPlanificarTodosActual={() => void planificarTodosDesdeUbicacionActual()}
-              onPlanificarDespacho={() => void generarPlanificacion('DESPACHO')}
-              onPlanificarActual={() => void generarPlanificacion('ACTUAL')}
-              onRetirarSeleccionados={confirmarRetiroSeleccionados}
-              onMover={moverParada}
-            />
-            <Pedidos
-              pedidos={pedidos}
-              accionPedido={accionPedido}
-              onRetirar={retirar}
-              onEntregar={entregar}
-              onNavegar={(pedido) => void abrirNavegacion(pedido)}
-            />
-          </>
+          <Pedidos
+            pedidos={pedidos}
+            seleccionados={pedidosSeleccionados}
+            planificacion={planificacion}
+            planificando={planificando}
+            retirando={retirandoSeleccionados}
+            accionPedido={accionPedido}
+            onAlternar={alternarPedidoPlanificacion}
+            onSeleccionarTodos={seleccionarTodosPlanificables}
+            onPlanificarTodosActual={() => void planificarTodosDesdeUbicacionActual()}
+            onPlanificarDespacho={() => void generarPlanificacion('DESPACHO')}
+            onPlanificarActual={() => void generarPlanificacion('ACTUAL')}
+            onRetirarSeleccionados={confirmarRetiroSeleccionados}
+            onMover={moverParada}
+            onRetirar={retirar}
+            onEntregar={entregar}
+            onVerMapaPedido={(pedido) => void abrirMapaPedido(pedido)}
+            onVerMapaPlan={() => planificacion && setMapaOperativo(planificacion)}
+            onActualizarUbicacionPlan={() => void actualizarPlanDesdeUbicacionActual()}
+          />
         ) : null}
 
         {seccion === 'clientes' ? (
@@ -841,6 +957,15 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
           onConfirmar={(valor) => void confirmarUbicacionMapa(valor)}
         />
       ) : null}
+
+      {mapaOperativo ? (
+        <MapaRepartoModal
+          visible
+          origen={mapaOperativo.origen}
+          paradas={mapaOperativo.paradas}
+          onCerrar={() => setMapaOperativo(null)}
+        />
+      ) : null}
     </View>
   );
 }
@@ -868,19 +993,54 @@ function Tab({
 
 function Pedidos({
   pedidos,
+  seleccionados,
+  planificacion,
+  planificando,
+  retirando,
   accionPedido,
+  onAlternar,
+  onSeleccionarTodos,
+  onPlanificarTodosActual,
+  onPlanificarDespacho,
+  onPlanificarActual,
+  onRetirarSeleccionados,
+  onMover,
   onRetirar,
   onEntregar,
-  onNavegar,
+  onVerMapaPedido,
+  onVerMapaPlan,
+  onActualizarUbicacionPlan,
 }: {
   pedidos: PedidoResumen[];
+  seleccionados: string[];
+  planificacion: PlanificacionReparto | null;
+  planificando: boolean;
+  retirando: boolean;
   accionPedido: string | null;
+  onAlternar: (id: string) => void;
+  onSeleccionarTodos: () => void;
+  onPlanificarTodosActual: () => void;
+  onPlanificarDespacho: () => void;
+  onPlanificarActual: () => void;
+  onRetirarSeleccionados: () => void;
+  onMover: (indice: number, direccion: -1 | 1) => void;
   onRetirar: (pedido: PedidoResumen) => void;
   onEntregar: (pedido: PedidoResumen) => void;
-  onNavegar: (pedido: PedidoResumen) => void;
+  onVerMapaPedido: (pedido: PedidoResumen) => void;
+  onVerMapaPlan: () => void;
+  onActualizarUbicacionPlan: () => void;
 }) {
   const [busqueda, setBusqueda] = useState('');
   const [filtroEstado, setFiltroEstado] = useState<'TODOS' | PedidoResumen['estado']>('TODOS');
+
+  const pedidoPorId = useMemo(
+    () => new Map(pedidos.map((pedido) => [pedido.id, pedido])),
+    [pedidos],
+  );
+  const pendientes = pedidos.filter((pedido) => pedido.estado !== 'ENTREGADO');
+  const planificables = pendientes.filter((pedido) => pedido.destinoGps !== null);
+  const sinGps = pendientes.filter((pedido) => pedido.destinoGps === null);
+  const puedePlanificar = planificables.length >= 2 && seleccionados.length >= 2;
 
   const pedidosVisibles = useMemo(() => {
     const consulta = busqueda.trim().toLocaleLowerCase('es-BO');
@@ -889,29 +1049,122 @@ function Pedidos({
         !consulta ||
         pedido.cliente.nombre.toLocaleLowerCase('es-BO').includes(consulta) ||
         pedido.direccionEntrega.toLocaleLowerCase('es-BO').includes(consulta);
-      const coincideEstado =
-        filtroEstado === 'TODOS' || pedido.estado === filtroEstado;
-      return coincide && coincideEstado;
+      return coincide && (filtroEstado === 'TODOS' || pedido.estado === filtroEstado);
     });
   }, [busqueda, filtroEstado, pedidos]);
 
-  const pendientes = pedidos.filter((pedido) => pedido.estado !== 'ENTREGADO').length;
+  const idsPlan = new Set(planificacion?.paradas.map((parada) => parada.pedidoId) ?? []);
+  const pedidosPlan = (planificacion?.paradas ?? [])
+    .map((parada) => pedidoPorId.get(parada.pedidoId))
+    .filter((pedido): pedido is PedidoResumen => Boolean(pedido) && pedido!.estado !== 'ENTREGADO');
+  const otrosPedidos = pedidosVisibles.filter((pedido) => !idsPlan.has(pedido.id));
+
+  function tarjetaPedido(pedido: PedidoResumen, indicePlan?: number) {
+    const enPlan = indicePlan !== undefined;
+    const seleccionable = pedido.estado !== 'ENTREGADO' && Boolean(pedido.destinoGps);
+    const seleccionado = seleccionados.includes(pedido.id);
+    const parada = enPlan ? planificacion?.paradas[indicePlan] : null;
+
+    return (
+      <View key={pedido.id} style={[styles.tarjeta, enPlan && styles.tarjetaPlan]}>
+        <View style={styles.filaEntre}>
+          <View style={styles.flex}>
+            <View style={styles.filaTituloPedido}>
+              {enPlan ? <Text style={styles.ordenBadge}>{(indicePlan ?? 0) + 1}</Text> : null}
+              <Text style={styles.tarjetaTitulo}>{pedido.cliente.nombre}</Text>
+            </View>
+            <Text style={styles.textoSecundario}>
+              {enPlan && parada
+                ? `${formatearDistancia(parada.distanciaDesdeAnteriorMetros)} desde el punto anterior`
+                : fechaCorta(pedido.creadoEn)}
+            </Text>
+          </View>
+          <Estado estado={pedido.estado} />
+        </View>
+
+        <Text style={styles.direccion}>{pedido.direccionEntrega}</Text>
+
+        <View style={styles.resumenPedido}>
+          <Dato etiqueta="Unidades" valor={String(pedido.unidades)} />
+          <Dato etiqueta="Total" valor={`Bs ${pedido.totalBob}`} />
+        </View>
+
+        {!planificacion && seleccionable ? (
+          <Pressable
+            onPress={() => onAlternar(pedido.id)}
+            style={[styles.botonSeleccion, seleccionado && styles.botonSeleccionActivo]}
+          >
+            <Text style={[styles.botonSeleccionTexto, seleccionado && styles.botonSeleccionTextoActivo]}>
+              {seleccionado ? '✓ Incluido en organización' : 'Incluir para organizar'}
+            </Text>
+          </Pressable>
+        ) : null}
+
+        {enPlan ? (
+          <View style={styles.fila}>
+            <Pressable
+              disabled={indicePlan === 0}
+              onPress={() => onMover(indicePlan!, -1)}
+              style={[styles.botonOrdenAncho, indicePlan === 0 && styles.deshabilitado]}
+            >
+              <Text style={styles.botonOrdenTexto}>↑ Antes</Text>
+            </Pressable>
+            <Pressable
+              disabled={indicePlan === pedidosPlan.length - 1}
+              onPress={() => onMover(indicePlan!, 1)}
+              style={[
+                styles.botonOrdenAncho,
+                indicePlan === pedidosPlan.length - 1 && styles.deshabilitado,
+              ]}
+            >
+              <Text style={styles.botonOrdenTexto}>↓ Después</Text>
+            </Pressable>
+          </View>
+        ) : null}
+
+        {pedido.destinoGps ? (
+          <Pressable onPress={() => onVerMapaPedido(pedido)} style={styles.botonMapa}>
+            <Text style={styles.botonMapaTexto}>Ver en mapa</Text>
+          </Pressable>
+        ) : (
+          <Text style={styles.alertaInline}>Pedido histórico sin destino GPS.</Text>
+        )}
+
+        {pedido.estado === 'REGISTRADO' ? (
+          <BotonAccion
+            texto="Retirar para reparto"
+            cargando={accionPedido === pedido.id}
+            onPress={() => onRetirar(pedido)}
+          />
+        ) : null}
+
+        {pedido.estado === 'EN_DISTRIBUCION' ? (
+          <BotonAccion
+            texto="Comprobar y confirmar entrega"
+            cargando={accionPedido === pedido.id}
+            onPress={() => onEntregar(pedido)}
+          />
+        ) : null}
+
+        {pedido.estado === 'ENTREGADO' && pedido.entregadoEn ? (
+          <Text style={styles.confirmado}>Entregado · {fechaCorta(pedido.entregadoEn)}</Text>
+        ) : null}
+      </View>
+    );
+  }
 
   return (
     <View style={styles.bloque}>
       <Titulo
         titulo="Pedidos"
-        descripcion="Consulta pedidos, gestiona entregas y organiza la salida de reparto desde esta misma sección."
+        descripcion="Organiza, retira y entrega desde una sola vista."
       />
 
       <View style={styles.tarjeta}>
         <View style={styles.resumenPedido}>
           <Dato etiqueta="Total" valor={String(pedidos.length)} />
-          <Dato etiqueta="Pendientes" valor={String(pendientes)} />
-          <Dato
-            etiqueta="Entregados"
-            valor={String(pedidos.length - pendientes)}
-          />
+          <Dato etiqueta="Pendientes" valor={String(pendientes.length)} />
+          <Dato etiqueta="Entregados" valor={String(pedidos.length - pendientes.length)} />
         </View>
         <TextInput
           value={busqueda}
@@ -929,89 +1182,129 @@ function Pedidos({
           ].map(([valor, texto]) => (
             <Pressable
               key={valor}
-              onPress={() =>
-                setFiltroEstado(valor as 'TODOS' | PedidoResumen['estado'])
-              }
-              style={[
-                styles.filtroChip,
-                filtroEstado === valor && styles.filtroChipActivo,
-              ]}
+              onPress={() => setFiltroEstado(valor as 'TODOS' | PedidoResumen['estado'])}
+              style={[styles.filtroChip, filtroEstado === valor && styles.filtroChipActivo]}
             >
-              <Text
-                style={[
-                  styles.filtroChipTexto,
-                  filtroEstado === valor && styles.filtroChipTextoActivo,
-                ]}
-              >
+              <Text style={[styles.filtroChipTexto, filtroEstado === valor && styles.filtroChipTextoActivo]}>
                 {texto}
               </Text>
             </Pressable>
           ))}
         </View>
-        <Text style={styles.contador}>
-          Mostrando {pedidosVisibles.length} de {pedidos.length} pedido(s)
-        </Text>
       </View>
 
-      {!pedidosVisibles.length ? (
-        <Vacio texto="No hay pedidos que coincidan con los filtros." />
-      ) : (
-        pedidosVisibles.map((pedido) => (
-          <View key={pedido.id} style={styles.tarjeta}>
+      {!planificacion && planificables.length >= 2 ? (
+        <View style={styles.tarjetaPlanControl}>
+          <View style={styles.filaEntre}>
+            <View style={styles.flex}>
+              <Text style={styles.tarjetaTitulo}>Organizar entregas</Text>
+              <Text style={styles.textoSecundario}>
+                Selecciona pedidos o usa todos. El orden es una sugerencia por cercanía.
+              </Text>
+            </View>
+            <Pressable onPress={onSeleccionarTodos} style={styles.botonMapaCompacto}>
+              <Text style={styles.botonMapaTexto}>Todos</Text>
+            </Pressable>
+          </View>
+
+          <BotonAccion
+            texto={planificando ? 'Calculando…' : 'Organizar todos desde mi ubicación'}
+            cargando={planificando}
+            onPress={onPlanificarTodosActual}
+          />
+
+          {seleccionados.length >= 2 ? (
+            <View style={styles.fila}>
+              <Pressable
+                disabled={!puedePlanificar || planificando}
+                onPress={onPlanificarActual}
+                style={[styles.botonMapa, (!puedePlanificar || planificando) && styles.deshabilitado]}
+              >
+                <Text style={styles.botonMapaTexto}>Desde mi ubicación</Text>
+              </Pressable>
+              <Pressable
+                disabled={!puedePlanificar || planificando}
+                onPress={onPlanificarDespacho}
+                style={[styles.botonMapa, (!puedePlanificar || planificando) && styles.deshabilitado]}
+              >
+                <Text style={styles.botonMapaTexto}>Desde ZAV</Text>
+              </Pressable>
+            </View>
+          ) : null}
+
+          {seleccionados.some((id) => pedidoPorId.get(id)?.estado === 'REGISTRADO') ? (
+            <Pressable
+              disabled={retirando}
+              onPress={onRetirarSeleccionados}
+              style={[styles.botonMapa, retirando && styles.deshabilitado]}
+            >
+              <Text style={styles.botonMapaTexto}>
+                {retirando ? 'Registrando…' : 'Retirar seleccionados'}
+              </Text>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
+
+      {sinGps.length ? (
+        <Text style={styles.alertaInline}>
+          {sinGps.length} pedido(s) histórico(s) no pueden organizarse porque no guardaron GPS.
+        </Text>
+      ) : null}
+
+      {planificacion && pedidosPlan.length ? (
+        <>
+          <View style={styles.tarjetaPlanControl}>
             <View style={styles.filaEntre}>
               <View style={styles.flex}>
-                <Text style={styles.tarjetaTitulo}>{pedido.cliente.nombre}</Text>
-                <Text style={styles.textoSecundario}>{fechaCorta(pedido.creadoEn)}</Text>
+                <Text style={styles.tarjetaTitulo}>Recorrido activo · {pedidosPlan.length} parada(s)</Text>
+                <Text style={styles.textoSecundario}>
+                  Aproximado: {formatearDistancia(planificacion.distanciaTotalAproximadaMetros)}
+                </Text>
               </View>
-              <Estado estado={pedido.estado} />
+              <Text style={styles.estadoMiniOk}>Activo</Text>
             </View>
 
-            <Text style={styles.direccion}>{pedido.direccionEntrega}</Text>
-            <Text style={pedido.destinoGps ? styles.disponible : styles.alertaInline}>
-              {pedido.destinoGps
-                ? 'Destino GPS confirmado para este pedido'
-                : 'Este pedido histórico no tiene destino GPS'}
-            </Text>
-
-            <View style={styles.resumenPedido}>
-              <Dato etiqueta="Unidades" valor={String(pedido.unidades)} />
-              <Dato etiqueta="Total" valor={`Bs ${pedido.totalBob}`} />
-            </View>
-
-            {pedido.estado === 'REGISTRADO' ? (
-              <BotonAccion
-                texto="Retirar para reparto"
-                cargando={accionPedido === pedido.id}
-                onPress={() => onRetirar(pedido)}
-              />
-            ) : null}
-
-            {pedido.estado === 'EN_DISTRIBUCION' ? (
-              <View style={styles.accionesPedido}>
-                {pedido.destinoGps ? (
-                  <Pressable onPress={() => onNavegar(pedido)} style={styles.botonMapa}>
-                    <Text style={styles.botonMapaTexto}>Abrir navegación</Text>
-                  </Pressable>
-                ) : null}
-                <BotonAccion
-                  texto="Comprobar y confirmar entrega"
-                  cargando={accionPedido === pedido.id}
-                  onPress={() => onEntregar(pedido)}
-                />
+            <Pressable onPress={onVerMapaPlan} style={styles.mapaPreview}>
+              <MapaReparto origen={planificacion.origen} paradas={planificacion.paradas} />
+              <View style={styles.mapaPreviewEtiqueta}>
+                <Text style={styles.botonMapaTexto}>Abrir mapa completo</Text>
               </View>
-            ) : null}
+            </Pressable>
 
-            {pedido.estado === 'ENTREGADO' && pedido.entregadoEn ? (
-              <Text style={styles.confirmado}>
-                Entregado · {fechaCorta(pedido.entregadoEn)}
+            <Pressable
+              disabled={planificando}
+              onPress={onActualizarUbicacionPlan}
+              style={[styles.botonMapa, planificando && styles.deshabilitado]}
+            >
+              <Text style={styles.botonMapaTexto}>
+                {planificando ? 'Actualizando…' : 'Actualizar mi ubicación y reordenar'}
               </Text>
-            ) : null}
+            </Pressable>
           </View>
-        ))
-      )}
+
+          {pedidosPlan.map((pedido, indice) => tarjetaPedido(pedido, indice))}
+        </>
+      ) : null}
+
+      {!planificacion && !pedidosVisibles.length ? (
+        <Vacio texto="No hay pedidos que coincidan con los filtros." />
+      ) : null}
+
+      {!planificacion
+        ? pedidosVisibles.map((pedido) => tarjetaPedido(pedido))
+        : otrosPedidos.length
+          ? (
+              <>
+                <Text style={styles.seccionTitulo}>Otros pedidos e historial</Text>
+                {otrosPedidos.map((pedido) => tarjetaPedido(pedido))}
+              </>
+            )
+          : null}
     </View>
   );
 }
+
 
 function Clientes({
   clientes,
@@ -1060,6 +1353,11 @@ function Clientes({
 }) {
   const [busqueda, setBusqueda] = useState('');
   const [filtroUbicacion, setFiltroUbicacion] = useState<'TODOS' | 'CON' | 'SIN'>('TODOS');
+  const editando = Boolean(clienteEditando);
+  const formNombre = editando ? editNombre : nombre;
+  const formTelefono = editando ? editTelefono : telefono;
+  const formDireccion = editando ? editDireccion : direccion;
+  const formUbicacion = editando ? editUbicacion : ubicacion;
 
   const clientesVisibles = useMemo(() => {
     const consulta = busqueda.trim().toLocaleLowerCase('es-BO');
@@ -1081,49 +1379,76 @@ function Clientes({
     <View style={styles.bloque}>
       <Titulo
         titulo="Clientes"
-        descripcion="La ubicación se define en el mapa y es obligatoria para registrar pedidos nuevos."
+        descripcion="Alta y edición usan el mismo formulario."
       />
 
-      <View style={styles.tarjeta}>
-        <Text style={styles.seccionTitulo}>Nuevo cliente</Text>
-        <Campo label="Nombre" value={nombre} onChangeText={setNombre} />
+      <View style={[styles.tarjeta, editando && styles.tarjetaEdicion]}>
+        <View style={styles.filaEntre}>
+          <View style={styles.flex}>
+            <Text style={styles.seccionTitulo}>
+              {editando ? 'Editar cliente' : 'Nuevo cliente'}
+            </Text>
+            {editando ? (
+              <Text style={styles.textoSecundario}>{clienteEditando?.nombre}</Text>
+            ) : null}
+          </View>
+          {editando ? (
+            <Pressable onPress={onCancelarEdicion} style={styles.botonMapaCompacto}>
+              <Text style={styles.botonMapaTexto}>Cancelar</Text>
+            </Pressable>
+          ) : null}
+        </View>
+
+        <Campo
+          label="Nombre"
+          value={formNombre}
+          onChangeText={editando ? setEditNombre : setNombre}
+        />
         <Campo
           label="Teléfono (opcional)"
-          value={telefono}
-          onChangeText={setTelefono}
+          value={formTelefono}
+          onChangeText={editando ? setEditTelefono : setTelefono}
           keyboardType="phone-pad"
         />
 
-        {direccion && ubicacion ? (
+        {formDireccion && formUbicacion ? (
           <View style={styles.ubicacionResumen}>
             <Text style={styles.ubicacionResumenTitulo}>Ubicación confirmada</Text>
-            <Text style={styles.direccion}>{direccion}</Text>
+            <Text style={styles.direccion}>{formDireccion}</Text>
           </View>
         ) : (
-          <Text style={styles.textoSecundario}>
-            Aún no se definió el punto de entrega. El vendedor puede buscar una referencia o usar su ubicación actual.
+          <Text style={styles.alertaInline}>
+            Define la ubicación en Tarija para poder guardar el cliente.
           </Text>
         )}
 
-        <Pressable onPress={onAbrirMapa} style={styles.botonMapa}>
+        <Pressable
+          onPress={editando ? onAbrirMapaEdicion : onAbrirMapa}
+          style={styles.botonMapa}
+        >
           <Text style={styles.botonMapaTexto}>
-            {ubicacion ? 'Revisar ubicación en mapa' : 'Definir ubicación en mapa'}
+            {formUbicacion ? 'Revisar ubicación' : 'Definir ubicación'}
           </Text>
         </Pressable>
 
         <BotonAccion
-          texto="Guardar cliente"
+          texto={editando ? 'Guardar cambios' : 'Guardar cliente'}
           cargando={guardando}
-          onPress={onGuardar}
+          onPress={editando ? onGuardarEdicion : onGuardar}
         />
+
+        {editando ? (
+          <Text style={styles.textoSecundario}>
+            Los pedidos ya registrados conservan su destino histórico.
+          </Text>
+        ) : null}
       </View>
 
       <View style={styles.tarjeta}>
-        <Text style={styles.seccionTitulo}>Buscar y filtrar</Text>
         <TextInput
           value={busqueda}
           onChangeText={setBusqueda}
-          placeholder="Nombre, teléfono o dirección"
+          placeholder="Buscar nombre, teléfono o dirección"
           placeholderTextColor="#8a8982"
           style={styles.input}
         />
@@ -1136,310 +1461,46 @@ function Clientes({
             <Pressable
               key={valor}
               onPress={() => setFiltroUbicacion(valor as 'TODOS' | 'CON' | 'SIN')}
-              style={[
-                styles.filtroChip,
-                filtroUbicacion === valor && styles.filtroChipActivo,
-              ]}
+              style={[styles.filtroChip, filtroUbicacion === valor && styles.filtroChipActivo]}
             >
-              <Text
-                style={[
-                  styles.filtroChipTexto,
-                  filtroUbicacion === valor && styles.filtroChipTextoActivo,
-                ]}
-              >
+              <Text style={[styles.filtroChipTexto, filtroUbicacion === valor && styles.filtroChipTextoActivo]}>
                 {texto}
               </Text>
             </Pressable>
           ))}
         </View>
         <Text style={styles.contador}>
-          Mostrando {clientesVisibles.length} de {clientes.length} cliente(s)
+          {clientesVisibles.length} de {clientes.length} cliente(s)
         </Text>
       </View>
 
       {!clientesVisibles.length ? (
         <Vacio texto="No hay clientes que coincidan con los filtros." />
       ) : (
-        clientesVisibles.map((cliente) => {
-          const editando = clienteEditando?.id === cliente.id;
-
-          if (editando) {
-            return (
-              <View key={cliente.id} style={styles.tarjeta}>
-                <View style={styles.filaEntre}>
-                  <Text style={styles.seccionTitulo}>Editar cliente</Text>
-                  <Pressable onPress={onCancelarEdicion}>
-                    <Text style={styles.enlaceSecundario}>Cancelar</Text>
-                  </Pressable>
-                </View>
-
-                <Campo label="Nombre" value={editNombre} onChangeText={setEditNombre} />
-                <Campo
-                  label="Teléfono (opcional)"
-                  value={editTelefono}
-                  onChangeText={setEditTelefono}
-                  keyboardType="phone-pad"
-                />
-
-                {editDireccion && editUbicacion ? (
-                  <View style={styles.ubicacionResumen}>
-                    <Text style={styles.ubicacionResumenTitulo}>Ubicación actual</Text>
-                    <Text style={styles.direccion}>{editDireccion}</Text>
-                  </View>
-                ) : (
-                  <Text style={styles.alertaInline}>
-                    Este cliente todavía no tiene ubicación confirmada. Debes definirla para guardar los cambios.
-                  </Text>
-                )}
-
-                <Pressable onPress={onAbrirMapaEdicion} style={styles.botonMapa}>
-                  <Text style={styles.botonMapaTexto}>
-                    {editUbicacion ? 'Cambiar ubicación' : 'Definir ubicación'}
-                  </Text>
-                </Pressable>
-
-                <BotonAccion
-                  texto="Guardar cambios"
-                  cargando={guardando}
-                  onPress={onGuardarEdicion}
-                />
-
-                <Text style={styles.textoSecundario}>
-                  Los cambios se usarán en pedidos nuevos. Los pedidos ya registrados mantienen su dirección histórica.
-                </Text>
+        clientesVisibles.map((cliente) => (
+          <View key={cliente.id} style={styles.tarjetaCompacta}>
+            <View style={styles.filaEntre}>
+              <View style={styles.flex}>
+                <Text style={styles.tarjetaTitulo}>{cliente.nombre}</Text>
+                {cliente.telefono ? (
+                  <Text style={styles.textoSecundario}>{cliente.telefono}</Text>
+                ) : null}
               </View>
-            );
-          }
-
-          return (
-            <View key={cliente.id} style={styles.tarjetaCompacta}>
-              <View style={styles.filaEntre}>
-                <View style={styles.flex}>
-                  <Text style={styles.tarjetaTitulo}>{cliente.nombre}</Text>
-                  {cliente.telefono ? (
-                    <Text style={styles.textoSecundario}>{cliente.telefono}</Text>
-                  ) : null}
-                </View>
-                <Text style={cliente.ubicacion ? styles.estadoMiniOk : styles.estadoMiniPendiente}>
-                  {cliente.ubicacion ? 'Ubicado' : 'Sin GPS'}
-                </Text>
-              </View>
-              <Text style={styles.direccion}>{cliente.direccion}</Text>
-              <Pressable onPress={() => onEditar(cliente)} style={styles.botonMapaCompacto}>
-                <Text style={styles.botonMapaTexto}>Editar cliente</Text>
-              </Pressable>
+              <Text style={cliente.ubicacion ? styles.estadoMiniOk : styles.estadoMiniPendiente}>
+                {cliente.ubicacion ? 'Ubicado' : 'Sin GPS'}
+              </Text>
             </View>
-          );
-        })
+            <Text style={styles.direccion}>{cliente.direccion}</Text>
+            <Pressable onPress={() => onEditar(cliente)} style={styles.botonMapaCompacto}>
+              <Text style={styles.botonMapaTexto}>Editar</Text>
+            </Pressable>
+          </View>
+        ))
       )}
     </View>
   );
 }
 
-function Reparto({
-  pedidos,
-  seleccionados,
-  planificacion,
-  planificando,
-  retirando,
-  onAlternar,
-  onSeleccionarTodos,
-  onPlanificarTodosActual,
-  onPlanificarDespacho,
-  onPlanificarActual,
-  onRetirarSeleccionados,
-  onMover,
-}: {
-  pedidos: PedidoResumen[];
-  seleccionados: string[];
-  planificacion: PlanificacionReparto | null;
-  planificando: boolean;
-  retirando: boolean;
-  onAlternar: (id: string) => void;
-  onSeleccionarTodos: () => void;
-  onPlanificarTodosActual: () => void;
-  onPlanificarDespacho: () => void;
-  onPlanificarActual: () => void;
-  onRetirarSeleccionados: () => void;
-  onMover: (indice: number, direccion: -1 | 1) => void;
-}) {
-  const pendientes = pedidos.filter((pedido) => pedido.estado !== 'ENTREGADO');
-  const disponibles = pendientes.filter((pedido) => pedido.destinoGps !== null);
-  const sinGps = pendientes.filter((pedido) => pedido.destinoGps === null);
-  const puedePlanificar = disponibles.length >= 2 && seleccionados.length >= 2;
-
-  return (
-    <View style={styles.bloque}>
-      <Titulo
-        titulo="Organizar reparto"
-        descripcion="Primero organiza los pedidos por cercanía; debajo queda el listado operativo e historial."
-      />
-
-      <View style={styles.tarjeta}>
-        <View style={styles.filaEntre}>
-          <View style={styles.flex}>
-            <Text style={styles.tarjetaTitulo}>Pedidos planificables</Text>
-            <Text style={styles.textoSecundario}>
-              {disponibles.length} con ubicación · {sinGps.length} sin ubicación · {pendientes.length} pendiente(s)
-            </Text>
-          </View>
-          {disponibles.length >= 2 ? (
-            <Pressable onPress={onSeleccionarTodos} style={styles.botonMapaCompacto}>
-              <Text style={styles.botonMapaTexto}>Seleccionar todos</Text>
-            </Pressable>
-          ) : null}
-        </View>
-
-        {pendientes.length === 0 ? (
-          <Text style={styles.textoSecundario}>
-            No hay pedidos pendientes. Los pedidos entregados quedan solo como historial.
-          </Text>
-        ) : disponibles.length < 2 ? (
-          <Text style={styles.alertaInline}>
-            Se necesitan al menos dos pedidos pendientes con GPS para comparar cercanía y sugerir un orden.
-          </Text>
-        ) : (
-          <Text style={styles.textoSecundario}>
-            Toca los pedidos que quieras incluir. Para una salida completa puedes seleccionar todos los elegibles.
-          </Text>
-        )}
-
-        {sinGps.length ? (
-          <Text style={styles.alertaInline}>
-            {sinGps.map((pedido) => pedido.cliente.nombre).join(', ')}: sin destino GPS en este pedido histórico.
-          </Text>
-        ) : null}
-
-        {disponibles.length >= 2 ? (
-          <>
-            <BotonAccion
-              texto={planificando ? 'Calculando secuencia…' : 'Organizar todos desde mi ubicación'}
-              cargando={planificando}
-              onPress={onPlanificarTodosActual}
-            />
-            <Text style={styles.textoSecundario}>
-              Esta acción solo propone un orden por proximidad; no cambia el estado de los pedidos.
-            </Text>
-          </>
-        ) : null}
-      </View>
-
-      {disponibles.map((pedido) => {
-        const activo = seleccionados.includes(pedido.id);
-        return (
-          <Pressable
-            key={pedido.id}
-            onPress={() => onAlternar(pedido.id)}
-            style={[styles.opcion, activo && styles.opcionActiva]}
-          >
-            <View style={styles.filaEntre}>
-              <View style={styles.flex}>
-                <Text style={[styles.opcionTitulo, activo && styles.opcionTituloActiva]}>
-                  {pedido.cliente.nombre}
-                </Text>
-                <Text style={styles.opcionSubtitulo}>{pedido.direccionEntrega}</Text>
-                <Text style={styles.textoSecundario}>
-                  {estadoLegible(pedido.estado)}
-                </Text>
-              </View>
-              <Text style={styles.seleccionMarca}>{activo ? '✓' : '+'}</Text>
-            </View>
-          </Pressable>
-        );
-      })}
-
-      {disponibles.length >= 2 ? (
-        <>
-          <Text style={styles.textoSecundario}>
-            Seleccionados: {seleccionados.length}. Se requieren al menos 2.
-          </Text>
-
-          <View style={styles.fila}>
-            <Pressable
-              disabled={!puedePlanificar || planificando}
-              onPress={onPlanificarActual}
-              style={[styles.botonMapa, (!puedePlanificar || planificando) && styles.deshabilitado]}
-            >
-              <Text style={styles.botonMapaTexto}>Sugerir desde mi ubicación</Text>
-            </Pressable>
-            <Pressable
-              disabled={!puedePlanificar || planificando}
-              onPress={onPlanificarDespacho}
-              style={[styles.botonMapa, (!puedePlanificar || planificando) && styles.deshabilitado]}
-            >
-              <Text style={styles.botonMapaTexto}>Sugerir desde ZAV</Text>
-            </Pressable>
-          </View>
-
-          {seleccionados.some((id) =>
-            pedidos.some((pedido) => pedido.id === id && pedido.estado === 'REGISTRADO'),
-          ) ? (
-            <Pressable
-              disabled={retirando}
-              onPress={onRetirarSeleccionados}
-              style={[styles.botonMapa, retirando && styles.deshabilitado]}
-            >
-              <Text style={styles.botonMapaTexto}>
-                {retirando ? 'Registrando retiros…' : 'Retirar seleccionados para reparto'}
-              </Text>
-            </Pressable>
-          ) : null}
-        </>
-      ) : null}
-
-      {planificando ? <ActivityIndicator color="#b83b17" /> : null}
-
-      {planificacion ? (
-        <>
-          <View style={styles.tarjeta}>
-            <Text style={styles.seccionTitulo}>Secuencia geográfica sugerida</Text>
-            <Text style={styles.textoSecundario}>
-              Distancia geodésica aproximada total: {formatearDistancia(planificacion.distanciaTotalAproximadaMetros)}
-            </Text>
-            <Text style={styles.textoSecundario}>{planificacion.limitacion}</Text>
-          </View>
-
-          <MapaReparto origen={planificacion.origen} paradas={planificacion.paradas} />
-
-          {planificacion.paradas.map((parada, indice) => (
-            <View key={parada.pedidoId} style={styles.tarjetaCompacta}>
-              <View style={styles.filaEntre}>
-                <View style={styles.flex}>
-                  <Text style={styles.tarjetaTitulo}>
-                    {parada.orden}. {parada.clienteNombre}
-                  </Text>
-                  <Text style={styles.direccion}>{parada.direccionEntrega}</Text>
-                  <Text style={styles.textoSecundario}>
-                    Desde la parada anterior: {formatearDistancia(parada.distanciaDesdeAnteriorMetros)}
-                  </Text>
-                </View>
-                <View style={styles.reordenar}>
-                  <Pressable
-                    disabled={indice === 0}
-                    onPress={() => onMover(indice, -1)}
-                    style={[styles.botonOrden, indice === 0 && styles.deshabilitado]}
-                  >
-                    <Text style={styles.botonOrdenTexto}>↑</Text>
-                  </Pressable>
-                  <Pressable
-                    disabled={indice === planificacion.paradas.length - 1}
-                    onPress={() => onMover(indice, 1)}
-                    style={[
-                      styles.botonOrden,
-                      indice === planificacion.paradas.length - 1 && styles.deshabilitado,
-                    ]}
-                  >
-                    <Text style={styles.botonOrdenTexto}>↓</Text>
-                  </Pressable>
-                </View>
-              </View>
-            </View>
-          ))}
-        </>
-      ) : null}
-    </View>
-  );
-}
 
 function NuevoPedido({
   clientes,
@@ -1749,6 +1810,88 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 14,
     gap: 5,
+  },
+  tarjetaPlan: {
+    borderColor: '#d9a28f',
+    backgroundColor: '#fffaf7',
+  },
+  tarjetaPlanControl: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#d9a28f',
+    borderRadius: 10,
+    padding: 14,
+    gap: 10,
+  },
+  tarjetaEdicion: {
+    borderColor: '#d9a28f',
+    backgroundColor: '#fffaf7',
+  },
+  filaTituloPedido: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  ordenBadge: {
+    minWidth: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#b83b17',
+    color: '#fff',
+    textAlign: 'center',
+    textAlignVertical: 'center',
+    fontSize: 12,
+    fontWeight: '900',
+    paddingTop: 5,
+  },
+  botonSeleccion: {
+    minHeight: 38,
+    borderWidth: 1,
+    borderColor: '#c6c5bd',
+    borderRadius: 7,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+    paddingHorizontal: 10,
+  },
+  botonSeleccionActivo: {
+    borderColor: '#b83b17',
+    backgroundColor: '#fdf0e9',
+  },
+  botonSeleccionTexto: {
+    color: '#66665e',
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  botonSeleccionTextoActivo: {
+    color: '#b83b17',
+  },
+  botonOrdenAncho: {
+    flex: 1,
+    minHeight: 38,
+    borderWidth: 1,
+    borderColor: '#c6c5bd',
+    borderRadius: 7,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+  },
+  mapaPreview: {
+    borderRadius: 10,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  mapaPreviewEtiqueta: {
+    position: 'absolute',
+    right: 10,
+    bottom: 10,
+    backgroundColor: 'rgba(255,255,255,0.94)',
+    borderRadius: 7,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderWidth: 1,
+    borderColor: '#d9a28f',
   },
   tarjetaTitulo: { color: '#262622', fontWeight: '800', fontSize: 15 },
   textoSecundario: { color: '#717169', fontSize: 12, lineHeight: 18 },
