@@ -73,7 +73,7 @@ export class ClientesService {
       );
     }
 
-    const filas = await this.db.query(
+    await this.db.query(
       `UPDATE cliente
        SET nombre = $2,
            telefono = $3,
@@ -82,14 +82,11 @@ export class ClientesService {
            longitud = $6,
            ubicacion_confirmada_en = now(),
            actualizado_en = now()
-       WHERE id = $1::uuid AND activo = TRUE
-       RETURNING id, nombre, telefono, direccion, latitud, longitud,
-                 ubicacion_confirmada_en, activo, creado_en, actualizado_en`,
+       WHERE id = $1::uuid AND activo = TRUE`,
       [id, nombre, telefono, direccion, latitud, longitud],
-    ) as Array<Record<string, unknown>>;
+    );
 
-    if (!filas.length) throw new NotFoundException('Cliente activo no encontrado.');
-    return this.respuesta(filas[0]);
+    return this.obtener(id);
   }
 
   async actualizarUbicacion(idEntrada: string, entrada: unknown) {
@@ -103,28 +100,18 @@ export class ClientesService {
     const direccion =
       datos.direccion === undefined ? null : texto(datos.direccion, 'direccion', 240);
 
-    const filas = await this.db.query(
+    await this.db.query(
       `UPDATE cliente
        SET direccion = COALESCE($2, direccion),
            latitud = $3,
            longitud = $4,
            ubicacion_confirmada_en = now(),
            actualizado_en = now()
-       WHERE id = $1::uuid AND activo = TRUE
-       RETURNING id, nombre, telefono, direccion, latitud, longitud,
-                 ubicacion_confirmada_en, activo, creado_en, actualizado_en`,
+       WHERE id = $1::uuid AND activo = TRUE`,
       [id, direccion, latitud, longitud],
-    ) as Array<Record<string, unknown>>;
+    );
 
-    if (!filas.length) throw new NotFoundException('Cliente activo no encontrado.');
-    return {
-      ...this.respuesta(filas[0]),
-      ubicacion: {
-        latitud,
-        longitud,
-        confirmadaEn: filas[0].ubicacion_confirmada_en,
-      },
-    };
+    return this.obtener(id);
   }
 
   async listar(consulta: Record<string, unknown>) {
