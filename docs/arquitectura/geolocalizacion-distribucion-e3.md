@@ -227,14 +227,33 @@ Todo Pedido conserva el `vendedor_id` obtenido de la sesión JWT. Las acciones q
 
 El Administrador dispone de una consulta de solo lectura de Pedidos con Vendedor responsable. La futura Venta Directa deberá conservar la misma regla de trazabilidad.
 
+### 7.7 Refinamiento de interacción previo al cierre
+
+La cuarta validación física confirmó el funcionamiento general y originó una ronda de eficiencia operativa:
+
+- alta consecutiva de Pedidos sin abandonar el formulario;
+- selector buscable de Clientes;
+- selector buscable de productos;
+- directorio de Clientes limitado inicialmente a ocho coincidencias y expandible;
+- filtro inicial de Pedidos de hoy con zona `America/La_Paz`;
+- historial de Pedidos cargable por páginas;
+- selección múltiple para retiro;
+- mapa con vista general, enfoque por Pedido y separación visual de marcadores coincidentes;
+- estados de carga explícitos y bloqueo de ejecuciones concurrentes.
+
+La entrega continúa siendo individual porque RF-11 exige asociar una posición puntual a cada Pedido.
+
+**Decisión de inventario:** Nuevo pedido no permite seleccionar manualmente un lote. El Vendedor define productos y cantidades; los lotes se asignan al retiro mediante FEFO. Esta separación mantiene la trazabilidad de inventario sin trasladar al Vendedor una decisión que ya resuelve el backend.
+
 ## 8. RF-11 — Entrega con comprobación geográfica
 
 Para un Pedido `EN_DISTRIBUCION`, la pantalla muestra:
 
 - destino confirmado;
-- mapa;
-- acción **Abrir navegación**;
-- acción **Confirmar entrega**.
+- acción **Ver esta parada en mapa**;
+- acción **Comprobar y confirmar entrega**.
+
+El mapa puede abrirse como recorrido completo o enfocado en una parada. La navegación vial giro a giro no forma parte del alcance actual.
 
 Al confirmar:
 
@@ -388,7 +407,7 @@ El servidor vuelve a calcular la distancia contra el destino del Pedido. No conf
 | Registrar destino real del cliente | RF-07 | mapa + búsqueda + confirmación | registro por ubicación actual y por dirección remota |
 | Custodiar producto al salir | RF-10 | Retirar para reparto + FEFO | transición, idempotencia, stock |
 | Organizar varios pedidos | extensión de distribución | vecino más cercano + Haversine | secuencia determinista y reordenable |
-| Llegar al destino | apoyo operativo RF-11 | navegación externa | enlace generado con destino correcto |
+| Visualizar el destino | apoyo operativo RF-11 | mapa interno general/enfocado | apertura de parada y recorrido completo |
 | Acreditar entrega | RF-11 | posición real + precisión + distancia | GPS válido, permiso denegado, distancia calculada |
 
 ## 13. Decisiones de defensa
@@ -416,6 +435,6 @@ El servidor vuelve a calcular la distancia contra el destino del Pedido. No conf
 - Secuenciación por proximidad: **IMPLEMENTADO Y CUBIERTO POR E2E**.
 - Reordenamiento manual de la secuencia: **IMPLEMENTADO EN MÓVIL**.
 - Retiro múltiple para reparto: **IMPLEMENTADO EN CÓDIGO Y CUBIERTO POR E2E; pendiente de QA del HEAD**.
-- Navegación externa: **IMPLEMENTADO EN CÓDIGO; PENDIENTE DE VALIDACIÓN FÍSICA**.
+- Mapa general y enfoque por Pedido: **IMPLEMENTADO EN CÓDIGO; PENDIENTE DE REVALIDACIÓN FÍSICA**.
 - Precisión/distancia de entrega: **IMPLEMENTADO Y CUBIERTO POR E2E**.
 - Radio de advertencia: **PENDIENTE DE VALIDAR**.
