@@ -15,7 +15,7 @@ import {
 
 import {
   ApiError,
-  actualizarUbicacionCliente,
+  actualizarCliente,
   crearCliente,
   crearPedido,
   entregarPedidoConComprobacion,
@@ -119,7 +119,12 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
   const [clienteDireccion, setClienteDireccion] = useState('');
   const [clienteUbicacion, setClienteUbicacion] = useState<PuntoGeografico | null>(null);
   const [selectorUbicacionVisible, setSelectorUbicacionVisible] = useState(false);
-  const [clienteEditandoUbicacion, setClienteEditandoUbicacion] = useState<Cliente | null>(null);
+  const [mapaParaEdicion, setMapaParaEdicion] = useState(false);
+  const [clienteEditando, setClienteEditando] = useState<Cliente | null>(null);
+  const [clienteEditNombre, setClienteEditNombre] = useState('');
+  const [clienteEditTelefono, setClienteEditTelefono] = useState('');
+  const [clienteEditDireccion, setClienteEditDireccion] = useState('');
+  const [clienteEditUbicacion, setClienteEditUbicacion] = useState<PuntoGeografico | null>(null);
   const [guardandoCliente, setGuardandoCliente] = useState(false);
 
   const [clienteSeleccionado, setClienteSeleccionado] = useState('');
@@ -204,12 +209,12 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
   }
 
   async function guardarCliente() {
-    if (!clienteNombre.trim() || !clienteDireccion.trim()) {
-      setError('Nombre y dirección son obligatorios.');
+    if (!clienteNombre.trim()) {
+      setError('El nombre del cliente es obligatorio.');
       return;
     }
-    if (!clienteUbicacion) {
-      setError('Confirma la ubicación de entrega del cliente en el mapa.');
+    if (!clienteUbicacion || !clienteDireccion.trim()) {
+      setError('Define y confirma la ubicación del cliente en el mapa.');
       return;
     }
 
@@ -242,47 +247,71 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
   }
 
   function abrirMapaNuevoCliente() {
-    setClienteEditandoUbicacion(null);
+    setMapaParaEdicion(false);
     setSelectorUbicacionVisible(true);
   }
 
-  function abrirMapaClienteExistente(cliente: Cliente) {
-    setClienteEditandoUbicacion(cliente);
+  function iniciarEdicionCliente(cliente: Cliente) {
+    setClienteEditando(cliente);
+    setClienteEditNombre(cliente.nombre);
+    setClienteEditTelefono(cliente.telefono ?? '');
+    setClienteEditDireccion(cliente.direccion);
+    setClienteEditUbicacion(
+      cliente.ubicacion
+        ? {
+            latitud: cliente.ubicacion.latitud,
+            longitud: cliente.ubicacion.longitud,
+          }
+        : null,
+    );
+    setError('');
+  }
+
+  function cancelarEdicionCliente() {
+    setClienteEditando(null);
+    setClienteEditNombre('');
+    setClienteEditTelefono('');
+    setClienteEditDireccion('');
+    setClienteEditUbicacion(null);
+    setMapaParaEdicion(false);
+  }
+
+  function abrirMapaEdicionCliente() {
+    if (!clienteEditando) return;
+    setMapaParaEdicion(true);
     setSelectorUbicacionVisible(true);
   }
 
-  async function confirmarUbicacionMapa(
-    valor: PuntoGeografico & { direccion: string },
-  ) {
-    if (!clienteEditandoUbicacion) {
-      setClienteDireccion(valor.direccion);
-      setClienteUbicacion({
-        latitud: valor.latitud,
-        longitud: valor.longitud,
-      });
-      setSelectorUbicacionVisible(false);
-      setError('');
+  async function guardarEdicionCliente() {
+    if (!clienteEditando) return;
+    if (!clienteEditNombre.trim()) {
+      setError('El nombre del cliente es obligatorio.');
+      return;
+    }
+    if (!clienteEditUbicacion || !clienteEditDireccion.trim()) {
+      setError('El cliente debe tener una ubicación confirmada en Tarija.');
       return;
     }
 
     setGuardandoCliente(true);
     setError('');
     try {
-      const actualizado = await actualizarUbicacionCliente(
-        token,
-        clienteEditandoUbicacion.id,
-        valor,
-      );
+      const actualizado = await actualizarCliente(token, clienteEditando.id, {
+        nombre: clienteEditNombre.trim(),
+        telefono: clienteEditTelefono.trim() || undefined,
+        direccion: clienteEditDireccion.trim(),
+        latitud: clienteEditUbicacion.latitud,
+        longitud: clienteEditUbicacion.longitud,
+      });
       setClientes((actuales) =>
-        actuales.map((cliente) =>
-          cliente.id === actualizado.id ? actualizado : cliente,
-        ),
+        actuales
+          .map((cliente) => (cliente.id === actualizado.id ? actualizado : cliente))
+          .sort((a, b) => a.nombre.localeCompare(b.nombre)),
       );
-      setSelectorUbicacionVisible(false);
-      setClienteEditandoUbicacion(null);
+      cancelarEdicionCliente();
       Alert.alert(
-        'Ubicación actualizada',
-        'Los pedidos ya registrados conservarán su destino histórico.',
+        'Cliente actualizado',
+        'Los pedidos nuevos usarán estos datos. Los pedidos ya registrados conservan su destino histórico.',
       );
     } catch (e) {
       await manejarError(e);
@@ -291,9 +320,36 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
     }
   }
 
+  async function confirmarUbicacionMapa(
+    valor: PuntoGeografico & { direccion: string },
+  ) {
+    const ubicacion = {
+      latitud: valor.latitud,
+      longitud: valor.longitud,
+    };
+
+    if (mapaParaEdicion && clienteEditando) {
+      setClienteEditDireccion(valor.direccion);
+      setClienteEditUbicacion(ubicacion);
+    } else {
+      setClienteDireccion(valor.direccion);
+      setClienteUbicacion(ubicacion);
+    }
+
+    setSelectorUbicacionVisible(false);
+    setMapaParaEdicion(false);
+    setError('');
+  }
+
   async function guardarPedido() {
     if (!clienteSeleccionado) {
       setError('Selecciona un cliente.');
+      return;
+    }
+
+    const clienteActual = clientes.find((cliente) => cliente.id === clienteSeleccionado);
+    if (!clienteActual?.ubicacion) {
+      setError('El cliente seleccionado debe tener una ubicación confirmada antes de registrar el pedido.');
       return;
     }
 
