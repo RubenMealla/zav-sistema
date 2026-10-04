@@ -39,6 +39,12 @@ export class PedidoEntity {
   @Column({ type: 'varchar', length: 300, nullable: true })
   observacion!: string | null;
 
+  @Column({ name: 'destino_latitud', type: 'numeric', precision: 9, scale: 6, nullable: true })
+  destinoLatitud!: string | null;
+
+  @Column({ name: 'destino_longitud', type: 'numeric', precision: 9, scale: 6, nullable: true })
+  destinoLongitud!: string | null;
+
   @Column({ name: 'retiro_operacion_clave', type: 'uuid', nullable: true })
   retiroOperacionClave!: string | null;
 
@@ -56,6 +62,15 @@ export class PedidoEntity {
 
   @Column({ name: 'entrega_longitud', type: 'numeric', precision: 9, scale: 6, nullable: true })
   entregaLongitud!: string | null;
+
+  @Column({ name: 'entrega_precision_m', type: 'numeric', precision: 10, scale: 2, nullable: true })
+  entregaPrecisionM!: string | null;
+
+  @Column({ name: 'entrega_distancia_destino_m', type: 'numeric', precision: 12, scale: 2, nullable: true })
+  entregaDistanciaDestinoM!: string | null;
+
+  @Column({ name: 'entrega_observacion', type: 'varchar', length: 300, nullable: true })
+  entregaObservacion!: string | null;
 
   @CreateDateColumn({ name: 'creado_en', type: 'timestamptz' })
   creadoEn!: Date;

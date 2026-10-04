@@ -53,7 +53,8 @@ Un traslado que retire stock liberado y vigente desde `VENTA_DESPACHO` responde 
 | GET | `/api/v1/pedidos` | Vendedor | `estado`, `page`, `limit` | 200 solo pedidos propios | 400 |
 | GET | `/api/v1/pedidos/:id` | Vendedor | UUID | 200 Pedido propio | 404 |
 | POST | `/api/v1/pedidos/:id/retiro` | Vendedor | `operacionClave` | 201 EN_DISTRIBUCION | 404, 409 |
-| POST | `/api/v1/pedidos/:id/entrega` | Vendedor | `operacionClave`, `latitud`, `longitud` | 201 ENTREGADO | 400, 404, 409 |
+| POST | `/api/v1/pedidos/retiros` | Vendedor | `retiros[] { pedidoId, operacionClave }` | 201 resultado individual por Pedido | 400; cada ítem conserva 404/409 |
+| POST | `/api/v1/pedidos/:id/entrega` | Vendedor | `operacionClave`, `latitud`, `longitud`, `precisionMetros?` | 201 ENTREGADO | 400, 404, 409 |
 
 ### Creación de pedido
 
@@ -61,7 +62,7 @@ El servidor bloquea lógicamente por Producto durante la comprobación de dispon
 
 ### Retiro
 
-El retiro exige estado `REGISTRADO`, pertenece al mismo Vendedor y asigna lotes FEFO liberados/vigentes en `VENTA_DESPACHO`. Crea movimientos `RETIRO` hacia `EN_DISTRIBUCION` y cambia el pedido a `EN_DISTRIBUCION`. Repetir la misma clave no duplica movimientos.
+El retiro exige estado `REGISTRADO`, pertenece al mismo Vendedor y asigna lotes FEFO liberados/vigentes en `VENTA_DESPACHO`. Crea movimientos `RETIRO` hacia `EN_DISTRIBUCION` y cambia el pedido a `EN_DISTRIBUCION`. Repetir la misma clave no duplica movimientos. El endpoint `POST /api/v1/pedidos/retiros` permite confirmar varios pedidos en una sola acción; cada Pedido conserva su propia transacción, clave idempotente y resultado individual, por lo que un conflicto no revierte los retiros correctos de otros pedidos.
 
 ### Entrega
 
@@ -72,3 +73,28 @@ La entrega exige `EN_DISTRIBUCION`, valida latitud [-90,90] y longitud [-180,180
 La ejecución QA backend `37100513647` comprobó lint sin advertencias, build correcto, 11 pruebas unitarias y 18 E2E. La suite de pedidos contiene siete casos: rol incorrecto/validación de Cliente, registro de Cliente, consulta de Producto/disponibilidad, reserva y sobreventa, transición/GPS inválidos, protección de stock administrativo y flujo Pedido → Retiro → Entrega con reintentos idempotentes.
 
 La ejecución previa `37100404491` falló por una dependencia faltante de `JwtAuthGuard` en `PedidosModule`. Se conserva como evidencia de incidencia y regresión.
+
+
+## 6. Extensión geográfica E3
+
+**Estado:** IMPLEMENTADO EN LA RAMA E3 / PENDIENTE DE VALIDACIÓN FÍSICA DEL CLIENTE MÓVIL.
+
+| Método | Ruta | Rol | Propósito |
+|---|---|---|---|
+| PATCH | `/api/v1/clientes/:id/ubicacion` | Vendedor | Corregir dirección/coordenadas confirmadas del Cliente sin alterar Pedidos históricos |
+| GET | `/api/v1/ubicaciones/venta-despacho` | Vendedor / Administrador | Consultar el origen geográfico de reparto |
+| PATCH | `/api/v1/ubicaciones/:id/georreferencia` | Administrador | Configurar coordenadas de una ubicación física |
+| GET | `/api/v1/geografia/geocodificar?q=...` | Vendedor | Buscar hasta cinco direcciones mediante el proveedor configurado en backend |
+| GET | `/api/v1/geografia/reversa?latitud=...&longitud=...` | Vendedor | Obtener una dirección legible a partir de un punto |
+| POST | `/api/v1/pedidos/planificacion` | Vendedor | Calcular una secuencia geográfica sugerida para pedidos propios |
+
+La credencial del proveedor de geocodificación se mantiene en el backend mediante `GEOAPIFY_API_KEY`; no se incorpora al APK. Si el proveedor no está configurado, las rutas de geocodificación responden 503 y el cliente móvil puede recurrir al mecanismo local de `expo-location`.
+
+También se encuentran implementadas las siguientes extensiones:
+
+- `POST /api/v1/clientes` admite `latitud?` y `longitud?`;
+- `POST /api/v1/pedidos` copia al Pedido el snapshot geográfico del Cliente;
+- `POST /api/v1/pedidos/:id/entrega` admite `precisionMetros?` y `observacionDistancia?`;
+- `POST /api/v1/pedidos/retiros` procesa retiros múltiples con resultado individual.
+
+La planificación devuelve distancias geodésicas aproximadas y una secuencia por proximidad. No se presenta como ruta óptima ni como cálculo vial. El servidor recalcula la distancia entre destino esperado y posición real de entrega.

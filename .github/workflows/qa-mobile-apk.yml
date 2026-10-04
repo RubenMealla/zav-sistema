@@ -1,0 +1,132 @@
+name: APK móvil E3
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: apk-mobile-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  construir-apk:
+    name: Construir APK Android autónomo
+    runs-on: ubuntu-latest
+    env:
+      CI: 1
+      EXPO_PUBLIC_API_BASE_URL: https://zav-api-2026.onrender.com
+      EXPO_PUBLIC_MAP_STYLE_URL: https://tiles.openfreemap.org/styles/liberty
+      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.4.2
+          run_install: false
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Configurar Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+
+      - name: Verificar credenciales de firma Android
+        shell: bash
+        run: |
+          faltantes=0
+          for nombre in ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
+            if [ -z "${!nombre:-}" ]; then
+              echo "::error::Falta el secreto $nombre."
+              faltantes=1
+            fi
+          done
+          if [ "$faltantes" -ne 0 ]; then
+            echo "::error::No se generará un APK release con la firma de depuración de la plantilla."
+            exit 1
+          fi
+
+      - name: Preparar firma y obtener SHA-1
+        shell: bash
+        run: |
+          KEYSTORE_PATH="$RUNNER_TEMP/zav-vendedor-release.jks"
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_PATH"
+          chmod 600 "$KEYSTORE_PATH"
+          echo "ANDROID_KEYSTORE_FILE=$KEYSTORE_PATH" >> "$GITHUB_ENV"
+
+          echo "Huella del certificado que firmará el APK:"
+          keytool -list -v             -keystore "$KEYSTORE_PATH"             -alias "$ANDROID_KEY_ALIAS"             -storepass "$ANDROID_KEYSTORE_PASSWORD"             | grep -E "SHA1:|SHA-1:"
+
+      - name: Generar proyecto Android
+        run: pnpm --filter @zav/mobile exec expo prebuild --platform android --no-install --clean
+
+      - name: Configurar firma release estable
+        shell: bash
+        run: |
+          cat > apps/mobile/android/app/zav-signing.gradle <<'GRADLE'
+          android {
+            signingConfigs {
+              zavRelease {
+                storeFile file(System.getenv("ANDROID_KEYSTORE_FILE"))
+                storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                keyAlias System.getenv("ANDROID_KEY_ALIAS")
+                keyPassword System.getenv("ANDROID_KEY_PASSWORD")
+              }
+            }
+
+            buildTypes {
+              release {
+                signingConfig signingConfigs.zavRelease
+              }
+            }
+          }
+          GRADLE
+
+          printf '\napply from: "./zav-signing.gradle"\n' >> apps/mobile/android/app/build.gradle
+
+      - name: Compilar APK autónomo de revisión
+        working-directory: apps/mobile/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon
+
+      - name: Verificar firma y bundle JavaScript
+        working-directory: apps/mobile/android
+        shell: bash
+        run: |
+          APK="app/build/outputs/apk/release/app-release.apk"
+          test -f "$APK"
+          unzip -l "$APK" | grep -q "assets/index.android.bundle"
+
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          test -n "$APKSIGNER"
+          "$APKSIGNER" verify --verbose --print-certs "$APK"
+
+          sha256sum "$APK" | tee "$APK.sha256"
+
+      - name: Guardar APK autónomo
+        uses: actions/upload-artifact@v4
+        with:
+          name: zav-vendedor-e3-apk-standalone
+          path: |
+            apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+            apps/mobile/android/app/build/outputs/apk/release/app-release.apk.sha256
+          if-no-files-found: error
+          retention-days: 14

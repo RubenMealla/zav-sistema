@@ -1,98 +1,88 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, StyleSheet, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { ApiError, perfil } from '@/lib/api';
+import { borrarSesion, guardarSesion, leerSesion } from '@/lib/sesion';
+import type { Sesion } from '@/lib/tipos';
+import { LoginScreen } from '@/screens/login-screen';
+import { VendedorScreen } from '@/screens/vendedor-screen';
 
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
+export default function Inicio() {
+  const [sesion, setSesion] = useState<Sesion | null>(null);
+  const [cargando, setCargando] = useState(true);
+
+  useEffect(() => {
+    let activa = true;
+
+    async function cargarSesionGuardada() {
+      try {
+        const guardada = await leerSesion();
+        if (!guardada) return;
+
+        const usuario = await perfil(guardada.accessToken);
+        if (usuario.rol !== 'VENDEDOR') {
+          await borrarSesion();
+          return;
+        }
+
+        if (activa) setSesion({ ...guardada, usuario });
+      } catch (error) {
+        if (error instanceof ApiError && error.status !== 401 && error.status !== 403) {
+          const guardada = await leerSesion();
+          if (activa) setSesion(guardada);
+        } else {
+          await borrarSesion();
+        }
+      } finally {
+        if (activa) setCargando(false);
+      }
+    }
+
+    void cargarSesionGuardada();
+    return () => {
+      activa = false;
+    };
+  }, []);
+
+  async function iniciar(nueva: Sesion) {
+    await guardarSesion(nueva);
+    setSesion(nueva);
   }
-  if (Device.isDevice) {
+
+  async function salir() {
+    await borrarSesion();
+    setSesion(null);
+  }
+
+  if (cargando) {
     return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
+      <SafeAreaView style={styles.cargando}>
+        <ActivityIndicator size="large" color="#b83b17" />
+        <Text style={styles.texto}>Verificando sesión…</Text>
+      </SafeAreaView>
     );
   }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
+
   return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
-  );
-}
-
-export default function HomeScreen() {
-  return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
-
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
-
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
-
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
-    </ThemedView>
+    <SafeAreaView style={styles.segura} edges={['top', 'bottom']}>
+      {sesion ? (
+        <VendedorScreen sesion={sesion} onCerrarSesion={salir} />
+      ) : (
+        <LoginScreen onSesion={iniciar} />
+      )}
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  segura: { flex: 1, backgroundColor: '#f6f5f0' },
+  cargando: {
     flex: 1,
-    justifyContent: 'center',
-    flexDirection: 'row',
-  },
-  safeArea: {
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
-  },
-  heroSection: {
+    backgroundColor: '#f6f5f0',
     alignItems: 'center',
     justifyContent: 'center',
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
+    gap: 12,
   },
-  title: {
-    textAlign: 'center',
-  },
-  code: {
-    textTransform: 'uppercase',
-  },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
-  },
+  texto: { color: '#66665e', fontSize: 13 },
 });

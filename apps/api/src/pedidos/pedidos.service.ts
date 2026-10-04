@@ -1,16 +1,20 @@
 import {
   BadRequestException,
   ConflictException,
+  HttpException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { DataSource, EntityManager } from 'typeorm';
 import { enteroPositivo, objeto, paginacion, texto, uuid } from '../inventario/validacion.js';
+import { distanciaHaversine } from './geografia.service.js';
 
 const CAMPOS_PEDIDO = ['clienteId', 'direccionEntrega', 'observacion', 'detalles'] as const;
 const CAMPOS_DETALLE = ['productoId', 'cantidad'] as const;
 const CAMPOS_RETIRO = ['operacionClave'] as const;
-const CAMPOS_ENTREGA = ['operacionClave', 'latitud', 'longitud'] as const;
+const CAMPOS_RETIROS = ['retiros'] as const;
+const CAMPOS_RETIRO_ITEM = ['pedidoId', 'operacionClave'] as const;
+const CAMPOS_ENTREGA = ['operacionClave', 'latitud', 'longitud', 'precisionMetros', 'observacionDistancia'] as const;
 
 type EstadoPedido = 'REGISTRADO' | 'EN_DISTRIBUCION' | 'ENTREGADO';
 
@@ -26,12 +30,17 @@ type FilaPedido = {
   estado: EstadoPedido;
   direccion_entrega: string;
   observacion: string | null;
+  destino_latitud: string | null;
+  destino_longitud: string | null;
   retiro_operacion_clave: string | null;
   retirado_en: Date | null;
   entrega_operacion_clave: string | null;
   entregado_en: Date | null;
   entrega_latitud: string | null;
   entrega_longitud: string | null;
+  entrega_precision_m: string | null;
+  entrega_distancia_destino_m: string | null;
+  entrega_observacion: string | null;
   creado_en: Date;
   actualizado_en: Date;
   cliente_nombre: string;
@@ -70,6 +79,14 @@ function opcional(valor: unknown, campo: string, maximo: number): string | null 
 function numeroRango(valor: unknown, campo: string, minimo: number, maximo: number): number {
   if (typeof valor !== 'number' || !Number.isFinite(valor) || valor < minimo || valor > maximo) {
     throw new BadRequestException(`${campo} debe estar entre ${minimo} y ${maximo}.`);
+  }
+  return valor;
+}
+
+function numeroOpcionalNoNegativo(valor: unknown, campo: string, maximo: number): number | null {
+  if (valor === undefined || valor === null) return null;
+  if (typeof valor !== 'number' || !Number.isFinite(valor) || valor < 0 || valor > maximo) {
+    throw new BadRequestException(`${campo} debe ser un numero entre 0 y ${maximo}.`);
   }
   return valor;
 }
@@ -170,9 +187,9 @@ export class PedidosService {
 
     const pedidoId = await this.db.transaction(async (manager) => {
       const clientes = await manager.query(
-        'SELECT id, direccion FROM cliente WHERE id = $1::uuid AND activo = TRUE',
+        'SELECT id, direccion, latitud, longitud FROM cliente WHERE id = $1::uuid AND activo = TRUE',
         [clienteId],
-      ) as Array<{ id: string; direccion: string }>;
+      ) as Array<{ id: string; direccion: string; latitud: string | null; longitud: string | null }>;
       if (!clientes.length) throw new NotFoundException('Cliente activo no encontrado.');
 
       const direccionEntrega = datos.direccionEntrega === undefined || datos.direccionEntrega === null || datos.direccionEntrega === ''
@@ -198,10 +215,18 @@ export class PedidosService {
       }
 
       const pedidos = await manager.query(
-        `INSERT INTO pedido (cliente_id, vendedor_id, direccion_entrega, observacion)
-         VALUES ($1::uuid, $2::uuid, $3, $4)
+        `INSERT INTO pedido
+           (cliente_id, vendedor_id, direccion_entrega, observacion, destino_latitud, destino_longitud)
+         VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6)
          RETURNING id`,
-        [clienteId, vendedorId, direccionEntrega, observacion],
+        [
+          clienteId,
+          vendedorId,
+          direccionEntrega,
+          observacion,
+          clientes[0].latitud,
+          clientes[0].longitud,
+        ],
       ) as Array<{ id: string }>;
       const id = pedidos[0].id;
 
@@ -245,7 +270,8 @@ export class PedidosService {
     const offsetPos = parametros.length;
 
     const items = await this.db.query(
-      `SELECT pe.id, pe.estado, pe.direccion_entrega, pe.creado_en, pe.retirado_en, pe.entregado_en,
+      `SELECT pe.id, pe.estado, pe.direccion_entrega, pe.destino_latitud, pe.destino_longitud,
+              pe.creado_en, pe.retirado_en, pe.entregado_en,
               c.id AS cliente_id, c.nombre AS cliente_nombre,
               COALESCE(SUM(d.cantidad * d.precio_unitario_bob), 0)::numeric(14,2) AS total_bob,
               COALESCE(SUM(d.cantidad), 0)::int AS unidades
@@ -272,6 +298,13 @@ export class PedidosService {
         id: fila.id,
         estado: fila.estado,
         direccionEntrega: fila.direccion_entrega,
+        destinoGps:
+          fila.destino_latitud === null
+            ? null
+            : {
+                latitud: Number(fila.destino_latitud),
+                longitud: Number(fila.destino_longitud),
+              },
         creadoEn: fila.creado_en,
         retiradoEn: fila.retirado_en,
         entregadoEn: fila.entregado_en,
@@ -317,12 +350,26 @@ export class PedidosService {
       estado: pedido.estado,
       direccionEntrega: pedido.direccion_entrega,
       observacion: pedido.observacion,
+      destinoGps:
+        pedido.destino_latitud === null
+          ? null
+          : {
+              latitud: Number(pedido.destino_latitud),
+              longitud: Number(pedido.destino_longitud),
+            },
       creadoEn: pedido.creado_en,
       retiradoEn: pedido.retirado_en,
       entregadoEn: pedido.entregado_en,
       entregaGps: pedido.entrega_latitud === null ? null : {
         latitud: Number(pedido.entrega_latitud),
         longitud: Number(pedido.entrega_longitud),
+        precisionMetros:
+          pedido.entrega_precision_m === null ? null : Number(pedido.entrega_precision_m),
+        distanciaDestinoMetros:
+          pedido.entrega_distancia_destino_m === null
+            ? null
+            : Number(pedido.entrega_distancia_destino_m),
+        observacion: pedido.entrega_observacion,
       },
       cliente: {
         id: pedido.cliente_id,
@@ -343,6 +390,86 @@ export class PedidosService {
         subtotalBob: d.subtotal_bob,
       })),
       totalBob: total.toFixed(2),
+    };
+  }
+
+  async retirarVarios(entrada: unknown, vendedorId: string) {
+    const datos = objeto(entrada, CAMPOS_RETIROS);
+    if (!Array.isArray(datos.retiros) || datos.retiros.length < 1 || datos.retiros.length > 20) {
+      throw new BadRequestException('retiros debe contener entre 1 y 20 pedidos.');
+    }
+
+    const retiros = datos.retiros.map((elemento, indice) => {
+      const item = objeto(elemento, CAMPOS_RETIRO_ITEM);
+      return {
+        pedidoId: uuid(item.pedidoId, `retiros[${indice}].pedidoId`),
+        operacionClave: uuid(item.operacionClave, `retiros[${indice}].operacionClave`),
+      };
+    });
+
+    if (new Set(retiros.map((r) => r.pedidoId)).size !== retiros.length) {
+      throw new BadRequestException('Un pedido no puede repetirse en el mismo retiro múltiple.');
+    }
+    if (new Set(retiros.map((r) => r.operacionClave)).size !== retiros.length) {
+      throw new BadRequestException('Cada retiro debe utilizar una operacionClave diferente.');
+    }
+
+    const resultados: Array<{
+      pedidoId: string;
+      ok: boolean;
+      estado?: EstadoPedido;
+      statusCode?: number;
+      message?: string;
+    }> = [];
+
+    for (const retiro of retiros) {
+      try {
+        const pedido = await this.retirar(
+          retiro.pedidoId,
+          { operacionClave: retiro.operacionClave },
+          vendedorId,
+        );
+        resultados.push({
+          pedidoId: retiro.pedidoId,
+          ok: true,
+          estado: pedido.estado as EstadoPedido,
+        });
+      } catch (error) {
+        if (!(error instanceof HttpException)) throw error;
+        const respuesta = error.getResponse();
+        let message = error.message;
+        if (typeof respuesta === 'string') {
+          message = respuesta;
+        } else if (
+          respuesta &&
+          typeof respuesta === 'object' &&
+          'message' in respuesta
+        ) {
+          const valor = (respuesta as { message?: unknown }).message;
+          message = Array.isArray(valor)
+            ? valor.map(String).join(' ')
+            : typeof valor === 'string'
+              ? valor
+              : error.message;
+        }
+        resultados.push({
+          pedidoId: retiro.pedidoId,
+          ok: false,
+          statusCode: error.getStatus(),
+          message,
+        });
+      }
+    }
+
+    const exitosos = resultados.filter((r) => r.ok).length;
+    const fallidos = resultados.length - exitosos;
+
+    return {
+      resultado:
+        fallidos === 0 ? 'COMPLETO' : exitosos === 0 ? 'SIN_CAMBIOS' : 'PARCIAL',
+      exitosos,
+      fallidos,
+      items: resultados,
     };
   }
 
@@ -457,6 +584,8 @@ export class PedidosService {
     const operacionClave = uuid(datos.operacionClave, 'operacionClave');
     const latitud = numeroRango(datos.latitud, 'latitud', -90, 90);
     const longitud = numeroRango(datos.longitud, 'longitud', -180, 180);
+    const precisionMetros = numeroOpcionalNoNegativo(datos.precisionMetros, 'precisionMetros', 10000);
+    const observacionDistancia = opcional(datos.observacionDistancia, 'observacionDistancia', 300);
 
     await this.db.transaction(async (manager) => {
       await manager.query('SELECT pg_advisory_xact_lock(hashtext($1::text))', [operacionClave]);
@@ -471,6 +600,7 @@ export class PedidosService {
 
       const pedidos = await manager.query(
         `SELECT id, vendedor_id, estado, entrega_operacion_clave,
+                destino_latitud, destino_longitud,
                 entrega_latitud, entrega_longitud
          FROM pedido WHERE id = $1::uuid FOR UPDATE`,
         [id],
@@ -479,6 +609,8 @@ export class PedidosService {
         vendedor_id: string;
         estado: EstadoPedido;
         entrega_operacion_clave: string | null;
+        destino_latitud: string | null;
+        destino_longitud: string | null;
         entrega_latitud: string | null;
         entrega_longitud: string | null;
       }>;
@@ -520,6 +652,17 @@ export class PedidosService {
         );
       }
 
+      const distanciaDestinoMetros =
+        pedido.destino_latitud === null || pedido.destino_longitud === null
+          ? null
+          : distanciaHaversine(
+              {
+                latitud: Number(pedido.destino_latitud),
+                longitud: Number(pedido.destino_longitud),
+              },
+              { latitud, longitud },
+            );
+
       await manager.query(
         `UPDATE pedido
          SET estado = 'ENTREGADO',
@@ -527,9 +670,20 @@ export class PedidosService {
              entregado_en = now(),
              entrega_latitud = $3,
              entrega_longitud = $4,
+             entrega_precision_m = $5,
+             entrega_distancia_destino_m = $6,
+             entrega_observacion = $7,
              actualizado_en = now()
          WHERE id = $1::uuid`,
-        [id, operacionClave, latitud, longitud],
+        [
+          id,
+          operacionClave,
+          latitud,
+          longitud,
+          precisionMetros,
+          distanciaDestinoMetros,
+          observacionDistancia,
+        ],
       );
     });
 
