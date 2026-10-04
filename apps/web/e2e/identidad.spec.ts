@@ -16,7 +16,7 @@ async function ingresar(page: Page) {
   await page.goto('/acceso');
   await page.getByLabel('Identificador de acceso').fill(usuario);
   await page.getByLabel('Contraseña', { exact: true }).fill(clave);
-  await page.getByRole('button', { name: 'Iniciar sesión' }).click();
+  await page.getByRole('button', { name: 'Ingresar al sistema' }).click();
   await expect(page.getByRole('heading', { name: 'Resumen general' })).toBeVisible();
 }
 
@@ -30,15 +30,15 @@ for (const ancho of [390, 768, 1440]) {
     page.on('pageerror', (error) => errores.push(error.message));
     await page.setViewportSize({ width: ancho, height: 900 });
     await page.goto('/');
-    await expect(page.getByRole('heading', { level: 1 })).toContainText('Fiambres y embutidos');
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('Una identidad propia para presentar');
     await expect(page.getByRole('img', { name: 'ZAV · Fiambres y embutidos' }).first()).toBeVisible();
     await expect.poll(() => page.locator('img').evaluateAll((imgs) => imgs.every((img) => img instanceof HTMLImageElement && img.complete && img.naturalWidth > 0))).toBeTruthy();
     await sinDesborde(page);
     await captura(page, `identidad-inicio-${ancho}.png`);
 
-    await page.getByRole('link', { name: 'Acceso privado' }).click();
+    await page.getByRole('link', { name: 'Acceso interno' }).first().click();
     await expect(page).toHaveURL(/\/acceso$/);
-    await expect(page.getByRole('heading', { name: 'Ingresa a tu espacio de trabajo' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Inicia sesión.' })).toBeVisible();
     await expect(page.getByRole('img', { name: 'ZAV · Fiambres y embutidos' }).filter({ visible: true })).toBeVisible();
     await page.getByLabel('Contraseña', { exact: true }).fill('Prueba-visual');
     await page.getByRole('button', { name: 'Mostrar contraseña' }).click();
@@ -88,13 +88,34 @@ for (const ancho of [390, 768, 1440]) {
     await sinDesborde(page);
     await captura(page, `identidad-pedidos-${ancho}.png`);
 
-    await page.getByRole('button', { name: 'Cerrar sesión', exact: true }).filter({ visible: true }).click();
+    await page.getByRole('button', { name: /Cerrar sesión|Salir/, exact: true }).filter({ visible: true }).click();
     await expect(page).toHaveURL(/\/acceso$/);
     await page.goto('/panel');
     await expect(page).toHaveURL(/error=sesion/);
     expect(errores).toEqual([]);
   });
 }
+
+
+test('landing extendida conserva jerarquía editorial y secciones públicas', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto('/');
+
+  await expect(page.getByRole('navigation', { name: 'Navegación pública' })).toBeVisible();
+  await expect(page.locator('#productos')).toBeVisible();
+  await expect(page.locator('#promociones')).toBeVisible();
+  await expect(page.locator('#novedades')).toBeVisible();
+  await expect(page.locator('#zav')).toBeVisible();
+
+  await expect(page.getByRole('heading', { name: /El producto debe ocupar espacio/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Las campañas necesitan una pausa visual propia/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Una sección de lectura/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Una empresa de fiambres y embutidos/ })).toBeVisible();
+
+  await expect(page.locator('.publico-futuro-grid')).toHaveCount(0);
+  await sinDesborde(page);
+  await captura(page, 'landing-extendida-editorial-1440.png');
+});
 
 test('teclado, contraste y movimiento reducido', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -109,7 +130,11 @@ test('teclado, contraste y movimiento reducido', async ({ page }) => {
   const modalProducto = page.getByRole('dialog', { name: 'Registrar producto' });
   const codigoProducto = modalProducto.getByLabel('Código', { exact: true });
   await codigoProducto.focus();
-  expect(await codigoProducto.evaluate((el) => getComputedStyle(el).outlineStyle)).toBe('solid');
+  const focoVisible = await codigoProducto.evaluate((el) => {
+    const estilo = getComputedStyle(el);
+    return estilo.outlineStyle !== 'none' || estilo.boxShadow !== 'none';
+  });
+  expect(focoVisible).toBeTruthy();
   await page.keyboard.press('Escape');
   const contrastes = await page.locator('.boton-primario, .sidebar .nav-item, th, td, .codigo, .badge, .eyebrow').evaluateAll((elementos) => {
     const rgb = (valor: string) => valor.match(/[\d.]+/g)!.slice(0, 3).map(Number);
@@ -135,7 +160,7 @@ test('credenciales inválidas muestran un error legible', async ({ page }) => {
   await page.goto('/acceso');
   await page.getByLabel('Identificador de acceso').fill('no-existe.qa');
   await page.getByLabel('Contraseña', { exact: true }).fill('No-es-una-cuenta-real');
-  await page.getByRole('button', { name: 'Iniciar sesión' }).click();
+  await page.getByRole('button', { name: 'Ingresar al sistema' }).click();
   await expect(page.locator('.mensaje-error')).toContainText('Verifica los datos de acceso');
   await captura(page, 'identidad-acceso-error.png');
 });

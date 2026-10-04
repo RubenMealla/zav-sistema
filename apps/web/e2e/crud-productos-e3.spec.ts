@@ -6,13 +6,13 @@ function requerida(nombre: string) {
   return valor;
 }
 
-test('edita y da de baja un producto desde la web', async ({ page }) => {
+test('edita y desactiva un producto desde la web', async ({ page }) => {
   const codigo = `QA-CRUD-${Date.now()}`;
 
   await page.goto('/acceso');
   await page.getByLabel('Identificador de acceso').fill(requerida('QA_ADMIN_IDENTIFICADOR'));
   await page.getByLabel('Contraseña', { exact: true }).fill(requerida('QA_ADMIN_PASSWORD'));
-  await page.getByRole('button', { name: /Iniciar sesión/ }).click();
+  await page.getByRole('button', { name: /Ingresar al sistema/ }).click();
 
   await page.getByRole('link', { name: 'Productos terminados', exact: true }).filter({ visible: true }).click();
   await page.getByRole('button', { name: 'Nuevo producto' }).click();
@@ -38,8 +38,8 @@ test('edita y da de baja un producto desde la web', async ({ page }) => {
   fila = page.getByRole('row').filter({ has: page.getByRole('cell', { name: codigo }) });
   await expect(fila).toContainText('Producto CRUD E3 actualizado');
 
-  await fila.getByRole('button', { name: 'Dar de baja' }).click();
-  await expect(page.getByRole('status')).toContainText('Producto dado de baja correctamente');
+  await fila.getByRole('button', { name: 'Desactivar' }).click();
+  await expect(page.getByRole('status')).toContainText('Producto desactivado correctamente');
 
   fila = page.getByRole('row').filter({ has: page.getByRole('cell', { name: codigo }) });
   await expect(fila.getByText('INACTIVO')).toBeVisible();
