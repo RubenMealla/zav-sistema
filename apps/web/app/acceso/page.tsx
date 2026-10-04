@@ -17,23 +17,28 @@ export default async function Acceso({ searchParams }: { searchParams: Promise<{
 
   return (
     <main className="acceso-layout">
-      <section className="acceso-escena" aria-label="ZAV, acceso interno">
-        <div className="acceso-escena-superior">
-          <Link href="/" aria-label="ZAV, inicio" className="acceso-marca-integrada">
+      <section className="acceso-identidad" aria-label="ZAV, acceso interno">
+        <div className="acceso-identidad-cabecera">
+          <Link href="/" aria-label="ZAV, inicio" className="acceso-identidad-marca">
             <Marca compacta />
             <span><strong>ZAV</strong><small>Fiambres &amp; embutidos</small></span>
           </Link>
           <span>GESTIÓN INTERNA</span>
         </div>
 
-        <div className="acceso-escena-contenido">
-          <span className="acceso-linea" />
-          <h2>Gestión clara para la operación diaria.</h2>
-          <p>Inventario, lotes, condiciones, movimientos y pedidos en un entorno reservado para el personal autorizado.</p>
+        <div className="acceso-identidad-centro">
+          <Marca grande />
+          <div>
+            <span>ADMINISTRACIÓN</span>
+            <h2>Una entrada directa al sistema ZAV.</h2>
+            <p>Inventario, lotes, movimientos, pedidos y control operativo.</p>
+          </div>
         </div>
 
-        <div className="acceso-escena-marca"><Marca etiqueta grande /></div>
-        <div className="acceso-escena-pie"><span>Tarija, Bolivia</span><span>Sistema ZAV</span></div>
+        <div className="acceso-identidad-pie">
+          <span>Tarija · Bolivia</span>
+          <span>Acceso autorizado</span>
+        </div>
       </section>
 
       <section className="acceso-panel" aria-labelledby="acceso-titulo">
@@ -42,11 +47,14 @@ export default async function Acceso({ searchParams }: { searchParams: Promise<{
         </div>
 
         <div className="acceso-formulario-caja">
-          <Link href="/" aria-label="ZAV, inicio" className="acceso-marca-movil"><Marca compacta /><span>ZAV</span></Link>
+          <Link href="/" aria-label="ZAV, inicio" className="acceso-marca-movil">
+            <Marca compacta /><strong>ZAV</strong>
+          </Link>
+
           <div className="acceso-titulo">
             <span className="eyebrow">SISTEMA ADMINISTRATIVO</span>
-            <h1 id="acceso-titulo">Inicia sesión.</h1>
-            <p>Ingresa con tu cuenta de Administrador para continuar al panel de gestión.</p>
+            <h1 id="acceso-titulo">Iniciar sesión</h1>
+            <p>Ingresa con tu cuenta de Administrador.</p>
           </div>
 
           {error && (
@@ -58,22 +66,34 @@ export default async function Acceso({ searchParams }: { searchParams: Promise<{
 
           <form action={iniciarSesion} className="formulario acceso-formulario">
             <label className="campo" htmlFor="identificador">
-              <span>Identificador de acceso</span>
-              <input id="identificador" name="identificador" autoComplete="username" autoCapitalize="none" spellCheck={false} minLength={3} maxLength={120} required placeholder="Ingresa tu identificador" />
+              <span>Identificador</span>
+              <input
+                id="identificador"
+                name="identificador"
+                autoComplete="username"
+                autoCapitalize="none"
+                spellCheck={false}
+                minLength={3}
+                maxLength={120}
+                required
+                placeholder="Correo o identificador"
+              />
             </label>
+
             <CampoContrasena />
-            <BotonEnviar className="boton boton-primario boton-completo boton-grande" pendiente="Ingresando…">
-              Ingresar al sistema <Icono nombre="flecha" tamano={17} />
+
+            <BotonEnviar className="boton boton-primario boton-completo" pendiente="Ingresando…">
+              Ingresar al sistema <Icono nombre="flecha" tamano={16} />
             </BotonEnviar>
           </form>
 
           <div className="acceso-seguridad">
-            <Icono nombre="escudo" tamano={18} />
-            <p>Acceso exclusivo del personal autorizado. La sesión expira automáticamente por seguridad.</p>
+            <Icono nombre="escudo" tamano={17} />
+            <p>Acceso exclusivo del personal autorizado.</p>
           </div>
         </div>
 
-        <p className="acceso-panel-pie">ZAV · Gestión interna</p>
+        <p className="acceso-panel-pie">ZAV · Sistema de gestión</p>
       </section>
     </main>
   );
