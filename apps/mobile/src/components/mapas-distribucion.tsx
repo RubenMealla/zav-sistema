@@ -7,7 +7,7 @@ import {
 } from '@maplibre/maplibre-react-native';
 import Constants from 'expo-constants';
 import * as Location from 'expo-location';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Modal,
@@ -18,11 +18,16 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
   ApiError,
+  autocompletarDirecciones,
   buscarDirecciones,
   direccionInversa,
+} from '@/lib/api';
+import type {
+  DireccionGeocodificada,
 } from '@/lib/api';
 import type {
   PlanificacionParada,
@@ -49,12 +54,25 @@ async function permisoForeground() {
   return solicitado.status === 'granted';
 }
 
+function esPlusCode(valor: string) {
+  return /^[A-Z0-9]{4,8}\+[A-Z0-9]{2,4}$/i.test(valor.trim());
+}
+
+function limpiarDireccion(valor: string) {
+  return valor
+    .replace(/^[A-Z0-9]{4,8}\+[A-Z0-9]{2,4},?\s*/i, '')
+    .trim();
+}
+
 function direccionLegible(direccion: Location.LocationGeocodedAddress | undefined) {
   if (!direccion) return '';
+  const nombre =
+    direccion.name && !esPlusCode(direccion.name) ? direccion.name : null;
   return [
-    direccion.name,
+    nombre,
     direccion.street,
     direccion.district,
+    direccion.subregion,
     direccion.city,
     direccion.region,
   ]
@@ -71,23 +89,62 @@ export function SelectorUbicacionMapa({
   onCancelar,
   onConfirmar,
 }: SelectorProps) {
-  const [direccion, setDireccion] = useState(direccionInicial);
+  const direccionLimpiaInicial = limpiarDireccion(direccionInicial);
+  const [direccion, setDireccion] = useState(direccionLimpiaInicial);
+  const [direccionElegida, setDireccionElegida] = useState<string | null>(
+    direccionLimpiaInicial || null,
+  );
   const [punto, setPunto] = useState<PuntoGeografico | null>(puntoInicial);
   const [versionMapa, setVersionMapa] = useState(0);
   const [cargando, setCargando] = useState(false);
+  const [sugerencias, setSugerencias] = useState<DireccionGeocodificada[]>([]);
+  const [buscandoSugerencias, setBuscandoSugerencias] = useState(false);
+  const [mapaListo, setMapaListo] = useState(false);
   const [error, setError] = useState('');
 
-  function permiteFallback(error: unknown) {
+  function permiteFallback(errorActual: unknown) {
     return (
-      error instanceof ApiError &&
-      (error.status === 0 || error.status === 404 || error.status === 503)
+      errorActual instanceof ApiError &&
+      (errorActual.status === 0 ||
+        errorActual.status === 404 ||
+        errorActual.status === 503)
     );
   }
+
+  useEffect(() => {
+    if (!visible) return;
+    const consulta = direccion.trim();
+    if (consulta.length < 2 || consulta === direccionElegida) {
+      setSugerencias([]);
+      return;
+    }
+
+    let activa = true;
+    const temporizador = setTimeout(() => {
+      setBuscandoSugerencias(true);
+      void autocompletarDirecciones(token, consulta)
+        .then((respuesta) => {
+          if (!activa) return;
+          setSugerencias(respuesta.resultados);
+        })
+        .catch(() => {
+          if (activa) setSugerencias([]);
+        })
+        .finally(() => {
+          if (activa) setBuscandoSugerencias(false);
+        });
+    }, 350);
+
+    return () => {
+      activa = false;
+      clearTimeout(temporizador);
+    };
+  }, [direccion, direccionElegida, token, visible]);
 
   async function resolverDireccionInversa(valor: PuntoGeografico) {
     try {
       const remota = await direccionInversa(token, valor);
-      if (remota.direccion) return remota.direccion;
+      if (remota.direccion) return limpiarDireccion(remota.direccion);
     } catch (e) {
       if (!permiteFallback(e)) throw e;
     }
@@ -100,52 +157,47 @@ export function SelectorUbicacionMapa({
     return direccionLegible(reversa[0]);
   }
 
+  function elegirSugerencia(elegida: DireccionGeocodificada) {
+    const direccionVisible = limpiarDireccion(elegida.direccion);
+    setDireccion(direccionVisible);
+    setDireccionElegida(direccionVisible);
+    setSugerencias([]);
+    setPunto({
+      latitud: elegida.latitud,
+      longitud: elegida.longitud,
+    });
+    setMapaListo(false);
+    setVersionMapa((actual) => actual + 1);
+    setError('');
+  }
+
   async function buscarDireccion() {
-    if (!direccion.trim()) {
-      setError('Escribe una dirección para buscarla.');
+    const consulta = direccion.trim();
+    if (!consulta) {
+      setError('Escribe una dirección, calle, barrio o referencia.');
       return;
     }
+
+    if (sugerencias.length) {
+      elegirSugerencia(sugerencias[0]);
+      return;
+    }
+
     setCargando(true);
     setError('');
     try {
-      try {
-        const remotos = await buscarDirecciones(token, direccion.trim());
-        if (remotos.resultados.length) {
-          const elegido = remotos.resultados[0];
-          setDireccion(elegido.direccion);
-          setPunto({
-            latitud: elegido.latitud,
-            longitud: elegido.longitud,
-          });
-          setVersionMapa((actual) => actual + 1);
-          return;
-        }
-        setError('No se encontró esa dirección. Puedes corregir el texto e intentar otra vez.');
-        return;
-      } catch (e) {
-        if (!permiteFallback(e)) throw e;
-      }
-
-      if (Platform.OS === 'android' && !(await permisoForeground())) {
+      const remotos = await buscarDirecciones(token, consulta);
+      if (!remotos.resultados.length) {
         setError(
-          'El servicio de búsqueda remoto no está disponible y Android requiere permiso de ubicación para usar la búsqueda local.',
+          'No se encontró esa referencia dentro de Bolivia. Prueba con el nombre del barrio, calle o una referencia más completa.',
         );
         return;
       }
-
-      const resultados = await Location.geocodeAsync(direccion.trim());
-      if (!resultados.length) {
-        setError('No se encontró esa dirección. Puedes corregir el texto e intentar otra vez.');
-        return;
-      }
-      const nuevo = {
-        latitud: resultados[0].latitude,
-        longitud: resultados[0].longitude,
-      };
-      setPunto(nuevo);
-      setVersionMapa((actual) => actual + 1);
+      elegirSugerencia(remotos.resultados[0]);
     } catch {
-      setError('No se pudo buscar la dirección en este momento.');
+      setError(
+        'No se pudo consultar direcciones en este momento. Puedes usar “Mi ubicación” y corregir el punto manualmente.',
+      );
     } finally {
       setCargando(false);
     }
@@ -156,7 +208,9 @@ export function SelectorUbicacionMapa({
     setError('');
     try {
       if (!(await permisoForeground())) {
-        setError('No se autorizó la ubicación. La selección puede hacerse buscando una dirección.');
+        setError(
+          'No se autorizó la ubicación. Puedes buscar una dirección sin compartir tu posición.',
+        );
         return;
       }
 
@@ -168,12 +222,20 @@ export function SelectorUbicacionMapa({
         longitud: posicion.coords.longitude,
       };
       setPunto(nuevo);
+      setMapaListo(false);
       setVersionMapa((actual) => actual + 1);
 
       const sugerida = await resolverDireccionInversa(nuevo);
-      if (sugerida) setDireccion(sugerida);
-    } catch {
-      setError('No se pudo obtener la ubicación actual.');
+      if (sugerida) {
+        setDireccion(sugerida);
+        setDireccionElegida(sugerida);
+      }
+    } catch (e) {
+      setError(
+        e instanceof ApiError
+          ? e.message
+          : 'No se pudo obtener la ubicación actual.',
+      );
     } finally {
       setCargando(false);
     }
@@ -181,27 +243,42 @@ export function SelectorUbicacionMapa({
 
   async function confirmar() {
     if (!punto) {
-      setError('Primero selecciona un punto.');
+      setError('Primero selecciona un punto dentro de Bolivia.');
       return;
     }
-    let direccionFinal = direccion.trim();
-    if (!direccionFinal) {
-      try {
-        direccionFinal = await resolverDireccionInversa(punto);
-      } catch {
-        // La geocodificación inversa es auxiliar: el punto sigue siendo válido.
+
+    setCargando(true);
+    setError('');
+    try {
+      const direccionMapa = await resolverDireccionInversa(punto);
+      let direccionFinal = limpiarDireccion(direccion.trim());
+
+      if (!direccionFinal || esPlusCode(direccionFinal)) {
+        direccionFinal = direccionMapa;
       }
+
+      if (!direccionFinal) {
+        setError(
+          'Escribe una dirección o referencia comprensible antes de confirmar el punto.',
+        );
+        return;
+      }
+
+      onConfirmar({ ...punto, direccion: direccionFinal });
+    } catch (e) {
+      setError(
+        e instanceof ApiError
+          ? e.message
+          : 'No se pudo validar el punto seleccionado.',
+      );
+    } finally {
+      setCargando(false);
     }
-    if (!direccionFinal) {
-      setError('Confirma también una dirección textual para el punto.');
-      return;
-    }
-    onConfirmar({ ...punto, direccion: direccionFinal });
   }
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onCancelar}>
-      <View style={styles.modal}>
+      <SafeAreaView style={styles.modal} edges={['top', 'bottom']}>
         <View style={styles.cabecera}>
           <View style={styles.flex}>
             <Text style={styles.eyebrow}>UBICACIÓN DE ENTREGA</Text>
@@ -213,17 +290,54 @@ export function SelectorUbicacionMapa({
         </View>
 
         <View style={styles.busqueda}>
-          <Text style={styles.label}>Dirección</Text>
+          <Text style={styles.label}>Dirección o referencia</Text>
           <TextInput
             value={direccion}
-            onChangeText={setDireccion}
-            placeholder="Escribe una dirección o referencia"
+            onChangeText={(valor) => {
+              setDireccion(valor);
+              setDireccionElegida(null);
+              setError('');
+            }}
+            autoCorrect={false}
+            placeholder="Ej. Senac, Calle La Cruz, barrio..."
             placeholderTextColor="#8a8982"
             style={styles.input}
           />
+
+          {buscandoSugerencias ? (
+            <View style={styles.sugerenciasEstado}>
+              <ActivityIndicator size="small" color="#b83b17" />
+              <Text style={styles.ayuda}>Buscando en Bolivia · Tarija primero…</Text>
+            </View>
+          ) : null}
+
+          {sugerencias.length ? (
+            <View style={styles.sugerencias}>
+              <Text style={styles.sugerenciasTitulo}>
+                Coincidencias en Bolivia · Tarija priorizada
+              </Text>
+              {sugerencias.map((sugerencia, indice) => (
+                <Pressable
+                  key={`${sugerencia.latitud}:${sugerencia.longitud}:${indice}`}
+                  onPress={() => elegirSugerencia(sugerencia)}
+                  style={styles.sugerencia}
+                >
+                  <Text style={styles.sugerenciaPrincipal}>
+                    {sugerencia.principal || sugerencia.direccion}
+                  </Text>
+                  {sugerencia.secundaria ? (
+                    <Text style={styles.sugerenciaSecundaria}>
+                      {sugerencia.secundaria}
+                    </Text>
+                  ) : null}
+                </Pressable>
+              ))}
+            </View>
+          ) : null}
+
           <View style={styles.fila}>
             <Pressable onPress={() => void buscarDireccion()} style={styles.secundario}>
-              <Text style={styles.secundarioTextoOscuro}>Buscar dirección</Text>
+              <Text style={styles.secundarioTextoOscuro}>Buscar</Text>
             </Pressable>
             <Pressable onPress={() => void usarUbicacionActual()} style={styles.secundario}>
               <Text style={styles.secundarioTextoOscuro}>Mi ubicación</Text>
@@ -235,7 +349,7 @@ export function SelectorUbicacionMapa({
         {cargando ? (
           <View style={styles.cargando}>
             <ActivityIndicator color="#b83b17" />
-            <Text style={styles.ayuda}>Obteniendo ubicación…</Text>
+            <Text style={styles.ayuda}>Validando ubicación…</Text>
           </View>
         ) : null}
 
@@ -245,9 +359,18 @@ export function SelectorUbicacionMapa({
               key={versionMapa}
               style={styles.mapa}
               mapStyle={MAP_STYLE_URL}
+              androidView="texture"
               attribution
               touchRotate={false}
               touchPitch={false}
+              onWillStartLoadingMap={() => setMapaListo(false)}
+              onDidFinishLoadingMap={() => setMapaListo(true)}
+              onDidFailLoadingMap={() => {
+                setMapaListo(false);
+                setError(
+                  'El mapa no pudo cargarse. Revisa la conexión y vuelve a intentar.',
+                );
+              }}
               onRegionDidChange={(evento) => {
                 const [longitud, latitud] = evento.nativeEvent.center;
                 if (Number.isFinite(latitud) && Number.isFinite(longitud)) {
@@ -262,23 +385,29 @@ export function SelectorUbicacionMapa({
                 }}
               />
             </Map>
+
+            {!mapaListo ? (
+              <View pointerEvents="none" style={styles.mapaCargando}>
+                <ActivityIndicator color="#b83b17" />
+                <Text style={styles.ayuda}>Cargando mapa…</Text>
+              </View>
+            ) : null}
+
             <View pointerEvents="none" style={styles.cruz}>
               <View style={styles.pin} />
               <View style={styles.pinPunta} />
             </View>
             <View style={styles.coordenadas}>
-              <Text style={styles.coordenadasTexto}>
-                {punto.latitud.toFixed(6)}, {punto.longitud.toFixed(6)}
-              </Text>
+              <Text style={styles.coordenadasTexto}>Punto seleccionado</Text>
               <Text style={styles.ayuda}>
-                Mueve el mapa hasta dejar el marcador sobre el destino.
+                Mueve el mapa hasta dejar el marcador sobre el destino. Las coordenadas se guardan internamente.
               </Text>
             </View>
           </View>
         ) : (
           <View style={styles.sinMapa}>
             <Text style={styles.ayuda}>
-              Busca una dirección o usa tu ubicación actual para abrir el mapa. Nada se guarda hasta confirmar.
+              Escribe al menos 2 letras para ver coincidencias, selecciona una dirección o usa tu ubicación actual. Nada se guarda hasta confirmar.
             </Text>
           </View>
         )}
@@ -287,11 +416,15 @@ export function SelectorUbicacionMapa({
           <Pressable onPress={onCancelar} style={styles.secundario}>
             <Text style={styles.secundarioTextoOscuro}>Cancelar</Text>
           </Pressable>
-          <Pressable onPress={() => void confirmar()} style={styles.primario}>
+          <Pressable
+            disabled={!punto || cargando}
+            onPress={() => void confirmar()}
+            style={[styles.primario, (!punto || cargando) && styles.deshabilitado]}
+          >
             <Text style={styles.primarioTexto}>Confirmar ubicación</Text>
           </Pressable>
         </View>
-      </View>
+      </SafeAreaView>
     </Modal>
   );
 }
@@ -406,6 +539,45 @@ const styles = StyleSheet.create({
   },
   titulo: { color: '#fff', fontSize: 21, fontWeight: '800', marginTop: 3 },
   busqueda: { padding: 16, gap: 8 },
+  sugerenciasEstado: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 2,
+  },
+  sugerencias: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#ddddd5',
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  sugerenciasTitulo: {
+    color: '#717169',
+    fontSize: 10,
+    fontWeight: '800',
+    paddingHorizontal: 11,
+    paddingTop: 9,
+    paddingBottom: 6,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  sugerencia: {
+    paddingHorizontal: 11,
+    paddingVertical: 9,
+    borderTopWidth: 1,
+    borderTopColor: '#eeeeea',
+  },
+  sugerenciaPrincipal: {
+    color: '#262622',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  sugerenciaSecundaria: {
+    color: '#717169',
+    fontSize: 11,
+    marginTop: 2,
+  },
   label: { color: '#50504a', fontSize: 12, fontWeight: '700' },
   input: {
     minHeight: 46,
@@ -455,6 +627,13 @@ const styles = StyleSheet.create({
   },
   mapaContenedor: { flex: 1, marginHorizontal: 16, overflow: 'hidden', borderRadius: 10 },
   mapa: { flex: 1 },
+  mapaCargando: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(246,245,240,0.92)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
   cruz: {
     position: 'absolute',
     left: '50%',
@@ -513,6 +692,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   primarioTexto: { color: '#fff', fontSize: 12, fontWeight: '800' },
+  deshabilitado: { opacity: 0.5 },
   mapaPlan: {
     height: 300,
     borderRadius: 10,
