@@ -1407,7 +1407,7 @@ function NotificacionEstado({
   onCerrar: () => void;
 }) {
   const esError = tipo === 'error';
-  const progreso = useRef(new Animated.Value(0)).current;
+  const [progreso] = useState(() => new Animated.Value(0));
   const cerrandoRef = useRef(false);
 
   const cerrarAnimado = useCallback(() => {
