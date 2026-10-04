@@ -22,14 +22,14 @@ async function captura(page: Page, nombre: string) {
 test('muestra una portada profesional y protege el panel sin sesion', async ({ page }) => {
   await page.goto('/');
 
-  await expect(page.getByRole('heading', { name: /Una identidad propia para presentar ZAV/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Fiambres y embutidos ZAV/ })).toBeVisible();
   await expect(page.getByRole('link', { name: /Acceso interno/ }).first()).toBeVisible();
   await expect(page.getByText('Productos y lotes')).toBeVisible();
   await captura(page, '01-inicio-redisenado.png');
 
   await page.goto('/panel');
   await expect(page).toHaveURL(/\/acceso\?error=sesion$/);
-  await expect(page.getByRole('heading', { name: 'Inicia sesión.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Iniciar sesión' })).toBeVisible();
   await expect(page.locator('.mensaje-error[role="alert"]')).toContainText('La sesión terminó o ya no es válida');
   await captura(page, '02-acceso-protegido-redisenado.png');
 });
@@ -43,7 +43,7 @@ test('permite gestionar inventario desde módulos, modales y notificaciones', as
   const loteCodigo = `QA-LOTE-${ejecucion}`;
 
   await page.goto('/acceso');
-  await expect(page.getByRole('heading', { name: 'Inicia sesión.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Iniciar sesión' })).toBeVisible();
   await page.getByLabel('Identificador de acceso').fill(identificador);
   await page.getByLabel('Contraseña', { exact: true }).fill(contrasena);
   await page.getByRole('button', { name: /Ingresar al sistema/ }).click();

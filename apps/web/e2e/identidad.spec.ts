@@ -30,7 +30,7 @@ for (const ancho of [390, 768, 1440]) {
     page.on('pageerror', (error) => errores.push(error.message));
     await page.setViewportSize({ width: ancho, height: 900 });
     await page.goto('/');
-    await expect(page.getByRole('heading', { level: 1 })).toContainText('Una identidad propia para presentar');
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('Fiambres y embutidos');
     await expect(page.getByRole('img', { name: 'ZAV · Fiambres y embutidos' }).first()).toBeVisible();
     await expect.poll(() => page.locator('img').evaluateAll((imgs) => imgs.every((img) => img instanceof HTMLImageElement && img.complete && img.naturalWidth > 0))).toBeTruthy();
     await sinDesborde(page);
@@ -38,7 +38,7 @@ for (const ancho of [390, 768, 1440]) {
 
     await page.getByRole('link', { name: 'Acceso interno' }).first().click();
     await expect(page).toHaveURL(/\/acceso$/);
-    await expect(page.getByRole('heading', { name: 'Inicia sesión.' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Iniciar sesión' })).toBeVisible();
     await expect(page.getByRole('img', { name: 'ZAV · Fiambres y embutidos' }).first()).toBeVisible();
     await page.getByLabel('Contraseña', { exact: true }).fill('Prueba-visual');
     await page.getByRole('button', { name: 'Mostrar contraseña' }).click();
@@ -107,10 +107,10 @@ test('landing extendida conserva jerarquía editorial y secciones públicas', as
   await expect(page.locator('#novedades')).toBeVisible();
   await expect(page.locator('#zav')).toBeVisible();
 
-  await expect(page.getByRole('heading', { name: /El producto debe ocupar espacio/ })).toBeVisible();
-  await expect(page.getByRole('heading', { name: /Las campañas necesitan una pausa visual propia/ })).toBeVisible();
-  await expect(page.getByRole('heading', { name: /Una sección de lectura/ })).toBeVisible();
-  await expect(page.getByRole('heading', { name: /Una empresa de fiambres y embutidos/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Catálogo público.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Un espacio independiente para campañas vigentes/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Información sin ruido visual/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /ZAV · Fiambres/ })).toBeVisible();
 
   await expect(page.locator('.publico-futuro-grid')).toHaveCount(0);
   await sinDesborde(page);
