@@ -1432,19 +1432,51 @@ function NuevoPedido({
   setCantidades: (v: Record<string, string>) => void;
   onGuardar: () => void;
 }) {
+  const [busquedaCliente, setBusquedaCliente] = useState('');
+
+  const clientesFiltrados = useMemo(() => {
+    const consulta = busquedaCliente.trim().toLocaleLowerCase('es-BO');
+    return clientes.filter((cliente) => {
+      if (!cliente.ubicacion) return false;
+      return (
+        !consulta ||
+        cliente.nombre.toLocaleLowerCase('es-BO').includes(consulta) ||
+        cliente.direccion.toLocaleLowerCase('es-BO').includes(consulta) ||
+        (cliente.telefono ?? '').toLocaleLowerCase('es-BO').includes(consulta)
+      );
+    });
+  }, [busquedaCliente, clientes]);
+
+  const sinUbicacion = clientes.filter((cliente) => !cliente.ubicacion).length;
+
   return (
     <View style={styles.bloque}>
       <Titulo
         titulo="Nuevo pedido"
-        descripcion="Selecciona un cliente y registra solo cantidades con disponibilidad actual."
+        descripcion="Selecciona un cliente con ubicación confirmada y registra solo cantidades con disponibilidad actual."
       />
 
       <Text style={styles.seccionTitulo}>1. Cliente</Text>
-      {!clientes.length ? (
-        <Vacio texto="Primero registra un cliente en la sección Clientes." />
+      <View style={styles.tarjeta}>
+        <TextInput
+          value={busquedaCliente}
+          onChangeText={setBusquedaCliente}
+          placeholder="Buscar cliente o dirección"
+          placeholderTextColor="#8a8982"
+          style={styles.input}
+        />
+        {sinUbicacion ? (
+          <Text style={styles.alertaInline}>
+            {sinUbicacion} cliente(s) no aparecen aquí porque todavía no tienen ubicación confirmada.
+          </Text>
+        ) : null}
+      </View>
+
+      {!clientesFiltrados.length ? (
+        <Vacio texto="No hay clientes con ubicación confirmada que coincidan con la búsqueda." />
       ) : (
         <View style={styles.selectorLista}>
-          {clientes.map((cliente) => {
+          {clientesFiltrados.map((cliente) => {
             const activo = clienteSeleccionado === cliente.id;
             return (
               <Pressable
@@ -1456,6 +1488,7 @@ function NuevoPedido({
                   {cliente.nombre}
                 </Text>
                 <Text style={styles.opcionSubtitulo}>{cliente.direccion}</Text>
+                <Text style={styles.disponible}>Ubicación confirmada</Text>
               </Pressable>
             );
           })}
