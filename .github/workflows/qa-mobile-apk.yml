@@ -4,6 +4,9 @@ on:
   pull_request:
     branches:
       - main
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
 concurrency:
@@ -16,7 +19,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       CI: 1
-      EXPO_PUBLIC_API_BASE_URL: https://zav-api-e3-dev.onrender.com
+      BUILD_CHANNEL: ${{ github.event_name == 'pull_request' && 'qa' || 'release' }}
+      EXPO_PUBLIC_API_BASE_URL: ${{ github.event_name == 'pull_request' && 'https://zav-api-e3-dev.onrender.com' || 'https://zav-api-2026.onrender.com' }}
       EXPO_PUBLIC_MAP_STYLE_URL: https://tiles.openfreemap.org/styles/liberty
       ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
       ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -140,7 +144,7 @@ jobs:
           VERSION="$(node -p "require('../app.json').expo.version")"
           VERSION_CODE="$(node -p "require('../app.json').expo.android.versionCode")"
           SALIDA="../dist"
-          NOMBRE_APK="ZAV-Vendedor-${VERSION}-build${VERSION_CODE}.apk"
+          NOMBRE_APK="ZAV-Vendedor-${VERSION}-build${VERSION_CODE}-${BUILD_CHANNEL}.apk"
 
           mkdir -p "$SALIDA"
           cp "$APK" "$SALIDA/$NOMBRE_APK"
@@ -151,9 +155,9 @@ jobs:
       - name: Guardar APK autónomo versionado
         uses: actions/upload-artifact@v4
         with:
-          name: ZAV-Vendedor-1.0.0-build10000-run-${{ github.run_number }}
+          name: ZAV-Vendedor-1.0.0-build10000-${{ env.BUILD_CHANNEL }}-run-${{ github.run_number }}
           path: |
-            apps/mobile/dist/ZAV-Vendedor-1.0.0-build10000.apk
-            apps/mobile/dist/ZAV-Vendedor-1.0.0-build10000.apk.sha256
+            apps/mobile/dist/ZAV-Vendedor-1.0.0-build10000-${{ env.BUILD_CHANNEL }}.apk
+            apps/mobile/dist/ZAV-Vendedor-1.0.0-build10000-${{ env.BUILD_CHANNEL }}.apk.sha256
           if-no-files-found: error
           retention-days: 30
