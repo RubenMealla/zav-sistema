@@ -82,3 +82,51 @@ Commits de la migración:
 **CONFIRMADO:** lint y TypeScript de MapLibre pasaron en GitHub Actions con el lockfile reproducible.
 
 **PENDIENTE DE VALIDAR:** resultado final del primer APK MapLibre firmado y ejecución del mapa en Android físico.
+
+
+## Primera validación física · hallazgos
+
+**Evidencia proporcionada por el estudiante:** capturas del APK release instalado en Android el 3 de octubre de 2026.
+
+### Hallazgo F-01 · barras del sistema
+
+La cabecera del modal de mapa y su zona inferior podían quedar debajo de la barra de estado o de navegación del dispositivo.
+
+**Corrección en código:** Safe Area reforzada en la raíz y en el modal.  
+**Estado:** IMPLEMENTADO EN CÓDIGO / PENDIENTE DE REVALIDAR EN EL SIGUIENTE APK.
+
+### Hallazgo F-02 · mapa en blanco tras conceder permiso
+
+En el primer uso de búsqueda/ubicación el mapa podía quedar en blanco aunque el permiso de ubicación ya hubiera sido concedido.
+
+**Corrección en código:** el mapa dentro del Modal utiliza TextureView en Android, incorpora estado visible de carga y error, y se recrea al seleccionar una nueva posición.  
+**Estado:** IMPLEMENTADO EN CÓDIGO / PENDIENTE DE REVALIDAR EN DISPOSITIVO.
+
+### Hallazgo F-03 · búsqueda fuera de Bolivia
+
+Una consulta textual como “Senac” podía terminar en una localidad extranjera cuando el fallback local del dispositivo resolvía la búsqueda.
+
+**Corrección en código:** se elimina ese fallback para búsqueda textual y el backend centraliza búsqueda/autocompletado con filtro de país Bolivia y prioridad Tarija.  
+**Estado:** IMPLEMENTADO EN CÓDIGO + PRUEBA UNITARIA DEL FILTRO / PENDIENTE DE VALIDAR CON GEOAPIFY REAL.
+
+### Hallazgo F-04 · dirección poco legible
+
+La geocodificación inversa podía mostrar un Plus Code como “F67P+GQ3” como parte principal de la dirección.
+
+**Corrección en código:** se normalizan resultados para priorizar calle, barrio/zona, ciudad y departamento; coordenadas y códigos auxiliares quedan como datos internos.  
+**Estado:** IMPLEMENTADO EN CÓDIGO + PRUEBA UNITARIA / PENDIENTE DE REVALIDAR EN DISPOSITIVO.
+
+### Hallazgo F-05 · error al guardar Cliente
+
+El APK geográfico estaba conectado al backend desplegado desde main, que no correspondía al contrato de la rama E3 y rechazaba latitud/longitud como campos no permitidos.
+
+**Corrección de entorno:** se creó el servicio aislado de desarrollo `zav-api-e3-dev`, vinculado a `desarrollo/e3-app-movil-vendedor`. El siguiente APK E3 apunta a ese servicio. Producción no forma parte de esta ronda de validación.
+
+**Estado:** SERVICIO CREADO / PENDIENTE DE COMPLETAR SUS VARIABLES SENSIBLES Y VALIDAR LOGIN + ALTA DE CLIENTE.
+
+### Hallazgo F-06 · pestaña Reparto redundante
+
+La planificación se mostraba como una cuarta pestaña incluso cuando había un único pedido.
+
+**Corrección en código:** Reparto se integra dentro de Pedidos y el planificador solo aparece cuando hay al menos dos pedidos georreferenciados pendientes.  
+**Estado:** IMPLEMENTADO EN CÓDIGO / PENDIENTE DE REVALIDAR EN DISPOSITIVO.
