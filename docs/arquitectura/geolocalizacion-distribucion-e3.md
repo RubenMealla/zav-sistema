@@ -44,7 +44,7 @@ Se conserva `expo-location` para:
 
 No se solicita permiso de ubicación en segundo plano.
 
-Para mejorar la búsqueda de direcciones sin exponer una credencial en el APK se incorpora una capa de geocodificación en la API ZAV. El backend puede utilizar **Geoapify** mediante `GEOAPIFY_API_KEY`, restringiendo los resultados de búsqueda a Bolivia. La app consulta:
+Para mejorar la búsqueda de direcciones sin exponer una credencial en el APK se incorpora una capa de geocodificación en la API ZAV. El backend puede utilizar **Geoapify** mediante `GEOAPIFY_API_KEY`, restringiendo los resultados de búsqueda al departamento de Tarija, Bolivia. La app consulta:
 
 - `GET /api/v1/geografia/geocodificar?q=...`;
 - `GET /api/v1/geografia/reversa?latitud=...&longitud=...`.
@@ -57,7 +57,7 @@ El sistema delega la navegación giro a giro a una aplicación/servicio externo 
 
 ### 2.5 Alcance geográfico de búsqueda
 
-**Decisión implementada:** la búsqueda y el autocompletado de direcciones se restringen a **Bolivia** mediante el filtro del proveedor geográfico. Dentro del país, se priorizan coincidencias de **Tarija** porque corresponde al contexto operativo actual del proyecto, sin impedir seleccionar direcciones de otros departamentos bolivianos.
+**Decisión implementada:** la búsqueda, el autocompletado y la validación inversa se restringen al **departamento de Tarija, Bolivia**. La expansión a otros departamentos queda fuera del alcance actual y podrá habilitarse posteriormente sin cambiar el motor MapLibre.
 
 La interfaz solicita sugerencias a partir de dos caracteres y muestra hasta ocho coincidencias relevantes de calles, barrios, zonas, localidades o referencias. No se afirma que la fuente posea un catálogo exhaustivo de todos los barrios y calles del país: la cobertura depende de los datos disponibles en OpenStreetMap/Geoapify.
 
@@ -117,6 +117,14 @@ Solo después de esa confirmación se guardan las coordenadas.
 **Caso B — Cliente registrado por llamada o mensaje:** busca la dirección o selecciona manualmente el punto sin necesidad de estar físicamente allí.
 
 **Caso C — Geocodificación imprecisa:** mueve el marcador antes de confirmar.
+
+### 3.1 Ubicación obligatoria y edición del Cliente
+
+Para el alcance actual, un Cliente nuevo no puede registrarse sin un punto de entrega confirmado. La interfaz principal no permite escribir libremente la dirección: el texto visible se obtiene del selector geográfico y se almacena junto con latitud y longitud.
+
+El Vendedor puede editar nombre, teléfono y ubicación. Un cambio en el Cliente se aplica a **pedidos nuevos**; los pedidos ya registrados conservan la instantánea histórica de dirección y coordenadas con la que fueron creados.
+
+La sección Clientes incorpora búsqueda y filtros por disponibilidad de ubicación para evitar depender de desplazamiento vertical cuando crezca el número de registros.
 
 ## 4. Punto geográfico de despacho
 
@@ -198,7 +206,7 @@ El orden sugerido no modifica el estado de los Pedidos.
 
 ### 7.4 Integración con la sección Pedidos
 
-El planificador de reparto dejó de presentarse como una pestaña independiente. Se integra en **Pedidos** y solo aparece cuando existen al menos dos pedidos pendientes con destino georreferenciado. Para un único pedido se mantienen directamente las acciones de retiro, navegación y entrega, evitando una sección sin utilidad operativa.
+El planificador de reparto dejó de presentarse como una pestaña independiente y se integra en **Pedidos**. El bloque permanece visible para explicar el estado del reparto; la secuenciación se habilita cuando existen al menos dos pedidos pendientes con destino georreferenciado. Los pedidos históricos sin GPS se identifican explícitamente y los entregados no participan en una nueva salida.
 
 ## 8. RF-11 — Entrega con comprobación geográfica
 
