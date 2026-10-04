@@ -91,7 +91,10 @@ describe('Pedidos y distribucion E3 (e2e)', () => {
 
   async function crearCliente(
     sufijo: string,
-    ubicacion?: { latitud: number; longitud: number },
+    ubicacion: { latitud: number; longitud: number } = {
+      latitud: -21.5355,
+      longitud: -64.7302,
+    },
   ) {
     const respuesta = await request(app.getHttpServer())
       .post('/api/v1/clientes')
@@ -100,8 +103,8 @@ describe('Pedidos y distribucion E3 (e2e)', () => {
         nombre: `Cliente QA ${sufijo}`,
         telefono: '70000000',
         direccion: `Calle de prueba ${sufijo}, Tarija`,
-        latitud: ubicacion?.latitud,
-        longitud: ubicacion?.longitud,
+        latitud: ubicacion.latitud,
+        longitud: ubicacion.longitud,
       })
       .expect(201);
     return respuesta.body.id as string;
@@ -200,6 +203,40 @@ describe('Pedidos y distribucion E3 (e2e)', () => {
 
     expect(consulta.body.nombre).toBe('Cliente QA REGISTRO');
     expect(consulta.body.activo).toBe(true);
+  });
+
+  it('edita datos y ubicación del Cliente; los pedidos nuevos copian el estado actualizado', async () => {
+    const clienteId = await crearCliente('EDICION');
+    const actualizado = await request(app.getHttpServer())
+      .patch(`/api/v1/clientes/${clienteId}`)
+      .set('Authorization', `Bearer ${tokenVendedor}`)
+      .send({
+        nombre: 'Cliente QA Editado',
+        telefono: '71111111',
+        direccion: 'Barrio de prueba actualizado, Tarija',
+        latitud: -21.541,
+        longitud: -64.741,
+      })
+      .expect(200);
+
+    expect(actualizado.body).toEqual(
+      expect.objectContaining({
+        nombre: 'Cliente QA Editado',
+        telefono: '71111111',
+        direccion: 'Barrio de prueba actualizado, Tarija',
+      }),
+    );
+    expect(actualizado.body.ubicacion).toEqual(
+      expect.objectContaining({ latitud: -21.541, longitud: -64.741 }),
+    );
+
+    const pedido = await crearPedido(clienteId, productoPrincipalId, 1);
+    expect(pedido.status).toBe(201);
+    expect(pedido.body.direccionEntrega).toBe('Barrio de prueba actualizado, Tarija');
+    expect(pedido.body.destinoGps).toEqual({
+      latitud: -21.541,
+      longitud: -64.741,
+    });
   });
 
   it('permite al Vendedor consultar productos y disponibilidad sin permisos de edicion', async () => {
