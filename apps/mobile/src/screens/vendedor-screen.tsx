@@ -1069,11 +1069,12 @@ function Pedidos({
   retirando,
   accionPedido,
   onAlternar,
-  onSeleccionarTodos,
+  onSeleccionarPedidos,
   onPlanificarTodosActual,
   onPlanificarDespacho,
   onPlanificarActual,
   onRetirarSeleccionados,
+  onCancelarPlan,
   onMover,
   onRetirar,
   onEntregar,
@@ -1088,11 +1089,12 @@ function Pedidos({
   retirando: boolean;
   accionPedido: string | null;
   onAlternar: (id: string) => void;
-  onSeleccionarTodos: () => void;
-  onPlanificarTodosActual: () => void;
-  onPlanificarDespacho: () => void;
-  onPlanificarActual: () => void;
+  onSeleccionarPedidos: (ids: string[]) => void;
+  onPlanificarTodosActual: (ids: string[]) => void;
+  onPlanificarDespacho: (ids: string[]) => void;
+  onPlanificarActual: (ids: string[]) => void;
   onRetirarSeleccionados: () => void;
+  onCancelarPlan: () => void;
   onMover: (indice: number, direccion: -1 | 1) => void;
   onRetirar: (pedido: PedidoResumen) => void;
   onEntregar: (pedido: PedidoResumen) => void;
@@ -1102,26 +1104,49 @@ function Pedidos({
 }) {
   const [busqueda, setBusqueda] = useState('');
   const [filtroEstado, setFiltroEstado] = useState<'TODOS' | PedidoResumen['estado']>('TODOS');
+  const [filtroPeriodo, setFiltroPeriodo] = useState<'HOY' | 'TODOS'>('HOY');
 
   const pedidoPorId = useMemo(
     () => new Map(pedidos.map((pedido) => [pedido.id, pedido])),
     [pedidos],
   );
-  const pendientes = pedidos.filter((pedido) => pedido.estado !== 'ENTREGADO');
-  const planificables = pendientes.filter((pedido) => pedido.destinoGps !== null);
-  const sinGps = pendientes.filter((pedido) => pedido.destinoGps === null);
-  const puedePlanificar = planificables.length >= 2 && seleccionados.length >= 2;
+
+  const pedidosPeriodo = useMemo(
+    () => (filtroPeriodo === 'HOY' ? pedidos.filter((pedido) => esHoyBolivia(pedido.creadoEn)) : pedidos),
+    [filtroPeriodo, pedidos],
+  );
 
   const pedidosVisibles = useMemo(() => {
     const consulta = busqueda.trim().toLocaleLowerCase('es-BO');
-    return pedidos.filter((pedido) => {
+    return pedidosPeriodo.filter((pedido) => {
       const coincide =
         !consulta ||
         pedido.cliente.nombre.toLocaleLowerCase('es-BO').includes(consulta) ||
         pedido.direccionEntrega.toLocaleLowerCase('es-BO').includes(consulta);
       return coincide && (filtroEstado === 'TODOS' || pedido.estado === filtroEstado);
     });
-  }, [busqueda, filtroEstado, pedidos]);
+  }, [busqueda, filtroEstado, pedidosPeriodo]);
+
+  const pendientesPeriodo = pedidosPeriodo.filter((pedido) => pedido.estado !== 'ENTREGADO');
+  const entregadosPeriodo = pedidosPeriodo.filter((pedido) => pedido.estado === 'ENTREGADO');
+  const planificablesVisibles = pedidosVisibles.filter(
+    (pedido) => pedido.estado !== 'ENTREGADO' && pedido.destinoGps !== null,
+  );
+  const registradosVisibles = pedidosVisibles.filter(
+    (pedido) => pedido.estado === 'REGISTRADO',
+  );
+  const sinGpsVisibles = pedidosVisibles.filter(
+    (pedido) => pedido.estado !== 'ENTREGADO' && pedido.destinoGps === null,
+  );
+
+  const idsSeleccionadosPlanificables = seleccionados.filter((id) => {
+    const pedido = pedidoPorId.get(id);
+    return Boolean(pedido && pedido.estado !== 'ENTREGADO' && pedido.destinoGps);
+  });
+  const cantidadSeleccionadosRegistrados = seleccionados.filter(
+    (id) => pedidoPorId.get(id)?.estado === 'REGISTRADO',
+  ).length;
+  const puedePlanificar = idsSeleccionadosPlanificables.length >= 2;
 
   const idsPlan = new Set(planificacion?.paradas.map((parada) => parada.pedidoId) ?? []);
   const pedidosPlan = (planificacion?.paradas ?? [])
@@ -1165,7 +1190,7 @@ function Pedidos({
             style={[styles.botonSeleccion, seleccionado && styles.botonSeleccionActivo]}
           >
             <Text style={[styles.botonSeleccionTexto, seleccionado && styles.botonSeleccionTextoActivo]}>
-              {seleccionado ? '✓ Incluido en organización' : 'Incluir para organizar'}
+              {seleccionado ? '✓ Seleccionado' : 'Seleccionar para acciones'}
             </Text>
           </Pressable>
         ) : null}
@@ -1194,7 +1219,9 @@ function Pedidos({
 
         {pedido.destinoGps ? (
           <Pressable onPress={() => onVerMapaPedido(pedido)} style={styles.botonMapa}>
-            <Text style={styles.botonMapaTexto}>Ver en mapa</Text>
+            <Text style={styles.botonMapaTexto}>
+              {enPlan ? 'Ver esta parada en mapa' : 'Ver destino en mapa'}
+            </Text>
           </Pressable>
         ) : (
           <Text style={styles.alertaInline}>Pedido histórico sin destino GPS.</Text>
@@ -1203,6 +1230,7 @@ function Pedidos({
         {pedido.estado === 'REGISTRADO' ? (
           <BotonAccion
             texto="Retirar para reparto"
+            textoCargando="Registrando retiro…"
             cargando={accionPedido === pedido.id}
             onPress={() => onRetirar(pedido)}
           />
@@ -1211,6 +1239,7 @@ function Pedidos({
         {pedido.estado === 'EN_DISTRIBUCION' ? (
           <BotonAccion
             texto="Comprobar y confirmar entrega"
+            textoCargando="Obteniendo ubicación…"
             cargando={accionPedido === pedido.id}
             onPress={() => onEntregar(pedido)}
           />
@@ -1227,15 +1256,34 @@ function Pedidos({
     <View style={styles.bloque}>
       <Titulo
         titulo="Pedidos"
-        descripcion="Organiza, retira y entrega desde una sola vista."
+        descripcion="Hoy aparece primero. Desde aquí puedes seleccionar, organizar, retirar y entregar."
       />
 
       <View style={styles.tarjeta}>
         <View style={styles.resumenPedido}>
-          <Dato etiqueta="Total" valor={String(pedidos.length)} />
-          <Dato etiqueta="Pendientes" valor={String(pendientes.length)} />
-          <Dato etiqueta="Entregados" valor={String(pedidos.length - pendientes.length)} />
+          <Dato etiqueta={filtroPeriodo === 'HOY' ? 'Hoy' : 'Total'} valor={String(pedidosPeriodo.length)} />
+          <Dato etiqueta="Pendientes" valor={String(pendientesPeriodo.length)} />
+          <Dato etiqueta="Entregados" valor={String(entregadosPeriodo.length)} />
         </View>
+
+        <Text style={styles.seccionTitulo}>Periodo</Text>
+        <View style={styles.filtros}>
+          {[
+            ['HOY', 'Hoy · Bolivia'],
+            ['TODOS', 'Todo el historial'],
+          ].map(([valor, texto]) => (
+            <Pressable
+              key={valor}
+              onPress={() => setFiltroPeriodo(valor as 'HOY' | 'TODOS')}
+              style={[styles.filtroChip, filtroPeriodo === valor && styles.filtroChipActivo]}
+            >
+              <Text style={[styles.filtroChipTexto, filtroPeriodo === valor && styles.filtroChipTextoActivo]}>
+                {texto}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+
         <TextInput
           value={busqueda}
           onChangeText={setBusqueda}
@@ -1243,6 +1291,8 @@ function Pedidos({
           placeholderTextColor="#8a8982"
           style={styles.input}
         />
+
+        <Text style={styles.seccionTitulo}>Estado</Text>
         <View style={styles.filtros}>
           {[
             ['TODOS', 'Todos'],
@@ -1261,64 +1311,103 @@ function Pedidos({
             </Pressable>
           ))}
         </View>
+
+        <Text style={styles.contador}>
+          Mostrando {pedidosVisibles.length} pedido(s).
+          {filtroPeriodo === 'HOY' ? ' Fecha calculada con America/La_Paz.' : ''}
+        </Text>
       </View>
 
-      {!planificacion && planificables.length >= 2 ? (
+      {!planificacion && (planificablesVisibles.length || registradosVisibles.length) ? (
         <View style={styles.tarjetaPlanControl}>
           <View style={styles.filaEntre}>
             <View style={styles.flex}>
-              <Text style={styles.tarjetaTitulo}>Organizar entregas</Text>
+              <Text style={styles.tarjetaTitulo}>Acciones rápidas</Text>
               <Text style={styles.textoSecundario}>
-                Selecciona pedidos o usa todos. El orden es una sugerencia por cercanía.
+                {seleccionados.length} pedido(s) seleccionado(s).
               </Text>
             </View>
-            <Pressable onPress={onSeleccionarTodos} style={styles.botonMapaCompacto}>
-              <Text style={styles.botonMapaTexto}>Todos</Text>
-            </Pressable>
+            {seleccionados.length ? (
+              <Pressable onPress={() => onSeleccionarPedidos([])} style={styles.botonMapaCompacto}>
+                <Text style={styles.botonMapaTexto}>Limpiar</Text>
+              </Pressable>
+            ) : null}
           </View>
 
-          <BotonAccion
-            texto={planificando ? 'Calculando…' : 'Organizar todos desde mi ubicación'}
-            cargando={planificando}
-            onPress={onPlanificarTodosActual}
-          />
+          <View style={styles.filaWrap}>
+            {planificablesVisibles.length ? (
+              <Pressable
+                onPress={() => onSeleccionarPedidos(planificablesVisibles.map((pedido) => pedido.id))}
+                style={styles.botonAccionSecundario}
+              >
+                <Text style={styles.botonAccionSecundarioTexto}>
+                  Seleccionar pendientes ({planificablesVisibles.length})
+                </Text>
+              </Pressable>
+            ) : null}
+            {registradosVisibles.length ? (
+              <Pressable
+                onPress={() => onSeleccionarPedidos(registradosVisibles.map((pedido) => pedido.id))}
+                style={styles.botonAccionSecundario}
+              >
+                <Text style={styles.botonAccionSecundarioTexto}>
+                  Seleccionar registrados ({registradosVisibles.length})
+                </Text>
+              </Pressable>
+            ) : null}
+          </View>
 
-          {seleccionados.length >= 2 ? (
+          {planificablesVisibles.length >= 2 ? (
+            <BotonAccion
+              texto={`Organizar visibles desde mi ubicación (${planificablesVisibles.length})`}
+              textoCargando="Calculando secuencia…"
+              cargando={planificando}
+              onPress={() => onPlanificarTodosActual(planificablesVisibles.map((pedido) => pedido.id))}
+            />
+          ) : null}
+
+          {puedePlanificar ? (
             <View style={styles.fila}>
               <Pressable
-                disabled={!puedePlanificar || planificando}
-                onPress={onPlanificarActual}
-                style={[styles.botonMapa, (!puedePlanificar || planificando) && styles.deshabilitado]}
+                disabled={planificando}
+                onPress={() => onPlanificarActual(idsSeleccionadosPlanificables)}
+                style={[styles.botonMapa, planificando && styles.deshabilitado]}
               >
-                <Text style={styles.botonMapaTexto}>Desde mi ubicación</Text>
+                <Text style={styles.botonMapaTexto}>Organizar seleccionados desde aquí</Text>
               </Pressable>
               <Pressable
-                disabled={!puedePlanificar || planificando}
-                onPress={onPlanificarDespacho}
-                style={[styles.botonMapa, (!puedePlanificar || planificando) && styles.deshabilitado]}
+                disabled={planificando}
+                onPress={() => onPlanificarDespacho(idsSeleccionadosPlanificables)}
+                style={[styles.botonMapa, planificando && styles.deshabilitado]}
               >
-                <Text style={styles.botonMapaTexto}>Desde ZAV</Text>
+                <Text style={styles.botonMapaTexto}>Organizar desde ZAV</Text>
               </Pressable>
             </View>
           ) : null}
 
-          {seleccionados.some((id) => pedidoPorId.get(id)?.estado === 'REGISTRADO') ? (
+          {cantidadSeleccionadosRegistrados > 0 ? (
             <Pressable
               disabled={retirando}
               onPress={onRetirarSeleccionados}
               style={[styles.botonMapa, retirando && styles.deshabilitado]}
             >
               <Text style={styles.botonMapaTexto}>
-                {retirando ? 'Registrando…' : 'Retirar seleccionados'}
+                {retirando
+                  ? 'Registrando retiros…'
+                  : `Retirar seleccionados (${cantidadSeleccionadosRegistrados})`}
               </Text>
             </Pressable>
           ) : null}
+
+          <Text style={styles.textoSecundario}>
+            La entrega se confirma una por una porque cada pedido necesita su propia comprobación GPS puntual.
+          </Text>
         </View>
       ) : null}
 
-      {sinGps.length ? (
+      {sinGpsVisibles.length ? (
         <Text style={styles.alertaInline}>
-          {sinGps.length} pedido(s) histórico(s) no pueden organizarse porque no guardaron GPS.
+          {sinGpsVisibles.length} pedido(s) histórico(s) no pueden entrar a una ruta porque no guardaron GPS.
         </Text>
       ) : null}
 
@@ -1351,6 +1440,24 @@ function Pedidos({
                 {planificando ? 'Actualizando…' : 'Actualizar mi ubicación y reordenar'}
               </Text>
             </Pressable>
+
+            {cantidadSeleccionadosRegistrados > 0 ? (
+              <Pressable
+                disabled={retirando}
+                onPress={onRetirarSeleccionados}
+                style={[styles.botonMapa, retirando && styles.deshabilitado]}
+              >
+                <Text style={styles.botonMapaTexto}>
+                  {retirando
+                    ? 'Registrando retiros…'
+                    : `Retirar registrados del recorrido (${cantidadSeleccionadosRegistrados})`}
+                </Text>
+              </Pressable>
+            ) : null}
+
+            <Pressable onPress={onCancelarPlan} style={styles.enlaceBoton}>
+              <Text style={styles.enlaceSecundario}>Cancelar organización</Text>
+            </Pressable>
           </View>
 
           {pedidosPlan.map((pedido, indice) => tarjetaPedido(pedido, indice))}
@@ -1358,7 +1465,10 @@ function Pedidos({
       ) : null}
 
       {!planificacion && !pedidosVisibles.length ? (
-        <Vacio texto="No hay pedidos que coincidan con los filtros." />
+        <Vacio texto={filtroPeriodo === 'HOY'
+          ? 'No hay pedidos de hoy que coincidan con los filtros. Puedes cambiar a Todo el historial.'
+          : 'No hay pedidos que coincidan con los filtros.'}
+        />
       ) : null}
 
       {!planificacion
@@ -1366,7 +1476,7 @@ function Pedidos({
         : otrosPedidos.length
           ? (
               <>
-                <Text style={styles.seccionTitulo}>Otros pedidos e historial</Text>
+                <Text style={styles.seccionTitulo}>Otros pedidos visibles</Text>
                 {otrosPedidos.map((pedido) => tarjetaPedido(pedido))}
               </>
             )
