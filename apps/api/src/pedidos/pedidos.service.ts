@@ -331,12 +331,12 @@ export class PedidosService {
         throw new BadRequestException('estado de pedido no valido.');
       }
       parametros.push(consulta.estado);
-      filtros.push(`pe.estado = ${parametros.length}`);
+      filtros.push(`pe.estado = $${parametros.length}`);
     }
 
     if (consulta.vendedorId !== undefined) {
       parametros.push(uuid(consulta.vendedorId, 'vendedorId'));
-      filtros.push(`pe.vendedor_id = ${parametros.length}::uuid`);
+      filtros.push(`pe.vendedor_id = $${parametros.length}::uuid`);
     }
 
     const where = filtros.length ? `WHERE ${filtros.join(' AND ')}` : '';
@@ -359,7 +359,7 @@ export class PedidosService {
        ${where}
        GROUP BY pe.id, c.id, c.nombre, u.id, u.nombre, u.identificador
        ORDER BY pe.creado_en DESC, pe.id DESC
-       LIMIT ${limitePos} OFFSET ${offsetPos}`,
+       LIMIT $${limitePos} OFFSET $${offsetPos}`,
       parametros,
     ) as Array<Record<string, unknown>>;
 
