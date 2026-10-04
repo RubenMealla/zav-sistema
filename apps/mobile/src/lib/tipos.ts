@@ -44,7 +44,7 @@ export type Disponibilidad = {
   cantidadDisponible: number;
 };
 
-export type EstadoPedido = 'REGISTRADO' | 'EN_DISTRIBUCION' | 'ENTREGADO';
+export type EstadoPedido = 'REGISTRADO' | 'EN_DISTRIBUCION' | 'ENTREGADO' | 'CANCELADO';
 
 export type PedidoResumen = {
   id: string;
@@ -68,6 +68,8 @@ export type PedidoDetalle = {
   creadoEn: string;
   retiradoEn: string | null;
   entregadoEn: string | null;
+  canceladoEn: string | null;
+  cancelacionMotivo: string | null;
   entregaGps:
     | (PuntoGeografico & {
         precisionMetros: number | null;

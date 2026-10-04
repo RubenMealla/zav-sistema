@@ -75,9 +75,18 @@ export function perfil(token: string) {
   return solicitud<Sesion['usuario']>('/api/v1/auth/me', {}, token);
 }
 
-export function listarClientes(token: string, q = '') {
-  const query = q.trim() ? `?q=${encodeURIComponent(q.trim())}&limit=100` : '?limit=100';
-  return solicitud<Lista<Cliente>>(`/api/v1/clientes${query}`, {}, token);
+export function listarClientes(
+  token: string,
+  q = '',
+  activo: 'true' | 'false' | 'todos' = 'todos',
+) {
+  const params = new URLSearchParams({ limit: '100', activo });
+  if (q.trim()) params.set('q', q.trim());
+  return solicitud<Lista<Cliente>>(
+    `/api/v1/clientes?${params.toString()}`,
+    {},
+    token,
+  );
 }
 
 export function crearCliente(
@@ -190,6 +199,39 @@ export function actualizarCliente(
   return solicitud<Cliente>(
     `/api/v1/clientes/${id}`,
     { method: 'PATCH', body: JSON.stringify(datos) },
+    token,
+  );
+}
+
+export function cambiarEstadoCliente(token: string, id: string, activo: boolean) {
+  return solicitud<Cliente>(
+    `/api/v1/clientes/${id}/estado`,
+    { method: 'PATCH', body: JSON.stringify({ activo }) },
+    token,
+  );
+}
+
+export function actualizarPedido(
+  token: string,
+  id: string,
+  datos: {
+    clienteId: string;
+    direccionEntrega?: string;
+    observacion?: string;
+    detalles: { productoId: string; cantidad: number }[];
+  },
+) {
+  return solicitud<PedidoDetalle>(
+    `/api/v1/pedidos/${id}`,
+    { method: 'PATCH', body: JSON.stringify(datos) },
+    token,
+  );
+}
+
+export function cancelarPedido(token: string, id: string, motivo?: string) {
+  return solicitud<PedidoDetalle>(
+    `/api/v1/pedidos/${id}/cancelacion`,
+    { method: 'POST', body: JSON.stringify({ motivo }) },
     token,
   );
 }

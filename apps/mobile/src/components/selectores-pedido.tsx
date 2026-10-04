@@ -37,7 +37,7 @@ export function SelectorClientePedidoModal({
   const [busqueda, setBusqueda] = useState('');
 
   const disponibles = useMemo(
-    () => clientes.filter((cliente) => Boolean(cliente.ubicacion)),
+    () => clientes.filter((cliente) => cliente.activo && Boolean(cliente.ubicacion)),
     [clientes],
   );
 

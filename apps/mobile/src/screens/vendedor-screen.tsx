@@ -15,12 +15,16 @@ import {
 import {
   ApiError,
   actualizarCliente,
+  actualizarPedido,
+  cancelarPedido,
+  cambiarEstadoCliente,
   crearCliente,
   crearPedido,
   entregarPedidoConComprobacion,
   listarClientes,
   listarPedidos,
   obtenerDisponibilidad,
+  obtenerPedido,
   planificarReparto,
   retirarPedido,
   retirarPedidosSeleccionados,
@@ -28,6 +32,7 @@ import {
 import type {
   Cliente,
   Disponibilidad,
+  PedidoDetalle,
   PedidoResumen,
   PlanificacionParada,
   PlanificacionReparto,
@@ -36,6 +41,7 @@ import type {
 } from '@/lib/tipos';
 import { uuidV4 } from '@/lib/uuid';
 import { MapaReparto, MapaRepartoModal, SelectorUbicacionMapa } from '@/components/mapas-distribucion';
+import { HistorialPedidosModal } from '@/components/historial-pedidos';
 import {
   SelectorClientePedidoModal,
   SelectorProductosPedidoModal,
@@ -60,8 +66,9 @@ function mensajeError(error: unknown) {
 }
 
 function estadoLegible(estado: PedidoResumen['estado']) {
-  if (estado === 'REGISTRADO') return 'Registrado';
-  if (estado === 'EN_DISTRIBUCION') return 'En distribución';
+  if (estado === 'REGISTRADO') return 'Por retirar';
+  if (estado === 'EN_DISTRIBUCION') return 'Para entregar';
+  if (estado === 'CANCELADO') return 'Anulado';
   return 'Entregado';
 }
 
@@ -142,6 +149,9 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
   const [actualizando, setActualizando] = useState(false);
   const [error, setError] = useState('');
   const [aviso, setAviso] = useState('');
+  const [historialVisible, setHistorialVisible] = useState(false);
+  const [historialPedidos, setHistorialPedidos] = useState<PedidoResumen[]>([]);
+  const [cargandoHistorial, setCargandoHistorial] = useState(false);
 
   const [clienteNombre, setClienteNombre] = useState('');
   const [clienteTelefono, setClienteTelefono] = useState('');
@@ -160,6 +170,9 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
   const [observacion, setObservacion] = useState('');
   const [cantidades, setCantidades] = useState<Record<string, string>>({});
   const [guardandoPedido, setGuardandoPedido] = useState(false);
+  const [pedidoEditando, setPedidoEditando] = useState<PedidoDetalle | null>(null);
+  const [cargandoEdicionPedido, setCargandoEdicionPedido] = useState<string | null>(null);
+  const [cambiandoEstadoCliente, setCambiandoEstadoCliente] = useState<string | null>(null);
   const [selectorClientePedidoVisible, setSelectorClientePedidoVisible] = useState(false);
   const [selectorProductosPedidoVisible, setSelectorProductosPedidoVisible] = useState(false);
   const [accionPedido, setAccionPedido] = useState<string | null>(null);
@@ -172,6 +185,18 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
   const accionesEnCursoRef = useRef(new Set<string>());
 
   const token = sesion.accessToken;
+
+  useEffect(() => {
+    if (!error) return;
+    const temporizador = setTimeout(() => setError(''), 5000);
+    return () => clearTimeout(temporizador);
+  }, [error]);
+
+  useEffect(() => {
+    if (!aviso) return;
+    const temporizador = setTimeout(() => setAviso(''), 3500);
+    return () => clearTimeout(temporizador);
+  }, [aviso]);
 
   const manejarError = useCallback(
     async (e: unknown) => {
@@ -188,7 +213,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
   const consultarDatos = useCallback(
     () =>
       Promise.all([
-        listarPedidos(token),
+        listarPedidos(token, 'ACTIVOS'),
         listarClientes(token),
         obtenerDisponibilidad(token),
       ]),
@@ -253,7 +278,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
     setError('');
     try {
       const siguientePagina = paginaPedidos + 1;
-      const respuesta = await listarPedidos(token, undefined, siguientePagina);
+      const respuesta = await listarPedidos(token, 'ACTIVOS', siguientePagina);
       setPedidos((actuales) => {
         const ids = new Set(actuales.map((pedido) => pedido.id));
         return [
@@ -297,10 +322,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
       setClienteTelefono('');
       setClienteDireccion('');
       setClienteUbicacion(null);
-      Alert.alert(
-        'Cliente registrado',
-        'El cliente y su punto de entrega quedaron disponibles para pedidos.',
-      );
+      setAviso('Cliente registrado. Ya está disponible para nuevos pedidos.');
     } catch (e) {
       await manejarError(e);
     } finally {
@@ -374,14 +396,54 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
           .sort((a, b) => a.nombre.localeCompare(b.nombre)),
       );
       cancelarEdicionCliente();
-      Alert.alert(
-        'Cliente actualizado',
-        'Los pedidos nuevos usarán estos datos. Los pedidos ya registrados conservan su destino histórico.',
-      );
+      setAviso('Cliente actualizado. Los pedidos históricos conservan su destino original.');
     } catch (e) {
       await manejarError(e);
     } finally {
       setGuardandoCliente(false);
+    }
+  }
+
+  function confirmarCambioEstadoCliente(cliente: Cliente) {
+    const activar = !cliente.activo;
+    Alert.alert(
+      activar ? 'Reactivar cliente' : 'Dar de baja al cliente',
+      activar
+        ? `¿Reactivar a ${cliente.nombre} para permitir nuevos pedidos?`
+        : `¿Dar de baja a ${cliente.nombre}? Su historial se conserva y no podrá usarse en pedidos nuevos.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: activar ? 'Reactivar' : 'Dar de baja',
+          style: activar ? 'default' : 'destructive',
+          onPress: () => void cambiarEstadoClienteDesdeApp(cliente, activar),
+        },
+      ],
+    );
+  }
+
+  async function cambiarEstadoClienteDesdeApp(cliente: Cliente, activo: boolean) {
+    if (cambiandoEstadoCliente) return;
+    setCambiandoEstadoCliente(cliente.id);
+    setError('');
+    try {
+      const actualizado = await cambiarEstadoCliente(token, cliente.id, activo);
+      setClientes((actuales) =>
+        actuales
+          .map((item) => (item.id === actualizado.id ? actualizado : item))
+          .sort((a, b) => a.nombre.localeCompare(b.nombre)),
+      );
+      if (!activo && clienteSeleccionado === cliente.id) setClienteSeleccionado('');
+      if (!activo && clienteEditando?.id === cliente.id) cancelarEdicionCliente();
+      setAviso(
+        activo
+          ? 'Cliente reactivado y disponible para nuevos pedidos.'
+          : 'Cliente dado de baja. Su historial permanece conservado.',
+      );
+    } catch (e) {
+      await manejarError(e);
+    } finally {
+      setCambiandoEstadoCliente(null);
     }
   }
 
@@ -413,12 +475,21 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
     }
 
     const clienteActual = clientes.find((cliente) => cliente.id === clienteSeleccionado);
-    if (!clienteActual?.ubicacion) {
-      setError('El cliente seleccionado debe tener una ubicación confirmada antes de registrar el pedido.');
+    if (!clienteActual?.activo || !clienteActual.ubicacion) {
+      setError('El cliente seleccionado debe estar activo y tener ubicación confirmada.');
       return;
     }
 
-    const detalles = disponibilidad
+    const productosFormulario = pedidoEditando
+      ? disponibilidad.map((producto) => ({
+          ...producto,
+          cantidadDisponible:
+            producto.cantidadDisponible +
+            (pedidoEditando.detalles.find((detalle) => detalle.productoId === producto.productoId)?.cantidad ?? 0),
+        }))
+      : disponibilidad;
+
+    const detalles = productosFormulario
       .map((producto) => ({
         productoId: producto.productoId,
         cantidad: Number(cantidades[producto.productoId] ?? '0'),
@@ -431,34 +502,135 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
     }
 
     const invalido = detalles.find((detalle) => {
-      const producto = disponibilidad.find((p) => p.productoId === detalle.productoId);
+      const producto = productosFormulario.find((p) => p.productoId === detalle.productoId);
       return !producto || detalle.cantidad > producto.cantidadDisponible;
     });
     if (invalido) {
-      setError('Una de las cantidades supera la disponibilidad mostrada.');
+      setError('Una de las cantidades supera la disponibilidad permitida.');
       return;
     }
 
     setGuardandoPedido(true);
     setError('');
     try {
-      await crearPedido(token, {
-        clienteId: clienteSeleccionado,
-        observacion: observacion.trim() || undefined,
-        detalles,
-      });
+      if (pedidoEditando) {
+        await actualizarPedido(token, pedidoEditando.id, {
+          clienteId: clienteSeleccionado,
+          observacion: observacion.trim() || undefined,
+          detalles,
+        });
+        setPedidoEditando(null);
+        setPlanificacion(null);
+        setPedidosSeleccionados([]);
+        setSeccion('pedidos');
+        setAviso('Pedido corregido. La organización activa se reinició para usar los datos actualizados.');
+      } else {
+        await crearPedido(token, {
+          clienteId: clienteSeleccionado,
+          observacion: observacion.trim() || undefined,
+          detalles,
+        });
+        setAviso('Pedido registrado. El formulario quedó listo para el siguiente pedido.');
+      }
       setClienteSeleccionado('');
       setObservacion('');
       setCantidades({});
       await cargar(false);
-      setAviso('Pedido registrado. El formulario quedó limpio y la disponibilidad fue actualizada.');
-      requestAnimationFrame(() => {
-        scrollPrincipalRef.current?.scrollTo({ y: 0, animated: true });
-      });
+      requestAnimationFrame(() => scrollPrincipalRef.current?.scrollTo({ y: 0, animated: true }));
     } catch (e) {
       await manejarError(e);
     } finally {
       setGuardandoPedido(false);
+    }
+  }
+
+  async function iniciarEdicionPedido(pedido: PedidoResumen) {
+    if (pedido.estado !== 'REGISTRADO') {
+      setError('Solo se pueden corregir pedidos que todavía no fueron retirados.');
+      return;
+    }
+    setCargandoEdicionPedido(pedido.id);
+    setError('');
+    try {
+      const detalle = await obtenerPedido(token, pedido.id);
+      setPedidoEditando(detalle);
+      setClienteSeleccionado(detalle.cliente.id);
+      setObservacion(detalle.observacion ?? '');
+      setCantidades(
+        Object.fromEntries(detalle.detalles.map((item) => [item.productoId, String(item.cantidad)])),
+      );
+      setSeccion('nuevo');
+      setAviso('Modo edición activo: corrige el pedido antes de retirarlo.');
+      requestAnimationFrame(() => scrollPrincipalRef.current?.scrollTo({ y: 0, animated: true }));
+    } catch (e) {
+      await manejarError(e);
+    } finally {
+      setCargandoEdicionPedido(null);
+    }
+  }
+
+  function cancelarEdicionPedidoFormulario() {
+    setPedidoEditando(null);
+    setClienteSeleccionado('');
+    setObservacion('');
+    setCantidades({});
+    setAviso('Edición cancelada. El pedido no fue modificado.');
+  }
+
+  function confirmarAnulacionPedido(pedido: PedidoResumen) {
+    Alert.alert(
+      'Anular pedido',
+      `¿Anular el pedido de ${pedido.cliente.nombre}? Se conservará en el historial y se liberará su compromiso de stock.`,
+      [
+        { text: 'Volver', style: 'cancel' },
+        {
+          text: 'Anular pedido',
+          style: 'destructive',
+          onPress: () => void anularPedido(pedido.id),
+        },
+      ],
+    );
+  }
+
+  async function anularPedido(id: string) {
+    const claveAccion = `cancelar:${id}`;
+    if (accionesEnCursoRef.current.has(claveAccion)) return;
+    accionesEnCursoRef.current.add(claveAccion);
+    setAccionPedido(id);
+    setError('');
+    try {
+      await cancelarPedido(token, id, 'Registro incorrecto anulado antes del retiro');
+      setPedidosSeleccionados((actuales) => actuales.filter((pedidoId) => pedidoId !== id));
+      setPlanificacion(null);
+      await cargar(false);
+      setAviso('Pedido anulado. Se conserva en el historial y dejó de comprometer stock.');
+    } catch (e) {
+      await manejarError(e);
+    } finally {
+      accionesEnCursoRef.current.delete(claveAccion);
+      setAccionPedido(null);
+    }
+  }
+
+  async function abrirHistorialPedidos() {
+    setHistorialVisible(true);
+    setCargandoHistorial(true);
+    setError('');
+    try {
+      const [entregados, cancelados] = await Promise.all([
+        listarPedidos(token, 'ENTREGADO', 1, 100),
+        listarPedidos(token, 'CANCELADO', 1, 100),
+      ]);
+      setHistorialPedidos(
+        [...entregados.items, ...cancelados.items].sort(
+          (a, b) => new Date(b.creadoEn).getTime() - new Date(a.creadoEn).getTime(),
+        ),
+      );
+    } catch (e) {
+      setHistorialVisible(false);
+      await manejarError(e);
+    } finally {
+      setCargandoHistorial(false);
     }
   }
 
@@ -550,19 +722,13 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
     try {
       const servicios = await Location.hasServicesEnabledAsync();
       if (!servicios) {
-        Alert.alert(
-          'Ubicación desactivada',
-          'Activa la ubicación del teléfono y vuelve a intentar la entrega.',
-        );
+        setError('Activa la ubicación del teléfono y vuelve a intentar la entrega.');
         return;
       }
 
       const permiso = await Location.requestForegroundPermissionsAsync();
       if (permiso.status !== 'granted') {
-        Alert.alert(
-          'Permiso requerido',
-          'La entrega no se registró porque no se autorizó la ubicación puntual.',
-        );
+        setError('La entrega no se registró porque no se autorizó la ubicación puntual.');
         return;
       }
 
@@ -659,10 +825,9 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
       setMapaOperativo(null);
 
       const distancia = entrega.entregaGps?.distanciaDestinoMetros;
-      Alert.alert(
-        'Entrega registrada',
+      setAviso(
         distancia === null || distancia === undefined
-          ? 'La entrega y su ubicación puntual fueron registradas.'
+          ? 'Entrega registrada con su ubicación puntual.'
           : `Entrega registrada. Distancia al destino esperado: ${formatearDistancia(distancia)}.`,
       );
     } catch (e) {
@@ -926,6 +1091,18 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
     () => disponibilidad.filter((item) => item.cantidadDisponible > 0),
     [disponibilidad],
   );
+  const productosFormularioPedido = useMemo(() => {
+    if (!pedidoEditando) return productosConStock;
+    const originales = new Map(
+      pedidoEditando.detalles.map((detalle) => [detalle.productoId, detalle.cantidad]),
+    );
+    return disponibilidad
+      .map((item) => ({
+        ...item,
+        cantidadDisponible: item.cantidadDisponible + (originales.get(item.productoId) ?? 0),
+      }))
+      .filter((item) => item.cantidadDisponible > 0);
+  }, [disponibilidad, pedidoEditando, productosConStock]);
 
   if (cargando) {
     return (
@@ -966,21 +1143,14 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
         />
       </View>
 
-      {error ? (
-        <View style={styles.alerta}>
-          <Text style={styles.alertaTexto}>{error}</Text>
-          <Pressable onPress={() => setError('')}>
-            <Text style={styles.alertaCerrar}>Cerrar</Text>
-          </Pressable>
-        </View>
-      ) : null}
-
-      {aviso ? (
-        <View style={styles.aviso}>
-          <Text style={styles.avisoTexto}>{aviso}</Text>
-          <Pressable onPress={() => setAviso('')}>
-            <Text style={styles.avisoCerrar}>Cerrar</Text>
-          </Pressable>
+      {error || aviso ? (
+        <View pointerEvents="box-none" style={styles.toastZona}>
+          <View style={[styles.toast, error ? styles.toastError : styles.toastOk]}>
+            <Text style={error ? styles.toastErrorTexto : styles.toastOkTexto}>{error || aviso}</Text>
+            <Pressable onPress={() => (error ? setError('') : setAviso(''))}>
+              <Text style={error ? styles.toastErrorCerrar : styles.toastOkCerrar}>×</Text>
+            </Pressable>
+          </View>
         </View>
       ) : null}
 
@@ -1027,6 +1197,10 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
             onActualizarUbicacionPlan={() => void actualizarPlanDesdeUbicacionActual()}
             onAgregarPedidosAlPlan={(ids) => void agregarPedidosAlPlan(ids)}
             onCargarMas={() => void cargarMasPedidos()}
+            onAbrirHistorial={() => void abrirHistorialPedidos()}
+            onEditar={(pedido) => void iniciarEdicionPedido(pedido)}
+            onAnular={confirmarAnulacionPedido}
+            cargandoEdicionPedido={cargandoEdicionPedido}
           />
         ) : null}
 
@@ -1053,13 +1227,15 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
             onCancelarEdicion={cancelarEdicionCliente}
             onAbrirMapaEdicion={abrirMapaEdicionCliente}
             onGuardarEdicion={() => void guardarEdicionCliente()}
+            onCambiarEstado={confirmarCambioEstadoCliente}
+            cambiandoEstadoId={cambiandoEstadoCliente}
           />
         ) : null}
 
         {seccion === 'nuevo' ? (
           <NuevoPedido
             clientes={clientes}
-            productos={productosConStock}
+            productos={productosFormularioPedido}
             clienteSeleccionado={clienteSeleccionado}
             observacion={observacion}
             cantidades={cantidades}
@@ -1070,6 +1246,8 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
             onAbrirClientes={() => setSelectorClientePedidoVisible(true)}
             onAbrirProductos={() => setSelectorProductosPedidoVisible(true)}
             onGuardar={guardarPedido}
+            editando={Boolean(pedidoEditando)}
+            onCancelarEdicion={cancelarEdicionPedidoFormulario}
           />
         ) : null}
       </ScrollView>
@@ -1094,6 +1272,13 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
         onCambiarCantidad={(productoId, cantidad) =>
           setCantidades((actuales) => ({ ...actuales, [productoId]: cantidad }))
         }
+      />
+
+      <HistorialPedidosModal
+        visible={historialVisible}
+        pedidos={historialPedidos}
+        cargando={cargandoHistorial}
+        onCerrar={() => setHistorialVisible(false)}
       />
 
       {selectorUbicacionVisible ? (
@@ -1168,6 +1353,10 @@ function Pedidos({
   onActualizarUbicacionPlan,
   onAgregarPedidosAlPlan,
   onCargarMas,
+  onAbrirHistorial,
+  onEditar,
+  onAnular,
+  cargandoEdicionPedido,
 }: {
   pedidos: PedidoResumen[];
   totalPedidos: number;
@@ -1192,6 +1381,10 @@ function Pedidos({
   onActualizarUbicacionPlan: () => void;
   onAgregarPedidosAlPlan: (ids: string[]) => void;
   onCargarMas: () => void;
+  onAbrirHistorial: () => void;
+  onEditar: (pedido: PedidoResumen) => void;
+  onAnular: (pedido: PedidoResumen) => void;
+  cargandoEdicionPedido: string | null;
 }) {
   const [busqueda, setBusqueda] = useState('');
   const [filtroEstado, setFiltroEstado] = useState<'TODOS' | PedidoResumen['estado']>('TODOS');
@@ -1218,16 +1411,22 @@ function Pedidos({
     });
   }, [busqueda, filtroEstado, pedidosPeriodo]);
 
-  const pendientesPeriodo = pedidosPeriodo.filter((pedido) => pedido.estado !== 'ENTREGADO');
-  const entregadosPeriodo = pedidosPeriodo.filter((pedido) => pedido.estado === 'ENTREGADO');
+  const registradosPeriodo = pedidosPeriodo.filter((pedido) => pedido.estado === 'REGISTRADO');
+  const distribucionPeriodo = pedidosPeriodo.filter((pedido) => pedido.estado === 'EN_DISTRIBUCION');
   const planificablesVisibles = pedidosVisibles.filter(
-    (pedido) => pedido.estado !== 'ENTREGADO' && pedido.destinoGps !== null,
+    (pedido) =>
+      pedido.estado !== 'ENTREGADO' &&
+      pedido.estado !== 'CANCELADO' &&
+      pedido.destinoGps !== null,
   );
   const registradosVisibles = pedidosVisibles.filter(
     (pedido) => pedido.estado === 'REGISTRADO',
   );
   const sinGpsVisibles = pedidosVisibles.filter(
-    (pedido) => pedido.estado !== 'ENTREGADO' && pedido.destinoGps === null,
+    (pedido) =>
+      pedido.estado !== 'ENTREGADO' &&
+      pedido.estado !== 'CANCELADO' &&
+      pedido.destinoGps === null,
   );
 
   const idsVisibles = new Set(pedidosVisibles.map((pedido) => pedido.id));
@@ -1249,23 +1448,32 @@ function Pedidos({
   const idsPlan = new Set(planificacion?.paradas.map((parada) => parada.pedidoId) ?? []);
   const pedidosPlan = (planificacion?.paradas ?? [])
     .map((parada) => pedidoPorId.get(parada.pedidoId))
-    .filter((pedido): pedido is PedidoResumen => Boolean(pedido) && pedido!.estado !== 'ENTREGADO');
+    .filter((pedido): pedido is PedidoResumen => Boolean(pedido) && pedido!.estado !== 'ENTREGADO' && pedido!.estado !== 'CANCELADO');
   const otrosPedidos = pedidosVisibles.filter((pedido) => !idsPlan.has(pedido.id));
   const nuevosParaPlan = pedidosPeriodo.filter(
     (pedido) =>
       pedido.estado !== 'ENTREGADO' &&
+      pedido.estado !== 'CANCELADO' &&
       pedido.destinoGps !== null &&
       !idsPlan.has(pedido.id),
   );
 
   function tarjetaPedido(pedido: PedidoResumen, indicePlan?: number) {
     const enPlan = indicePlan !== undefined;
-    const seleccionable = pedido.estado !== 'ENTREGADO' && Boolean(pedido.destinoGps);
+    const seleccionable = pedido.estado !== 'ENTREGADO' && pedido.estado !== 'CANCELADO' && Boolean(pedido.destinoGps);
     const seleccionado = seleccionados.includes(pedido.id);
     const parada = enPlan ? planificacion?.paradas[indicePlan] : null;
 
     return (
-      <View key={pedido.id} style={[styles.tarjeta, enPlan && styles.tarjetaPlan]}>
+      <View
+        key={pedido.id}
+        style={[
+          styles.tarjeta,
+          pedido.estado === 'REGISTRADO' && styles.tarjetaPorRetirar,
+          pedido.estado === 'EN_DISTRIBUCION' && styles.tarjetaParaEntregar,
+          enPlan && styles.tarjetaPlan,
+        ]}
+      >
         <View style={styles.filaEntre}>
           <View style={styles.flex}>
             <View style={styles.filaTituloPedido}>
@@ -1280,6 +1488,21 @@ function Pedidos({
           </View>
           <Estado estado={pedido.estado} />
         </View>
+
+        <Text
+          style={[
+            styles.accionPendiente,
+            pedido.estado === 'REGISTRADO'
+              ? styles.accionPendienteRetiro
+              : styles.accionPendienteEntrega,
+          ]}
+        >
+          {pedido.estado === 'REGISTRADO'
+            ? 'PENDIENTE DE RETIRO'
+            : pedido.estado === 'EN_DISTRIBUCION'
+              ? 'LISTO PARA CONFIRMAR ENTREGA'
+              : estadoLegible(pedido.estado).toUpperCase()}
+        </Text>
 
         <Text style={styles.direccion}>{pedido.direccionEntrega}</Text>
 
@@ -1332,12 +1555,32 @@ function Pedidos({
         )}
 
         {pedido.estado === 'REGISTRADO' ? (
-          <BotonAccion
-            texto="Retirar para reparto"
-            textoCargando="Registrando retiro…"
-            cargando={accionPedido === pedido.id}
-            onPress={() => onRetirar(pedido)}
-          />
+          <>
+            <View style={styles.fila}>
+              <Pressable
+                disabled={cargandoEdicionPedido === pedido.id || accionPedido === pedido.id}
+                onPress={() => onEditar(pedido)}
+                style={[styles.botonAccionSecundario, styles.flex, cargandoEdicionPedido === pedido.id && styles.deshabilitado]}
+              >
+                <Text style={styles.botonAccionSecundarioTexto}>
+                  {cargandoEdicionPedido === pedido.id ? 'Cargando…' : 'Editar pedido'}
+                </Text>
+              </Pressable>
+              <Pressable
+                disabled={accionPedido === pedido.id}
+                onPress={() => onAnular(pedido)}
+                style={[styles.botonAccionSecundario, styles.flex]}
+              >
+                <Text style={styles.botonAnularTexto}>Anular</Text>
+              </Pressable>
+            </View>
+            <BotonAccion
+              texto="Retirar para reparto"
+              textoCargando="Registrando retiro…"
+              cargando={accionPedido === pedido.id}
+              onPress={() => onRetirar(pedido)}
+            />
+          </>
         ) : null}
 
         {pedido.estado === 'EN_DISTRIBUCION' ? (
@@ -1346,6 +1589,7 @@ function Pedidos({
             textoCargando="Obteniendo ubicación…"
             cargando={accionPedido === pedido.id}
             onPress={() => onEntregar(pedido)}
+            variante="entrega"
           />
         ) : null}
 
@@ -1358,22 +1602,29 @@ function Pedidos({
 
   return (
     <View style={styles.bloque}>
-      <Titulo
-        titulo="Pedidos"
-        descripcion="Organiza y gestiona las entregas del día."
-      />
+      <View style={styles.filaEntre}>
+        <View style={styles.flex}>
+          <Titulo
+            titulo="Pedidos"
+            descripcion="Aquí solo se muestran pedidos pendientes de retiro o entrega."
+          />
+        </View>
+        <Pressable onPress={onAbrirHistorial} style={styles.botonHistorial}>
+          <Text style={styles.botonHistorialTexto}>Historial</Text>
+        </Pressable>
+      </View>
 
       <View style={styles.tarjeta}>
         <View style={styles.resumenPedido}>
-          <Dato etiqueta={filtroPeriodo === 'HOY' ? 'Hoy' : 'Total'} valor={String(pedidosPeriodo.length)} />
-          <Dato etiqueta="Pendientes" valor={String(pendientesPeriodo.length)} />
-          <Dato etiqueta="Entregados" valor={String(entregadosPeriodo.length)} />
+          <Dato etiqueta={filtroPeriodo === 'HOY' ? 'Activos hoy' : 'Activos'} valor={String(pedidosPeriodo.length)} />
+          <Dato etiqueta="Por retirar" valor={String(registradosPeriodo.length)} />
+          <Dato etiqueta="Para entregar" valor={String(distribucionPeriodo.length)} />
         </View>
 
         <View style={styles.filtrosGrid}>
           {[
             ['HOY', 'Hoy'],
-            ['TODOS', 'Historial'],
+            ['TODOS', 'Todos activos'],
           ].map(([valor, texto]) => (
             <Pressable
               key={valor}
@@ -1401,10 +1652,9 @@ function Pedidos({
 
         <View style={styles.filtrosGrid}>
           {[
-            ['TODOS', 'Todos'],
-            ['REGISTRADO', 'Registrados'],
-            ['EN_DISTRIBUCION', 'En reparto'],
-            ['ENTREGADO', 'Entregados'],
+            ['TODOS', 'Todos activos'],
+            ['REGISTRADO', 'Por retirar'],
+            ['EN_DISTRIBUCION', 'Para entregar'],
           ].map(([valor, texto]) => (
             <Pressable
               key={valor}
@@ -1591,7 +1841,7 @@ function Pedidos({
 
       {!planificacion && !pedidosVisibles.length ? (
         <Vacio texto={filtroPeriodo === 'HOY'
-          ? 'No hay pedidos de hoy que coincidan con los filtros. Puedes cambiar a Todo el historial.'
+          ? 'No hay pedidos activos de hoy que coincidan con los filtros.'
           : 'No hay pedidos que coincidan con los filtros.'}
         />
       ) : null}
@@ -1647,6 +1897,8 @@ function Clientes({
   onCancelarEdicion,
   onAbrirMapaEdicion,
   onGuardarEdicion,
+  onCambiarEstado,
+  cambiandoEstadoId,
 }: {
   clientes: Cliente[];
   nombre: string;
@@ -1669,9 +1921,12 @@ function Clientes({
   onCancelarEdicion: () => void;
   onAbrirMapaEdicion: () => void;
   onGuardarEdicion: () => void;
+  onCambiarEstado: (cliente: Cliente) => void;
+  cambiandoEstadoId: string | null;
 }) {
   const [busqueda, setBusqueda] = useState('');
   const [filtroUbicacion, setFiltroUbicacion] = useState<'TODOS' | 'CON' | 'SIN'>('TODOS');
+  const [filtroEstadoCliente, setFiltroEstadoCliente] = useState<'TODOS' | 'ACTIVOS' | 'INACTIVOS'>('ACTIVOS');
   const [orden, setOrden] = useState<'AZ' | 'ZA'>('AZ');
   const [limite, setLimite] = useState(8);
 
@@ -1694,13 +1949,17 @@ function Clientes({
           filtroUbicacion === 'TODOS' ||
           (filtroUbicacion === 'CON' && Boolean(cliente.ubicacion)) ||
           (filtroUbicacion === 'SIN' && !cliente.ubicacion);
-        return coincide && coincideUbicacion;
+        const coincideEstado =
+          filtroEstadoCliente === 'TODOS' ||
+          (filtroEstadoCliente === 'ACTIVOS' && cliente.activo) ||
+          (filtroEstadoCliente === 'INACTIVOS' && !cliente.activo);
+        return coincide && coincideUbicacion && coincideEstado;
       })
       .sort((a, b) => {
         const comparacion = a.nombre.localeCompare(b.nombre, 'es');
         return orden === 'AZ' ? comparacion : -comparacion;
       });
-  }, [busqueda, clientes, filtroUbicacion, orden]);
+  }, [busqueda, clientes, filtroEstadoCliente, filtroUbicacion, orden]);
 
   const clientesMostrados = clientesFiltrados.slice(0, limite);
   const restantes = Math.max(0, clientesFiltrados.length - clientesMostrados.length);
@@ -1797,6 +2056,28 @@ function Clientes({
           style={styles.input}
         />
 
+        <Text style={styles.seccionTitulo}>Estado</Text>
+        <View style={styles.filtros}>
+          {[
+            ['ACTIVOS', 'Activos'],
+            ['INACTIVOS', 'De baja'],
+            ['TODOS', 'Todos'],
+          ].map(([valor, texto]) => (
+            <Pressable
+              key={valor}
+              onPress={() => {
+                setFiltroEstadoCliente(valor as 'TODOS' | 'ACTIVOS' | 'INACTIVOS');
+                setLimite(8);
+              }}
+              style={[styles.filtroChip, filtroEstadoCliente === valor && styles.filtroChipActivo]}
+            >
+              <Text style={[styles.filtroChipTexto, filtroEstadoCliente === valor && styles.filtroChipTextoActivo]}>
+                {texto}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+
         <Text style={styles.seccionTitulo}>Ubicación</Text>
         <View style={styles.filtros}>
           {[
@@ -1857,14 +2138,36 @@ function Clientes({
                   <Text style={styles.textoSecundario}>{cliente.telefono}</Text>
                 ) : null}
               </View>
-              <Text style={cliente.ubicacion ? styles.estadoMiniOk : styles.estadoMiniPendiente}>
-                {cliente.ubicacion ? 'GPS' : 'Sin GPS'}
-              </Text>
+              <View style={styles.clienteBadges}>
+                <Text style={cliente.activo ? styles.estadoMiniOk : styles.estadoMiniBaja}>
+                  {cliente.activo ? 'Activo' : 'De baja'}
+                </Text>
+                <Text style={cliente.ubicacion ? styles.estadoMiniOk : styles.estadoMiniPendiente}>
+                  {cliente.ubicacion ? 'GPS' : 'Sin GPS'}
+                </Text>
+              </View>
             </View>
             <Text style={styles.direccion}>{cliente.direccion}</Text>
-            <Pressable onPress={() => onEditar(cliente)} style={styles.botonMapaCompacto}>
-              <Text style={styles.botonMapaTexto}>Editar</Text>
-            </Pressable>
+            <View style={styles.fila}>
+              {cliente.activo ? (
+                <Pressable onPress={() => onEditar(cliente)} style={[styles.botonMapaCompacto, styles.flex]}>
+                  <Text style={styles.botonMapaTexto}>Editar</Text>
+                </Pressable>
+              ) : null}
+              <Pressable
+                disabled={cambiandoEstadoId === cliente.id}
+                onPress={() => onCambiarEstado(cliente)}
+                style={[styles.botonAccionSecundario, styles.flex, cambiandoEstadoId === cliente.id && styles.deshabilitado]}
+              >
+                <Text style={cliente.activo ? styles.botonAnularTexto : styles.botonReactivarTexto}>
+                  {cambiandoEstadoId === cliente.id
+                    ? 'Procesando…'
+                    : cliente.activo
+                      ? 'Dar de baja'
+                      : 'Reactivar'}
+                </Text>
+              </Pressable>
+            </View>
           </View>
         ))
       )}
@@ -1898,6 +2201,8 @@ function NuevoPedido({
   onAbrirClientes,
   onAbrirProductos,
   onGuardar,
+  editando,
+  onCancelarEdicion,
 }: {
   clientes: Cliente[];
   productos: Disponibilidad[];
@@ -1911,6 +2216,8 @@ function NuevoPedido({
   onAbrirClientes: () => void;
   onAbrirProductos: () => void;
   onGuardar: () => void;
+  editando: boolean;
+  onCancelarEdicion: () => void;
 }) {
   const clienteActual =
     clientes.find((cliente) => cliente.id === clienteSeleccionado) ?? null;
@@ -1939,10 +2246,23 @@ function NuevoPedido({
 
   return (
     <View style={styles.bloque}>
-      <Titulo
-        titulo="Nuevo pedido"
-        descripcion="Selecciona cliente y productos mediante búsqueda. Al registrar, este formulario queda listo para el siguiente pedido."
-      />
+      <View style={styles.filaEntre}>
+        <View style={styles.flex}>
+          <Titulo
+            titulo={editando ? 'Editar pedido' : 'Nuevo pedido'}
+            descripcion={
+              editando
+                ? 'Corrige el pedido antes de retirarlo. Después del retiro se protege el historial.'
+                : 'Selecciona cliente y productos mediante búsqueda. Al registrar, el formulario queda listo para el siguiente pedido.'
+            }
+          />
+        </View>
+        {editando ? (
+          <Pressable onPress={onCancelarEdicion} style={styles.botonMapaCompacto}>
+            <Text style={styles.botonMapaTexto}>Cancelar</Text>
+          </Pressable>
+        ) : null}
+      </View>
 
       <Text style={styles.seccionTitulo}>1. Cliente</Text>
       <View style={styles.tarjeta}>
@@ -2058,8 +2378,8 @@ function NuevoPedido({
       />
 
       <BotonAccion
-        texto="Registrar pedido"
-        textoCargando="Registrando y actualizando stock…"
+        texto={editando ? 'Guardar corrección' : 'Registrar pedido'}
+        textoCargando={editando ? 'Guardando corrección…' : 'Registrando y actualizando stock…'}
         cargando={guardando}
         onPress={onGuardar}
       />
@@ -2118,11 +2438,13 @@ function BotonAccion({
   textoCargando = 'Procesando…',
   cargando,
   onPress,
+  variante = 'normal',
 }: {
   texto: string;
   textoCargando?: string;
   cargando: boolean;
   onPress: () => void;
+  variante?: 'normal' | 'entrega';
 }) {
   return (
     <Pressable
@@ -2130,6 +2452,7 @@ function BotonAccion({
       onPress={onPress}
       style={({ pressed }) => [
         styles.boton,
+        variante === 'entrega' && styles.botonEntrega,
         pressed && !cargando && styles.botonPresionado,
         cargando && styles.deshabilitado,
       ]}
@@ -2155,6 +2478,7 @@ function Estado({ estado }: { estado: PedidoResumen['estado'] }) {
         estado === 'REGISTRADO' && styles.estadoRegistrado,
         estado === 'EN_DISTRIBUCION' && styles.estadoDistribucion,
         estado === 'ENTREGADO' && styles.estadoEntregado,
+        estado === 'CANCELADO' && styles.estadoCancelado,
       ]}
     >
       <Text style={styles.estadoTexto}>{estadoLegible(estado)}</Text>
@@ -2253,6 +2577,16 @@ const styles = StyleSheet.create({
   tarjetaPlan: {
     borderColor: '#d9a28f',
     backgroundColor: '#fffaf7',
+  },
+  tarjetaPorRetirar: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#c98a18',
+    backgroundColor: '#fffdf7',
+  },
+  tarjetaParaEntregar: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#2d7a55',
+    backgroundColor: '#f8fcfa',
   },
   tarjetaPlanControl: {
     backgroundColor: '#fff',
@@ -2364,6 +2698,7 @@ const styles = StyleSheet.create({
   estadoRegistrado: { backgroundColor: '#fff5d9' },
   estadoDistribucion: { backgroundColor: '#edf4fa' },
   estadoEntregado: { backgroundColor: '#eaf4ed' },
+  estadoCancelado: { backgroundColor: '#f1efed' },
   estadoTexto: { color: '#50504a', fontSize: 10, fontWeight: '800' },
   boton: {
     minHeight: 46,
@@ -2374,6 +2709,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
   },
   botonPresionado: { backgroundColor: '#963011' },
+  botonEntrega: { backgroundColor: '#2d7a55' },
   botonTexto: { color: '#fff', fontWeight: '800', fontSize: 14 },
   botonCargandoFila: {
     flexDirection: 'row',
@@ -2582,30 +2918,33 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 16,
   },
-  alerta: {
-    backgroundColor: '#fcefeb',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e7c1bb',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+  toastZona: {
+    position: 'absolute',
+    top: 112,
+    left: 12,
+    right: 12,
+    zIndex: 50,
+    elevation: 12,
+  },
+  toast: {
+    borderRadius: 9,
+    paddingHorizontal: 13,
+    paddingVertical: 11,
     flexDirection: 'row',
     gap: 10,
     alignItems: 'center',
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOpacity: 0.13,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
   },
-  alertaTexto: { color: '#a1322c', fontSize: 12, flex: 1, lineHeight: 18 },
-  alertaCerrar: { color: '#a1322c', fontSize: 12, fontWeight: '800' },
-  aviso: {
-    backgroundColor: '#eaf4ed',
-    borderBottomWidth: 1,
-    borderBottomColor: '#c9dfd0',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    flexDirection: 'row',
-    gap: 10,
-    alignItems: 'center',
-  },
-  avisoTexto: { color: '#286344', fontSize: 12, flex: 1, lineHeight: 18 },
-  avisoCerrar: { color: '#286344', fontSize: 12, fontWeight: '800' },
+  toastError: { backgroundColor: '#fff4f1', borderColor: '#e1aaa0' },
+  toastOk: { backgroundColor: '#eef8f1', borderColor: '#acd0b8' },
+  toastErrorTexto: { color: '#9b3215', fontSize: 12, flex: 1, lineHeight: 17, fontWeight: '700' },
+  toastOkTexto: { color: '#286344', fontSize: 12, flex: 1, lineHeight: 17, fontWeight: '700' },
+  toastErrorCerrar: { color: '#9b3215', fontSize: 20, fontWeight: '900' },
+  toastOkCerrar: { color: '#286344', fontSize: 20, fontWeight: '900' },
   accionesPedido: { gap: 8 },
   botonMapa: {
     minHeight: 44,
@@ -2647,6 +2986,40 @@ const styles = StyleSheet.create({
   botonAccionSecundarioTexto: {
     color: '#50504a',
     fontSize: 11,
+    fontWeight: '800',
+  },
+  botonAnularTexto: { color: '#a1322c', fontSize: 11, fontWeight: '800' },
+  botonReactivarTexto: { color: '#286344', fontSize: 11, fontWeight: '800' },
+  accionPendiente: {
+    alignSelf: 'flex-start',
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 0.6,
+    borderRadius: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+  },
+  accionPendienteRetiro: { color: '#8a5a08', backgroundColor: '#fff4cf' },
+  accionPendienteEntrega: { color: '#286344', backgroundColor: '#eaf4ed' },
+  botonHistorial: {
+    minHeight: 38,
+    borderRadius: 7,
+    borderWidth: 1,
+    borderColor: '#c6c5bd',
+    backgroundColor: '#fff',
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  botonHistorialTexto: { color: '#50504a', fontSize: 12, fontWeight: '800' },
+  clienteBadges: { alignItems: 'flex-end', gap: 5 },
+  estadoMiniBaja: {
+    color: '#6f625d',
+    backgroundColor: '#f1efed',
+    borderRadius: 99,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    fontSize: 10,
     fontWeight: '800',
   },
   enlaceBoton: {
