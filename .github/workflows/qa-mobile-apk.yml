@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       CI: 1
-      EXPO_PUBLIC_API_BASE_URL: https://zav-api-2026.onrender.com
+      EXPO_PUBLIC_API_BASE_URL: https://zav-api-e3-dev.onrender.com
       EXPO_PUBLIC_MAP_STYLE_URL: https://tiles.openfreemap.org/styles/liberty
       ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
       ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
