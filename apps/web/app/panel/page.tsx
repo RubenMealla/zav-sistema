@@ -51,7 +51,7 @@ type Pagina<T> = { items: T[]; total: number };
 type Perfil = { nombre: string; identificador: string; rol: string };
 type PedidoAuditoria = {
   id: string;
-  estado: 'REGISTRADO' | 'EN_DISTRIBUCION' | 'ENTREGADO';
+  estado: 'REGISTRADO' | 'EN_DISTRIBUCION' | 'ENTREGADO' | 'CANCELADO';
   direccionEntrega: string;
   creadoEn: string;
   retiradoEn: string | null;

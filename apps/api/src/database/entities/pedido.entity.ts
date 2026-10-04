@@ -9,14 +9,14 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 
-export type EstadoPedido = 'REGISTRADO' | 'EN_DISTRIBUCION' | 'ENTREGADO';
+export type EstadoPedido = 'REGISTRADO' | 'EN_DISTRIBUCION' | 'ENTREGADO' | 'CANCELADO';
 
 @Entity({ name: 'pedido' })
 @Index('idx_pedido_cliente_id', ['clienteId'])
 @Index('idx_pedido_vendedor_estado', ['vendedorId', 'estado'])
 @Unique('uq_pedido_retiro_operacion', ['retiroOperacionClave'])
 @Unique('uq_pedido_entrega_operacion', ['entregaOperacionClave'])
-@Check('chk_pedido_estado', '"estado" IN (\'REGISTRADO\', \'EN_DISTRIBUCION\', \'ENTREGADO\')')
+@Check('chk_pedido_estado', '"estado" IN (\'REGISTRADO\', \'EN_DISTRIBUCION\', \'ENTREGADO\', \'CANCELADO\')')
 @Check('chk_pedido_direccion', 'length(trim("direccion_entrega")) > 0')
 @Check('chk_pedido_latitud', '"entrega_latitud" IS NULL OR ("entrega_latitud" >= -90 AND "entrega_latitud" <= 90)')
 @Check('chk_pedido_longitud', '"entrega_longitud" IS NULL OR ("entrega_longitud" >= -180 AND "entrega_longitud" <= 180)')
@@ -71,6 +71,12 @@ export class PedidoEntity {
 
   @Column({ name: 'entrega_observacion', type: 'varchar', length: 300, nullable: true })
   entregaObservacion!: string | null;
+
+  @Column({ name: 'cancelado_en', type: 'timestamptz', nullable: true })
+  canceladoEn!: Date | null;
+
+  @Column({ name: 'cancelacion_motivo', type: 'varchar', length: 300, nullable: true })
+  cancelacionMotivo!: string | null;
 
   @CreateDateColumn({ name: 'creado_en', type: 'timestamptz' })
   creadoEn!: Date;

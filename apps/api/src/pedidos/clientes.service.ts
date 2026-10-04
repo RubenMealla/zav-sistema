@@ -5,6 +5,7 @@ import { consultaTexto, objeto, paginacion, texto, uuid } from '../inventario/va
 const CAMPOS_CLIENTE = ['nombre', 'telefono', 'direccion', 'latitud', 'longitud'] as const;
 const CAMPOS_UBICACION = ['direccion', 'latitud', 'longitud'] as const;
 const CAMPOS_EDICION = ['nombre', 'telefono', 'direccion', 'latitud', 'longitud'] as const;
+const CAMPOS_ESTADO = ['activo'] as const;
 
 function telefonoOpcional(valor: unknown): string | null {
   if (valor === undefined || valor === null || valor === '') return null;
@@ -115,10 +116,18 @@ export class ClientesService {
   }
 
   async listar(consulta: Record<string, unknown>) {
-    const { page, limit } = paginacion(consulta, ['q', 'page', 'limit']);
+    const { page, limit } = paginacion(consulta, ['q', 'activo', 'page', 'limit']);
     const q = consultaTexto(consulta.q, 'q', 100);
     const parametros: unknown[] = [];
-    const condiciones = ['activo = TRUE'];
+    const condiciones: string[] = [];
+
+    if (consulta.activo === undefined || consulta.activo === 'true') {
+      condiciones.push('activo = TRUE');
+    } else if (consulta.activo === 'false') {
+      condiciones.push('activo = FALSE');
+    } else if (consulta.activo !== 'todos') {
+      throw new BadRequestException('activo debe ser true, false o todos.');
+    }
 
     if (q) {
       parametros.push(`%${q}%`);
@@ -129,7 +138,7 @@ export class ClientesService {
     const limitePos = parametros.length - 1;
     const offsetPos = parametros.length;
 
-    const where = condiciones.join(' AND ');
+    const where = condiciones.length ? condiciones.join(' AND ') : 'TRUE';
     const [items, total] = await Promise.all([
       this.db.query(
         `SELECT id, nombre, telefono, direccion, latitud, longitud,
@@ -154,16 +163,36 @@ export class ClientesService {
     };
   }
 
+  async cambiarEstado(idEntrada: string, entrada: unknown) {
+    const id = uuid(idEntrada, 'id');
+    const datos = objeto(entrada, CAMPOS_ESTADO);
+    if (typeof datos.activo !== 'boolean') {
+      throw new BadRequestException('activo debe ser booleano.');
+    }
+
+    const filas = await this.db.query(
+      `UPDATE cliente
+       SET activo = $2,
+           actualizado_en = now()
+       WHERE id = $1::uuid
+       RETURNING id`,
+      [id, datos.activo],
+    ) as Array<{ id: string }>;
+
+    if (!filas.length) throw new NotFoundException('Cliente no encontrado.');
+    return this.obtener(id);
+  }
+
   async obtener(idEntrada: string) {
     const id = uuid(idEntrada, 'id');
     const filas = await this.db.query(
       `SELECT id, nombre, telefono, direccion, latitud, longitud,
               ubicacion_confirmada_en, activo, creado_en, actualizado_en
-       FROM cliente WHERE id = $1::uuid AND activo = TRUE`,
+       FROM cliente WHERE id = $1::uuid`,
       [id],
     ) as Array<Record<string, unknown>>;
 
-    if (!filas.length) throw new NotFoundException('Cliente activo no encontrado.');
+    if (!filas.length) throw new NotFoundException('Cliente no encontrado.');
     return this.respuesta(filas[0]);
   }
 

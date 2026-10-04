@@ -551,6 +551,94 @@ describe('Pedidos y distribucion E3 (e2e)', () => {
     expect(distribucion).toBeUndefined();
   });
 
+
+  it('gestiona baja lógica de Cliente sin perder historial ni permitir nuevos pedidos', async () => {
+    const clienteId = await crearCliente(`BAJA-${randomUUID().slice(0, 8)}`);
+
+    const baja = await request(app.getHttpServer())
+      .patch(`/api/v1/clientes/${clienteId}/estado`)
+      .set('Authorization', `Bearer ${tokenVendedor}`)
+      .send({ activo: false })
+      .expect(200);
+
+    expect(baja.body.activo).toBe(false);
+
+    const todos = await request(app.getHttpServer())
+      .get('/api/v1/clientes?activo=todos&limit=100')
+      .set('Authorization', `Bearer ${tokenVendedor}`)
+      .expect(200);
+
+    expect(todos.body.items.find((item: { id: string }) => item.id === clienteId)?.activo).toBe(false);
+
+    const pedidoRechazado = await crearPedido(clienteId, productoPrincipalId, 1);
+    expect(pedidoRechazado.status).toBe(404);
+
+    const alta = await request(app.getHttpServer())
+      .patch(`/api/v1/clientes/${clienteId}/estado`)
+      .set('Authorization', `Bearer ${tokenVendedor}`)
+      .send({ activo: true })
+      .expect(200);
+
+    expect(alta.body.activo).toBe(true);
+  });
+
+  it('edita y anula Pedidos solo antes del retiro, liberando el compromiso de stock', async () => {
+    const producto = await prepararProducto(`QA-PED-CORR-${randomUUID().slice(0, 6)}`, 5);
+    const clienteId = await crearCliente(`CORR-${randomUUID().slice(0, 8)}`);
+    const creado = await crearPedido(clienteId, producto.productoId, 4);
+    expect(creado.status).toBe(201);
+
+    const editado = await request(app.getHttpServer())
+      .patch(`/api/v1/pedidos/${creado.body.id}`)
+      .set('Authorization', `Bearer ${tokenVendedor}`)
+      .send({
+        clienteId,
+        observacion: 'Pedido corregido antes del retiro',
+        detalles: [{ productoId: producto.productoId, cantidad: 2 }],
+      })
+      .expect(200);
+
+    expect(editado.body.estado).toBe('REGISTRADO');
+    expect(editado.body.detalles[0].cantidad).toBe(2);
+    expect(editado.body.observacion).toBe('Pedido corregido antes del retiro');
+
+    const antesAnular = await request(app.getHttpServer())
+      .get('/api/v1/pedidos/disponibilidad')
+      .set('Authorization', `Bearer ${tokenVendedor}`)
+      .expect(200);
+    const comprometido = antesAnular.body.items.find(
+      (item: { productoId: string }) => item.productoId === producto.productoId,
+    );
+    expect(comprometido.cantidadComprometida).toBe(2);
+
+    const cancelado = await request(app.getHttpServer())
+      .post(`/api/v1/pedidos/${creado.body.id}/cancelacion`)
+      .set('Authorization', `Bearer ${tokenVendedor}`)
+      .send({ motivo: 'Registro incorrecto detectado antes del retiro' })
+      .expect(201);
+
+    expect(cancelado.body.estado).toBe('CANCELADO');
+    expect(cancelado.body.canceladoEn).toBeTruthy();
+
+    const despuesAnular = await request(app.getHttpServer())
+      .get('/api/v1/pedidos/disponibilidad')
+      .set('Authorization', `Bearer ${tokenVendedor}`)
+      .expect(200);
+    const liberado = despuesAnular.body.items.find(
+      (item: { productoId: string }) => item.productoId === producto.productoId,
+    );
+    expect(liberado.cantidadComprometida).toBe(0);
+
+    await request(app.getHttpServer())
+      .patch(`/api/v1/pedidos/${creado.body.id}`)
+      .set('Authorization', `Bearer ${tokenVendedor}`)
+      .send({
+        clienteId,
+        detalles: [{ productoId: producto.productoId, cantidad: 1 }],
+      })
+      .expect(409);
+  });
+
   it('permite al Administrador auditar el pedido y el Vendedor responsable', async () => {
     const auditoria = await prepararProducto(`QA-AUD-${randomUUID().slice(0, 8)}`, 2);
     const clienteId = await crearCliente(`AUD-${randomUUID().slice(0, 8)}`);

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import type { SolicitudAutenticada } from '../auth/jwt-auth.guard.js';
 import { Roles } from '../auth/roles.decorator.js';
@@ -24,6 +24,24 @@ export class PedidosController {
   @Get()
   listar(@Req() solicitud: SolicitudAutenticada, @Query() consulta: Record<string, unknown>) {
     return this.pedidos.listar(solicitud.usuario!.id, consulta);
+  }
+
+  @Patch(':id')
+  actualizar(
+    @Param('id') id: string,
+    @Body() datos: unknown,
+    @Req() solicitud: SolicitudAutenticada,
+  ) {
+    return this.pedidos.actualizar(id, datos, solicitud.usuario!.id);
+  }
+
+  @Post(':id/cancelacion')
+  cancelar(
+    @Param('id') id: string,
+    @Body() datos: unknown,
+    @Req() solicitud: SolicitudAutenticada,
+  ) {
+    return this.pedidos.cancelar(id, datos, solicitud.usuario!.id);
   }
 
   @Post('retiros')

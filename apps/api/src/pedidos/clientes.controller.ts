@@ -30,6 +30,11 @@ export class ClientesController {
     return this.clientes.actualizarUbicacion(id, datos);
   }
 
+  @Patch(':id/estado')
+  cambiarEstado(@Param('id') id: string, @Body() datos: unknown) {
+    return this.clientes.cambiarEstado(id, datos);
+  }
+
   @Get(':id')
   obtener(@Param('id') id: string) {
     return this.clientes.obtener(id);

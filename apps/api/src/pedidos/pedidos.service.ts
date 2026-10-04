@@ -15,8 +15,9 @@ const CAMPOS_RETIRO = ['operacionClave'] as const;
 const CAMPOS_RETIROS = ['retiros'] as const;
 const CAMPOS_RETIRO_ITEM = ['pedidoId', 'operacionClave'] as const;
 const CAMPOS_ENTREGA = ['operacionClave', 'latitud', 'longitud', 'precisionMetros', 'observacionDistancia'] as const;
+const CAMPOS_CANCELACION = ['motivo'] as const;
 
-type EstadoPedido = 'REGISTRADO' | 'EN_DISTRIBUCION' | 'ENTREGADO';
+type EstadoPedido = 'REGISTRADO' | 'EN_DISTRIBUCION' | 'ENTREGADO' | 'CANCELADO';
 
 type DetalleEntrada = {
   productoId: string;
@@ -41,6 +42,8 @@ type FilaPedido = {
   entrega_precision_m: string | null;
   entrega_distancia_destino_m: string | null;
   entrega_observacion: string | null;
+  cancelado_en: Date | null;
+  cancelacion_motivo: string | null;
   creado_en: Date;
   actualizado_en: Date;
   cliente_nombre: string;
@@ -248,22 +251,24 @@ export class PedidosService {
 
   async listar(vendedorId: string, consulta: Record<string, unknown>) {
     const { page, limit } = paginacion(consulta, ['estado', 'page', 'limit']);
-    let estado: EstadoPedido | undefined;
+    let estado: EstadoPedido | 'ACTIVOS' | undefined;
     if (consulta.estado !== undefined) {
       if (
         typeof consulta.estado !== 'string' ||
-        !['REGISTRADO', 'EN_DISTRIBUCION', 'ENTREGADO'].includes(consulta.estado)
+        !['REGISTRADO', 'EN_DISTRIBUCION', 'ENTREGADO', 'CANCELADO', 'ACTIVOS'].includes(consulta.estado)
       ) {
         throw new BadRequestException('estado de pedido no valido.');
       }
-      estado = consulta.estado as EstadoPedido;
+      estado = consulta.estado as EstadoPedido | 'ACTIVOS';
     }
 
     const parametros: unknown[] = [vendedorId];
     let filtro = '';
-    if (estado) {
+    if (estado === 'ACTIVOS') {
+      filtro = `AND pe.estado IN ('REGISTRADO', 'EN_DISTRIBUCION')`;
+    } else if (estado) {
       parametros.push(estado);
-      filtro = `AND pe.estado = $${parametros.length}`;
+      filtro = `AND pe.estado = ${parametros.length}`;
     }
     parametros.push(limit, (page - 1) * limit);
     const limitePos = parametros.length - 1;
@@ -285,11 +290,18 @@ export class PedidosService {
       parametros,
     ) as Array<Record<string, unknown>>;
 
-    const totalParametros = estado ? [vendedorId, estado] : [vendedorId];
+    const totalParametros =
+      estado && estado !== 'ACTIVOS' ? [vendedorId, estado] : [vendedorId];
+    const totalFiltro =
+      estado === 'ACTIVOS'
+        ? "AND estado IN ('REGISTRADO', 'EN_DISTRIBUCION')"
+        : estado
+          ? 'AND estado = $2'
+          : '';
     const total = await this.db.query(
       `SELECT count(*)::int AS total
        FROM pedido
-       WHERE vendedor_id = $1::uuid ${estado ? 'AND estado = $2' : ''}`,
+       WHERE vendedor_id = $1::uuid ${totalFiltro}`,
       totalParametros,
     ) as Array<{ total: number }>;
 
@@ -326,7 +338,7 @@ export class PedidosService {
     if (consulta.estado !== undefined) {
       if (
         typeof consulta.estado !== 'string' ||
-        !['REGISTRADO', 'EN_DISTRIBUCION', 'ENTREGADO'].includes(consulta.estado)
+        !['REGISTRADO', 'EN_DISTRIBUCION', 'ENTREGADO', 'CANCELADO'].includes(consulta.estado)
       ) {
         throw new BadRequestException('estado de pedido no valido.');
       }
@@ -439,6 +451,8 @@ export class PedidosService {
       creadoEn: pedido.creado_en,
       retiradoEn: pedido.retirado_en,
       entregadoEn: pedido.entregado_en,
+      canceladoEn: pedido.cancelado_en,
+      cancelacionMotivo: pedido.cancelacion_motivo,
       entregaGps: pedido.entrega_latitud === null ? null : {
         latitud: Number(pedido.entrega_latitud),
         longitud: Number(pedido.entrega_longitud),
@@ -470,6 +484,155 @@ export class PedidosService {
       })),
       totalBob: total.toFixed(2),
     };
+  }
+
+  async actualizar(idEntrada: string, entrada: unknown, vendedorId: string) {
+    const id = uuid(idEntrada, 'id');
+    const datos = objeto(entrada, CAMPOS_PEDIDO);
+    const clienteId = uuid(datos.clienteId, 'clienteId');
+    const detalles = this.detallesEntrada(datos.detalles);
+    const observacion = opcional(datos.observacion, 'observacion', 300);
+
+    await this.db.transaction(async (manager) => {
+      const pedidos = await manager.query(
+        `SELECT id, vendedor_id, estado
+         FROM pedido
+         WHERE id = $1::uuid
+         FOR UPDATE`,
+        [id],
+      ) as Array<{ id: string; vendedor_id: string; estado: EstadoPedido }>;
+
+      if (!pedidos.length || pedidos[0].vendedor_id !== vendedorId) {
+        throw new NotFoundException('Pedido no encontrado.');
+      }
+      if (pedidos[0].estado !== 'REGISTRADO') {
+        throw new ConflictException(
+          'Solo se puede editar un pedido antes de retirarlo para reparto.',
+        );
+      }
+
+      const clientes = await manager.query(
+        'SELECT id, direccion, latitud, longitud FROM cliente WHERE id = $1::uuid AND activo = TRUE',
+        [clienteId],
+      ) as Array<{ id: string; direccion: string; latitud: string | null; longitud: string | null }>;
+      if (!clientes.length) throw new NotFoundException('Cliente activo no encontrado.');
+
+      const direccionEntrega =
+        datos.direccionEntrega === undefined ||
+        datos.direccionEntrega === null ||
+        datos.direccionEntrega === ''
+          ? clientes[0].direccion
+          : texto(datos.direccionEntrega, 'direccionEntrega', 240);
+
+      const anteriores = await manager.query(
+        `SELECT producto_id, cantidad, precio_unitario_bob
+         FROM detalle_pedido
+         WHERE pedido_id = $1::uuid`,
+        [id],
+      ) as Array<{ producto_id: string; cantidad: number; precio_unitario_bob: string }>;
+
+      const idsProductos = [
+        ...new Set([
+          ...anteriores.map((detalle) => detalle.producto_id),
+          ...detalles.map((detalle) => detalle.productoId),
+        ]),
+      ];
+      await this.bloquearProductos(manager, idsProductos);
+
+      const disponibilidad = await this.disponibilidadIds(manager, idsProductos);
+      const porProducto = new Map(disponibilidad.map((producto) => [producto.id, producto]));
+      const anteriorPorProducto = new Map(
+        anteriores.map((detalle) => [detalle.producto_id, detalle]),
+      );
+
+      for (const detalle of detalles) {
+        const producto = porProducto.get(detalle.productoId);
+        if (!producto) {
+          throw new NotFoundException('Uno o mas productos activos no existen.');
+        }
+        const cantidadAnterior = anteriorPorProducto.get(detalle.productoId)?.cantidad ?? 0;
+        const capacidad = producto.disponible + cantidadAnterior;
+        if (detalle.cantidad > capacidad) {
+          throw new ConflictException(
+            `Stock disponible insuficiente para ${producto.nombre}. Disponible para esta edición: ${capacidad}.`,
+          );
+        }
+      }
+
+      await manager.query(
+        `UPDATE pedido
+         SET cliente_id = $2::uuid,
+             direccion_entrega = $3,
+             observacion = $4,
+             destino_latitud = $5,
+             destino_longitud = $6,
+             actualizado_en = now()
+         WHERE id = $1::uuid`,
+        [
+          id,
+          clienteId,
+          direccionEntrega,
+          observacion,
+          clientes[0].latitud,
+          clientes[0].longitud,
+        ],
+      );
+
+      await manager.query('DELETE FROM detalle_pedido WHERE pedido_id = $1::uuid', [id]);
+
+      for (const detalle of detalles) {
+        const producto = porProducto.get(detalle.productoId)!;
+        const precio =
+          anteriorPorProducto.get(detalle.productoId)?.precio_unitario_bob ??
+          producto.precio_bob;
+        await manager.query(
+          `INSERT INTO detalle_pedido
+             (pedido_id, producto_id, cantidad, precio_unitario_bob)
+           VALUES ($1::uuid, $2::uuid, $3, $4)`,
+          [id, detalle.productoId, detalle.cantidad, precio],
+        );
+      }
+    });
+
+    return this.obtener(id, vendedorId);
+  }
+
+  async cancelar(idEntrada: string, entrada: unknown, vendedorId: string) {
+    const id = uuid(idEntrada, 'id');
+    const datos = objeto(entrada, CAMPOS_CANCELACION);
+    const motivo = opcional(datos.motivo, 'motivo', 300) ?? 'Anulado por el Vendedor antes del retiro';
+
+    await this.db.transaction(async (manager) => {
+      const pedidos = await manager.query(
+        `SELECT id, vendedor_id, estado
+         FROM pedido
+         WHERE id = $1::uuid
+         FOR UPDATE`,
+        [id],
+      ) as Array<{ id: string; vendedor_id: string; estado: EstadoPedido }>;
+
+      if (!pedidos.length || pedidos[0].vendedor_id !== vendedorId) {
+        throw new NotFoundException('Pedido no encontrado.');
+      }
+      if (pedidos[0].estado === 'CANCELADO') return;
+      if (pedidos[0].estado !== 'REGISTRADO') {
+        throw new ConflictException(
+          'Solo se puede anular un pedido antes de retirarlo para reparto.',
+        );
+      }
+
+      await manager.query(
+        `UPDATE pedido
+         SET estado = 'CANCELADO',
+             cancelado_en = now(),
+             cancelacion_motivo = $2,
+             actualizado_en = now()
+         WHERE id = $1::uuid`,
+        [id, motivo],
+      );
+    });
+
+    return this.obtener(id, vendedorId);
   }
 
   async retirarVarios(entrada: unknown, vendedorId: string) {
