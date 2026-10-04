@@ -38,7 +38,7 @@ import type {
 import { uuidV4 } from '@/lib/uuid';
 import { MapaReparto, SelectorUbicacionMapa } from '@/components/mapas-distribucion';
 
-type Seccion = 'pedidos' | 'nuevo' | 'clientes' | 'reparto';
+type Seccion = 'pedidos' | 'nuevo' | 'clientes';
 
 type Props = {
   sesion: Sesion;
@@ -660,11 +660,6 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
           texto="Clientes"
           onPress={() => setSeccion('clientes')}
         />
-        <Tab
-          activo={seccion === 'reparto'}
-          texto="Reparto"
-          onPress={() => setSeccion('reparto')}
-        />
       </View>
 
       {error ? (
@@ -684,13 +679,27 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
         }
       >
         {seccion === 'pedidos' ? (
-          <Pedidos
-            pedidos={pedidos}
-            accionPedido={accionPedido}
-            onRetirar={retirar}
-            onEntregar={entregar}
-            onNavegar={(pedido) => void abrirNavegacion(pedido)}
-          />
+          <>
+            <Pedidos
+              pedidos={pedidos}
+              accionPedido={accionPedido}
+              onRetirar={retirar}
+              onEntregar={entregar}
+              onNavegar={(pedido) => void abrirNavegacion(pedido)}
+            />
+            <Reparto
+              pedidos={pedidos}
+              seleccionados={pedidosSeleccionados}
+              planificacion={planificacion}
+              planificando={planificando}
+              retirando={retirandoSeleccionados}
+              onAlternar={alternarPedidoPlanificacion}
+              onPlanificarDespacho={() => void generarPlanificacion('DESPACHO')}
+              onPlanificarActual={() => void generarPlanificacion('ACTUAL')}
+              onRetirarSeleccionados={confirmarRetiroSeleccionados}
+              onMover={moverParada}
+            />
+          </>
         ) : null}
 
         {seccion === 'clientes' ? (
@@ -707,21 +716,6 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
             onAbrirMapa={abrirMapaNuevoCliente}
             onEditarUbicacion={abrirMapaClienteExistente}
             onGuardar={guardarCliente}
-          />
-        ) : null}
-
-        {seccion === 'reparto' ? (
-          <Reparto
-            pedidos={pedidos}
-            seleccionados={pedidosSeleccionados}
-            planificacion={planificacion}
-            planificando={planificando}
-            retirando={retirandoSeleccionados}
-            onAlternar={alternarPedidoPlanificacion}
-            onPlanificarDespacho={() => void generarPlanificacion('DESPACHO')}
-            onPlanificarActual={() => void generarPlanificacion('ACTUAL')}
-            onRetirarSeleccionados={confirmarRetiroSeleccionados}
-            onMover={moverParada}
           />
         ) : null}
 
@@ -985,11 +979,16 @@ function Reparto({
       pedido.destinoGps !== null,
   );
 
+  // Con un solo pedido no hace falta un planificador separado: las acciones
+  // de retiro, navegación y entrega permanecen directamente en su tarjeta.
+  if (disponibles.length < 2) return null;
+
   return (
     <View style={styles.bloque}>
+      <View style={styles.separadorReparto} />
       <Titulo
-        titulo="Planificar reparto"
-        descripcion="Selecciona pedidos con ubicación confirmada. El sistema propone una secuencia por proximidad; puedes reordenarla."
+        titulo="Organizar reparto"
+        descripcion="Cuando tienes dos o más pedidos con ubicación confirmada, puedes sugerir un orden de visita y ajustarlo manualmente."
       />
 
       {!disponibles.length ? (
@@ -1338,8 +1337,14 @@ const styles = StyleSheet.create({
   tabActivo: { borderBottomColor: '#b83b17' },
   tabTexto: { color: '#717169', fontSize: 12, fontWeight: '700' },
   tabTextoActivo: { color: '#b83b17' },
-  contenido: { padding: 16, paddingBottom: 40 },
+  contenido: { padding: 16, paddingBottom: 72 },
   bloque: { gap: 12 },
+  separadorReparto: {
+    height: 1,
+    backgroundColor: '#ddddd5',
+    marginTop: 12,
+    marginBottom: 4,
+  },
   tituloBloque: { gap: 5, marginBottom: 2 },
   titulo: { color: '#20201e', fontSize: 24, fontWeight: '800' },
   descripcion: { color: '#66665e', lineHeight: 20, fontSize: 13 },
