@@ -1971,10 +1971,12 @@ function Campo({
 
 function BotonAccion({
   texto,
+  textoCargando = 'Procesando…',
   cargando,
   onPress,
 }: {
   texto: string;
+  textoCargando?: string;
   cargando: boolean;
   onPress: () => void;
 }) {
@@ -1984,18 +1986,22 @@ function BotonAccion({
       onPress={onPress}
       style={({ pressed }) => [
         styles.boton,
-        pressed && styles.botonPresionado,
+        pressed && !cargando && styles.botonPresionado,
         cargando && styles.deshabilitado,
       ]}
     >
       {cargando ? (
-        <ActivityIndicator color="#fff" />
+        <View style={styles.botonCargandoFila}>
+          <ActivityIndicator color="#fff" size="small" />
+          <Text style={styles.botonTexto}>{textoCargando}</Text>
+        </View>
       ) : (
         <Text style={styles.botonTexto}>{texto}</Text>
       )}
     </Pressable>
   );
 }
+
 
 function Estado({ estado }: { estado: PedidoResumen['estado'] }) {
   return (
@@ -2210,6 +2216,12 @@ const styles = StyleSheet.create({
   },
   botonPresionado: { backgroundColor: '#963011' },
   botonTexto: { color: '#fff', fontWeight: '800', fontSize: 14 },
+  botonCargandoFila: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
   deshabilitado: { opacity: 0.55 },
   confirmado: {
     color: '#286344',
@@ -2325,6 +2337,52 @@ const styles = StyleSheet.create({
   opcionTitulo: { color: '#262622', fontSize: 14, fontWeight: '700' },
   opcionTituloActiva: { color: '#b83b17' },
   opcionSubtitulo: { color: '#717169', fontSize: 11 },
+  seleccionResumen: {
+    borderWidth: 1,
+    borderColor: '#c9dfd0',
+    backgroundColor: '#eef7f1',
+    borderRadius: 8,
+    padding: 11,
+    gap: 4,
+  },
+  seleccionEtiqueta: {
+    color: '#286344',
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 0.6,
+  },
+  productoSeleccionado: {
+    borderTopWidth: 1,
+    borderTopColor: '#eeeeea',
+    paddingTop: 10,
+    flexDirection: 'row',
+    gap: 10,
+    alignItems: 'center',
+  },
+  productoSeleccionadoAcciones: {
+    alignItems: 'flex-end',
+    gap: 5,
+  },
+  productoCantidad: {
+    minWidth: 34,
+    textAlign: 'center',
+    color: '#262622',
+    fontSize: 18,
+    fontWeight: '900',
+  },
+  quitarProducto: {
+    borderWidth: 1,
+    borderColor: '#d8b3a7',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    backgroundColor: '#fff',
+  },
+  quitarProductoTexto: {
+    color: '#9b3215',
+    fontSize: 10,
+    fontWeight: '800',
+  },
   producto: {
     backgroundColor: '#fff',
     borderWidth: 1,
@@ -2367,6 +2425,18 @@ const styles = StyleSheet.create({
   },
   alertaTexto: { color: '#a1322c', fontSize: 12, flex: 1, lineHeight: 18 },
   alertaCerrar: { color: '#a1322c', fontSize: 12, fontWeight: '800' },
+  aviso: {
+    backgroundColor: '#eaf4ed',
+    borderBottomWidth: 1,
+    borderBottomColor: '#c9dfd0',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    gap: 10,
+    alignItems: 'center',
+  },
+  avisoTexto: { color: '#286344', fontSize: 12, flex: 1, lineHeight: 18 },
+  avisoCerrar: { color: '#286344', fontSize: 12, fontWeight: '800' },
   accionesPedido: { gap: 8 },
   botonMapa: {
     minHeight: 44,
@@ -2390,6 +2460,31 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   fila: { flexDirection: 'row', gap: 8 },
+  filaWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  botonAccionSecundario: {
+    minHeight: 40,
+    borderWidth: 1,
+    borderColor: '#c6c5bd',
+    borderRadius: 7,
+    backgroundColor: '#fff',
+    paddingHorizontal: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  botonAccionSecundarioTexto: {
+    color: '#50504a',
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  enlaceBoton: {
+    minHeight: 38,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   seleccionMarca: {
     color: '#b83b17',
     fontSize: 20,
