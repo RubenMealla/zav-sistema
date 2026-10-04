@@ -794,10 +794,11 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
     if (!planificacion?.paradas.length) return;
 
     const existentes = planificacion.paradas.map((parada) => parada.pedidoId);
-    const combinados = [...new Set([...existentes, ...ids])].filter((pedidoId) => {
+    const nuevosValidos = ids.filter((pedidoId) => {
       const pedido = pedidos.find((item) => item.id === pedidoId);
       return Boolean(pedido && pedido.estado !== 'ENTREGADO' && pedido.destinoGps);
     });
+    const combinados = [...new Set([...existentes, ...nuevosValidos])];
 
     if (combinados.length === existentes.length) {
       setAviso('No hay pedidos nuevos con ubicación para añadir al recorrido.');
@@ -825,7 +826,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
       });
 
       setPlanificacion(actualizada);
-      setPedidosSeleccionados([]);
+      setPedidosSeleccionados(combinados);
       setMapaOperativo(null);
       setAviso(
         `${combinados.length - existentes.length} pedido(s) nuevo(s) añadidos y recorrido recalculado desde tu ubicación.`,
