@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   FlatList,
   Modal,
@@ -35,10 +35,6 @@ export function SelectorClientePedidoModal({
   onSeleccionar: (clienteId: string) => void;
 }) {
   const [busqueda, setBusqueda] = useState('');
-
-  useEffect(() => {
-    if (!visible) setBusqueda('');
-  }, [visible]);
 
   const disponibles = useMemo(
     () => clientes.filter((cliente) => Boolean(cliente.ubicacion)),
@@ -105,7 +101,10 @@ export function SelectorClientePedidoModal({
             const activo = item.id === seleccionadoId;
             return (
               <Pressable
-                onPress={() => onSeleccionar(item.id)}
+                onPress={() => {
+                  setBusqueda('');
+                  onSeleccionar(item.id);
+                }}
                 style={[styles.item, activo && styles.itemActivo]}
               >
                 <View style={styles.filaEntre}>
@@ -316,7 +315,13 @@ export function SelectorProductosPedidoModal({
             </Text>
             <Text style={styles.subtitulo}>{resumen.unidades} unidad(es)</Text>
           </View>
-          <Pressable onPress={onCerrar} style={styles.botonListo}>
+          <Pressable
+            onPress={() => {
+              setBusqueda('');
+              onCerrar();
+            }}
+            style={styles.botonListo}
+          >
             <Text style={styles.botonListoTexto}>Listo</Text>
           </Pressable>
         </View>
