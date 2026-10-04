@@ -137,14 +137,23 @@ jobs:
           test -n "$APKSIGNER"
           "$APKSIGNER" verify --verbose --print-certs "$APK"
 
-          sha256sum "$APK" | tee "$APK.sha256"
+          VERSION="$(node -p "require('../app.json').expo.version")"
+          VERSION_CODE="$(node -p "require('../app.json').expo.android.versionCode")"
+          SALIDA="../dist"
+          NOMBRE_APK="ZAV-Vendedor-${VERSION}-build${VERSION_CODE}.apk"
 
-      - name: Guardar APK autónomo
+          mkdir -p "$SALIDA"
+          cp "$APK" "$SALIDA/$NOMBRE_APK"
+          sha256sum "$SALIDA/$NOMBRE_APK" | tee "$SALIDA/$NOMBRE_APK.sha256"
+
+          echo "APK versionado: $SALIDA/$NOMBRE_APK"
+
+      - name: Guardar APK autónomo versionado
         uses: actions/upload-artifact@v4
         with:
-          name: zav-vendedor-1.0.0-apk-standalone
+          name: ZAV-Vendedor-1.0.0-build10000-run-${{ github.run_number }}
           path: |
-            apps/mobile/android/app/build/outputs/apk/release/app-release.apk
-            apps/mobile/android/app/build/outputs/apk/release/app-release.apk.sha256
+            apps/mobile/dist/ZAV-Vendedor-1.0.0-build10000.apk
+            apps/mobile/dist/ZAV-Vendedor-1.0.0-build10000.apk.sha256
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 30

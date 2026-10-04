@@ -339,3 +339,34 @@ La tarjeta de recorrido activo también se compactó y agrupa en una misma fila 
 2. La primera ejecución E2E de esta ronda reveló que la base aislada no incluía aún la nueva migración de cancelación; el setup se actualizó para ejecutar la misma migración antes de las pruebas.
 
 Estas incidencias se conservan como evidencia real y no se presentan como resultados exitosos.
+
+
+## Novena validación física · aceptación de ZAV Vendedor 1.0.0
+
+**Evidencia reportada por el estudiante el 4 de octubre de 2026:** la compilación final fue probada en un dispositivo Android y, para el alcance de esta primera versión, la aplicación se considera estable y funcional.
+
+### Resultado físico final
+
+- **CONFIRMADO:** inicio de sesión y navegación principal funcionan.
+- **CONFIRMADO:** Pedidos y Nuevo pedido funcionan después de la corrección del filtro SQL por estado.
+- **CONFIRMADO:** Clientes lista, permite edición y permite Desactivar/Reactivar.
+- **CONFIRMADO:** los productos sin stock no se muestran en el selector de productos para registrar un Pedido.
+- **CONFIRMADO:** las notificaciones, botones, filtros y compactación visual resultan utilizables en el dispositivo probado.
+- **CONFIRMADO:** los selectores respetan Safe Area superior e inferior.
+- **CONFIRMADO:** el icono de la aplicación y el nombre **ZAV Vendedor** se visualizan correctamente.
+- **CONFIRMADO:** los símbolos semitransparentes observados inicialmente no aparecen en capturas de pantalla de la aplicación y el estudiante verificó que corresponden al dispositivo, no a ZAV Vendedor.
+
+### Identidad de la versión aceptada
+
+- Nombre: **ZAV Vendedor**
+- Versión funcional inicial: **1.0.0**
+- Android versionCode: **10000**
+- iOS buildNumber: **10000**
+- Package/bundle: `bo.zav.gestion.vendedor`
+- Slug/esquema: `zav-vendedor`
+
+### Criterio de cierre E3
+
+La versión 1.0.0 se acepta como primera versión funcional del módulo móvil del Vendedor. Esta aceptación no significa que el software sea definitivo ni que no pueda recibir mejoras futuras; significa que el alcance comprometido para E3 fue implementado, sometido a QA automatizada y validado físicamente por el estudiante.
+
+**Estado:** VALIDADO FÍSICAMENTE / LISTO PARA FUSIÓN A `main`.
