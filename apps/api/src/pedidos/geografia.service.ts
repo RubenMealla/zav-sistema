@@ -481,4 +481,4 @@ export class GeografiaService {
   }
 }
 
-export { distanciaHaversine };
+export { combinarResultados, direccionHumana, distanciaHaversine };
