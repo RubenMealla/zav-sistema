@@ -896,6 +896,15 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
         </View>
       ) : null}
 
+      {aviso ? (
+        <View style={styles.aviso}>
+          <Text style={styles.avisoTexto}>{aviso}</Text>
+          <Pressable onPress={() => setAviso('')}>
+            <Text style={styles.avisoCerrar}>Cerrar</Text>
+          </Pressable>
+        </View>
+      ) : null}
+
       <ScrollView
         ref={scrollPrincipalRef}
         contentContainerStyle={styles.contenido}
@@ -913,16 +922,27 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
             retirando={retirandoSeleccionados}
             accionPedido={accionPedido}
             onAlternar={alternarPedidoPlanificacion}
-            onSeleccionarTodos={seleccionarTodosPlanificables}
-            onPlanificarTodosActual={() => void planificarTodosDesdeUbicacionActual()}
-            onPlanificarDespacho={() => void generarPlanificacion('DESPACHO')}
-            onPlanificarActual={() => void generarPlanificacion('ACTUAL')}
+            onSeleccionarPedidos={seleccionarPedidos}
+            onPlanificarTodosActual={(ids) => void planificarTodosDesdeUbicacionActual(ids)}
+            onPlanificarDespacho={(ids) => void generarPlanificacion('DESPACHO', ids)}
+            onPlanificarActual={(ids) => void generarPlanificacion('ACTUAL', ids)}
             onRetirarSeleccionados={confirmarRetiroSeleccionados}
+            onCancelarPlan={() => {
+              setPlanificacion(null);
+              setPedidosSeleccionados([]);
+            }}
             onMover={moverParada}
             onRetirar={retirar}
             onEntregar={entregar}
-            onVerMapaPedido={(pedido) => void abrirMapaPedido(pedido)}
-            onVerMapaPlan={() => planificacion && setMapaOperativo(planificacion)}
+            onVerMapaPedido={abrirMapaPedido}
+            onVerMapaPlan={() =>
+              planificacion &&
+              setMapaOperativo({
+                origen: planificacion.origen,
+                paradas: planificacion.paradas,
+                enfoquePedidoId: null,
+              })
+            }
             onActualizarUbicacionPlan={() => void actualizarPlanDesdeUbicacionActual()}
           />
         ) : null}
@@ -964,10 +984,34 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
             setClienteSeleccionado={setClienteSeleccionado}
             setObservacion={setObservacion}
             setCantidades={setCantidades}
+            onAbrirClientes={() => setSelectorClientePedidoVisible(true)}
+            onAbrirProductos={() => setSelectorProductosPedidoVisible(true)}
             onGuardar={guardarPedido}
           />
         ) : null}
       </ScrollView>
+
+      <SelectorClientePedidoModal
+        visible={selectorClientePedidoVisible}
+        clientes={clientes}
+        seleccionadoId={clienteSeleccionado}
+        onCerrar={() => setSelectorClientePedidoVisible(false)}
+        onSeleccionar={(clienteId) => {
+          setClienteSeleccionado(clienteId);
+          setSelectorClientePedidoVisible(false);
+          setError('');
+        }}
+      />
+
+      <SelectorProductosPedidoModal
+        visible={selectorProductosPedidoVisible}
+        productos={productosConStock}
+        cantidades={cantidades}
+        onCerrar={() => setSelectorProductosPedidoVisible(false)}
+        onCambiarCantidad={(productoId, cantidad) =>
+          setCantidades((actuales) => ({ ...actuales, [productoId]: cantidad }))
+        }
+      />
 
       {selectorUbicacionVisible ? (
         <SelectorUbicacionMapa
@@ -988,6 +1032,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
           visible
           origen={mapaOperativo.origen}
           paradas={mapaOperativo.paradas}
+          enfoquePedidoId={mapaOperativo.enfoquePedidoId}
           onCerrar={() => setMapaOperativo(null)}
         />
       ) : null}
