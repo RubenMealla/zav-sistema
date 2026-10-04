@@ -38,6 +38,11 @@ const MAP_STYLE_URL =
   (Constants.expoConfig?.extra?.mapStyleUrl as string | undefined) ??
   'https://tiles.openfreemap.org/styles/liberty';
 
+const CENTRO_TARIJA_REFERENCIAL: PuntoGeografico = {
+  latitud: -21.5355,
+  longitud: -64.7296,
+};
+
 type SelectorProps = {
   visible: boolean;
   token: string;
@@ -151,7 +156,14 @@ export function SelectorUbicacionMapa({
       latitude: valor.latitud,
       longitude: valor.longitud,
     });
-    return direccionLegible(reversa[0]);
+    const local = reversa[0];
+    const contextoTarija = [local?.region, local?.subregion, local?.city, local?.district]
+      .filter(Boolean)
+      .some((texto) => String(texto).toLocaleLowerCase('es-BO').includes('tarija'));
+    if (!contextoTarija) {
+      throw new Error('FUERA_DE_TARIJA');
+    }
+    return direccionLegible(local);
   }
 
   function elegirSugerencia(elegida: DireccionGeocodificada) {
@@ -186,7 +198,7 @@ export function SelectorUbicacionMapa({
       const remotos = await buscarDirecciones(token, consulta);
       if (!remotos.resultados.length) {
         setError(
-          'No se encontró esa referencia dentro de Bolivia. Prueba con el nombre del barrio, calle o una referencia más completa.',
+          'No se encontró esa referencia dentro del departamento de Tarija. Prueba con el barrio, calle, zona o una referencia más completa.',
         );
         return;
       }
@@ -240,7 +252,7 @@ export function SelectorUbicacionMapa({
 
   async function confirmar() {
     if (!punto) {
-      setError('Primero selecciona un punto dentro de Bolivia.');
+      setError('Primero selecciona un punto dentro del departamento de Tarija.');
       return;
     }
 
@@ -305,14 +317,14 @@ export function SelectorUbicacionMapa({
           {buscandoSugerencias ? (
             <View style={styles.sugerenciasEstado}>
               <ActivityIndicator size="small" color="#b83b17" />
-              <Text style={styles.ayuda}>Buscando en Bolivia · Tarija primero…</Text>
+              <Text style={styles.ayuda}>Buscando únicamente en Tarija, Bolivia…</Text>
             </View>
           ) : null}
 
           {sugerencias.length ? (
             <View style={styles.sugerencias}>
               <Text style={styles.sugerenciasTitulo}>
-                Coincidencias en Bolivia · Tarija priorizada
+                Coincidencias en Tarija, Bolivia
               </Text>
               {sugerencias.map((sugerencia, indice) => (
                 <Pressable
@@ -351,64 +363,67 @@ export function SelectorUbicacionMapa({
           </View>
         ) : null}
 
-        {punto ? (
-          <View style={styles.mapaContenedor}>
-            <Map
-              key={versionMapa}
-              style={styles.mapa}
-              mapStyle={MAP_STYLE_URL}
-              androidView="texture"
-              attribution
-              touchRotate={false}
-              touchPitch={false}
-              onWillStartLoadingMap={() => setMapaListo(false)}
-              onDidFinishLoadingMap={() => setMapaListo(true)}
-              onDidFailLoadingMap={() => {
-                setMapaListo(false);
-                setError(
-                  'El mapa no pudo cargarse. Revisa la conexión y vuelve a intentar.',
-                );
+        <View style={styles.mapaContenedor}>
+          <Map
+            key={versionMapa}
+            style={styles.mapa}
+            mapStyle={MAP_STYLE_URL}
+            androidView="texture"
+            attribution
+            touchRotate={false}
+            touchPitch={false}
+            onWillStartLoadingMap={() => setMapaListo(false)}
+            onDidFinishLoadingMap={() => setMapaListo(true)}
+            onDidFailLoadingMap={() => {
+              setMapaListo(false);
+              setError(
+                'El mapa no pudo cargarse. Revisa la conexión y vuelve a intentar.',
+              );
+            }}
+            onRegionDidChange={(evento) => {
+              if (!punto) return;
+              const [longitud, latitud] = evento.nativeEvent.center;
+              if (Number.isFinite(latitud) && Number.isFinite(longitud)) {
+                setPunto({ latitud, longitud });
+              }
+            }}
+          >
+            <Camera
+              initialViewState={{
+                center: [
+                  (punto ?? CENTRO_TARIJA_REFERENCIAL).longitud,
+                  (punto ?? CENTRO_TARIJA_REFERENCIAL).latitud,
+                ],
+                zoom: punto ? 17 : 12,
               }}
-              onRegionDidChange={(evento) => {
-                const [longitud, latitud] = evento.nativeEvent.center;
-                if (Number.isFinite(latitud) && Number.isFinite(longitud)) {
-                  setPunto({ latitud, longitud });
-                }
-              }}
-            >
-              <Camera
-                initialViewState={{
-                  center: [punto.longitud, punto.latitud],
-                  zoom: 17,
-                }}
-              />
-            </Map>
+            />
+          </Map>
 
-            {!mapaListo ? (
-              <View pointerEvents="none" style={styles.mapaCargando}>
-                <ActivityIndicator color="#b83b17" />
-                <Text style={styles.ayuda}>Cargando mapa…</Text>
-              </View>
-            ) : null}
+          {!mapaListo ? (
+            <View pointerEvents="none" style={styles.mapaCargando}>
+              <ActivityIndicator color="#b83b17" />
+              <Text style={styles.ayuda}>Cargando mapa de Tarija…</Text>
+            </View>
+          ) : null}
 
+          {punto ? (
             <View pointerEvents="none" style={styles.cruz}>
               <View style={styles.pin} />
               <View style={styles.pinPunta} />
             </View>
-            <View style={styles.coordenadas}>
-              <Text style={styles.coordenadasTexto}>Punto seleccionado</Text>
-              <Text style={styles.ayuda}>
-                Mueve el mapa hasta dejar el marcador sobre el destino. Las coordenadas se guardan internamente.
-              </Text>
-            </View>
-          </View>
-        ) : (
-          <View style={styles.sinMapa}>
+          ) : null}
+
+          <View style={styles.coordenadas}>
+            <Text style={styles.coordenadasTexto}>
+              {punto ? 'Punto seleccionado' : 'Mapa de referencia · Tarija'}
+            </Text>
             <Text style={styles.ayuda}>
-              Escribe al menos 2 letras para ver coincidencias, selecciona una dirección o usa tu ubicación actual. Nada se guarda hasta confirmar.
+              {punto
+                ? 'Puedes mover el mapa para ajustar el destino. Las coordenadas se guardan internamente.'
+                : 'Busca una dirección o usa “Mi ubicación” para fijar el punto de entrega.'}
             </Text>
           </View>
-        )}
+        </View>
 
         <View style={styles.pie}>
           <Pressable onPress={onCancelar} style={styles.secundario}>
