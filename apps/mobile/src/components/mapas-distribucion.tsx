@@ -114,10 +114,7 @@ export function SelectorUbicacionMapa({
   useEffect(() => {
     if (!visible) return;
     const consulta = direccion.trim();
-    if (consulta.length < 2 || consulta === direccionElegida) {
-      setSugerencias([]);
-      return;
-    }
+    if (consulta.length < 2 || consulta === direccionElegida) return;
 
     let activa = true;
     const temporizador = setTimeout(() => {
@@ -296,6 +293,7 @@ export function SelectorUbicacionMapa({
             onChangeText={(valor) => {
               setDireccion(valor);
               setDireccionElegida(null);
+              if (valor.trim().length < 2) setSugerencias([]);
               setError('');
             }}
             autoCorrect={false}
