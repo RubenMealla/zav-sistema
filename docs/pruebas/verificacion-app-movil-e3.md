@@ -147,3 +147,44 @@ La lista completa de Clientes y Pedidos dependía demasiado del desplazamiento v
 **Corrección en código:** Clientes incorpora búsqueda y filtro por estado de ubicación; Pedidos incorpora búsqueda por cliente/dirección y filtro por estado; Nuevo pedido permite buscar únicamente clientes con ubicación confirmada.
 
 **Estado:** IMPLEMENTADO EN CÓDIGO / PENDIENTE DE REVALIDAR EN ANDROID.
+
+
+## Tercera validación física · interfaz operativa
+
+**Evidencia reportada por el estudiante:** el flujo geográfico y la organización por cercanía funcionan en Android, pero se detectaron problemas de usabilidad al operar Pedidos.
+
+### Hallazgo F-07 · Pedidos y reparto se percibían como dos módulos
+
+Aunque estaban en la misma pestaña, la interfaz renderizaba un bloque `Reparto` y otro bloque `Pedidos`, obligando a desplazarse entre ambos para cambiar estados.
+
+**Corrección en código:** se eliminó el componente independiente de Reparto. Pedidos concentra filtros, selección, planificación y acciones operativas. Cuando existe una planificación, las paradas ordenadas son las mismas tarjetas de Pedido.
+
+**Estado:** IMPLEMENTADO EN CÓDIGO / PENDIENTE DE REVALIDAR EN APK FÍSICO.
+
+### Hallazgo F-08 · mapa interactivo competía con el desplazamiento vertical
+
+El mapa de reparto estaba embebido dentro del ScrollView; los gestos de desplazamiento y zoom podían mover también la pantalla.
+
+**Corrección en código:** el mapa embebido queda como vista previa no interactiva y se abre un mapa de pantalla completa fuera del ScrollView para pan/zoom.
+
+**Estado:** IMPLEMENTADO EN CÓDIGO / PENDIENTE DE REVALIDAR EN APK FÍSICO.
+
+### Hallazgo F-09 · navegación externa no abría correctamente
+
+La acción `Abrir navegación` dependía de una URL externa de Google Maps.
+
+**Corrección en código:** la acción operativa se sustituye por `Ver en mapa` dentro del mapa MapLibre de ZAV. No se depende de Google Maps para operar el Pedido.
+
+**Estado:** IMPLEMENTADO EN CÓDIGO / PENDIENTE DE REVALIDAR EN APK FÍSICO.
+
+### Hallazgo F-10 · edición de Cliente duplicaba formularios
+
+El formulario de alta permanecía arriba y la edición se desplegaba dentro de la tarjeta seleccionada.
+
+**Corrección en código:** existe un único formulario superior que alterna entre Nuevo cliente y Editar cliente. Al elegir Editar se desplaza al formulario; Cancelar vuelve al modo Nuevo.
+
+**Estado:** IMPLEMENTADO EN CÓDIGO / PENDIENTE DE REVALIDAR EN APK FÍSICO.
+
+### Trazabilidad de usuario
+
+**CONFIRMADO EN CÓDIGO Y QA:** cada Pedido registra `vendedor_id` desde el JWT del usuario autenticado; los movimientos RETIRO y ENTREGA registran `usuario_id`. Se añadió una consulta administrativa de solo lectura y prueba E2E para verificar que el Administrador puede identificar al Vendedor responsable y que un VENDEDOR no puede usar la ruta administrativa.
