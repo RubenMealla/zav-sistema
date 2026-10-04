@@ -1360,7 +1360,7 @@ function Pedidos({
     <View style={styles.bloque}>
       <Titulo
         titulo="Pedidos"
-        descripcion="Hoy primero · organiza, retira y entrega desde una sola vista."
+        descripcion="Organiza y gestiona las entregas del día."
       />
 
       <View style={styles.tarjeta}>
@@ -1370,16 +1370,19 @@ function Pedidos({
           <Dato etiqueta="Entregados" valor={String(entregadosPeriodo.length)} />
         </View>
 
-        <Text style={styles.seccionTitulo}>Periodo</Text>
-        <View style={styles.filtros}>
+        <View style={styles.filtrosGrid}>
           {[
-            ['HOY', 'Hoy · Bolivia'],
-            ['TODOS', 'Todo el historial'],
+            ['HOY', 'Hoy'],
+            ['TODOS', 'Historial'],
           ].map(([valor, texto]) => (
             <Pressable
               key={valor}
               onPress={() => setFiltroPeriodo(valor as 'HOY' | 'TODOS')}
-              style={[styles.filtroChip, filtroPeriodo === valor && styles.filtroChipActivo]}
+              style={[
+                styles.filtroChip,
+                styles.filtroChipMitad,
+                filtroPeriodo === valor && styles.filtroChipActivo,
+              ]}
             >
               <Text style={[styles.filtroChipTexto, filtroPeriodo === valor && styles.filtroChipTextoActivo]}>
                 {texto}
@@ -1396,8 +1399,7 @@ function Pedidos({
           style={styles.input}
         />
 
-        <Text style={styles.seccionTitulo}>Estado</Text>
-        <View style={styles.filtros}>
+        <View style={styles.filtrosGrid}>
           {[
             ['TODOS', 'Todos'],
             ['REGISTRADO', 'Registrados'],
@@ -1407,7 +1409,11 @@ function Pedidos({
             <Pressable
               key={valor}
               onPress={() => setFiltroEstado(valor as 'TODOS' | PedidoResumen['estado'])}
-              style={[styles.filtroChip, filtroEstado === valor && styles.filtroChipActivo]}
+              style={[
+                styles.filtroChip,
+                styles.filtroChipMitad,
+                filtroEstado === valor && styles.filtroChipActivo,
+              ]}
             >
               <Text style={[styles.filtroChipTexto, filtroEstado === valor && styles.filtroChipTextoActivo]}>
                 {texto}
@@ -1417,8 +1423,7 @@ function Pedidos({
         </View>
 
         <Text style={styles.contador}>
-          Mostrando {pedidosVisibles.length} pedido(s).
-          {filtroPeriodo === 'HOY' ? ' Fecha calculada con America/La_Paz.' : ''}
+          {pedidosVisibles.length} pedido(s) visibles
         </Text>
       </View>
 
@@ -1426,13 +1431,29 @@ function Pedidos({
         <View style={styles.tarjetaPlanControl}>
           <View style={styles.filaEntre}>
             <View style={styles.flex}>
-              <Text style={styles.tarjetaTitulo}>Acciones del día</Text>
+              <Text style={styles.tarjetaTitulo}>Acciones</Text>
               <Text style={styles.textoSecundario}>
                 {seleccionados.length
                   ? `${seleccionados.length} seleccionado(s)`
-                  : `${planificablesVisibles.length} pedido(s) disponibles`}
+                  : `${planificablesVisibles.length} disponible(s)`}
               </Text>
             </View>
+          </View>
+
+          <View style={styles.fila}>
+            {planificablesVisibles.length >= 2 && !seleccionados.length ? (
+              <Pressable
+                disabled={planificando}
+                onPress={() =>
+                  onPlanificarTodosActual(planificablesVisibles.map((pedido) => pedido.id))
+                }
+                style={[styles.botonMapa, planificando && styles.deshabilitado]}
+              >
+                <Text style={styles.botonMapaTexto}>
+                  {planificando ? 'Calculando…' : 'Organizar todos'}
+                </Text>
+              </Pressable>
+            ) : null}
             <Pressable
               onPress={() =>
                 onSeleccionarPedidos(
@@ -1441,24 +1462,13 @@ function Pedidos({
                     : planificablesVisibles.map((pedido) => pedido.id),
                 )
               }
-              style={styles.botonMapaCompacto}
+              style={styles.botonMapa}
             >
               <Text style={styles.botonMapaTexto}>
-                {seleccionados.length ? 'Limpiar' : 'Seleccionar visibles'}
+                {seleccionados.length ? 'Limpiar selección' : 'Seleccionar todos'}
               </Text>
             </Pressable>
           </View>
-
-          {planificablesVisibles.length >= 2 && !seleccionados.length ? (
-            <BotonAccion
-              texto={`Organizar visibles (${planificablesVisibles.length})`}
-              textoCargando="Calculando secuencia…"
-              cargando={planificando}
-              onPress={() =>
-                onPlanificarTodosActual(planificablesVisibles.map((pedido) => pedido.id))
-              }
-            />
-          ) : null}
 
           {puedePlanificar ? (
             <View style={styles.fila}>
@@ -1530,7 +1540,7 @@ function Pedidos({
                     {nuevosParaPlan.length} pedido(s) fuera del recorrido
                   </Text>
                   <Text style={styles.textoSecundario}>
-                    Se recalculará desde tu ubicación actual.
+                    Puedes incorporarlos sin cancelar el recorrido.
                   </Text>
                 </View>
                 <Pressable
@@ -2406,6 +2416,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 7,
+  },
+  filtrosGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  filtroChipMitad: {
+    flexBasis: '47%',
+    flexGrow: 1,
+    alignItems: 'center',
   },
   filtroChip: {
     borderWidth: 1,
