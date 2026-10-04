@@ -1751,6 +1751,8 @@ function NuevoPedido({
   setClienteSeleccionado,
   setObservacion,
   setCantidades,
+  onAbrirClientes,
+  onAbrirProductos,
   onGuardar,
 }: {
   clientes: Cliente[];
@@ -1762,100 +1764,146 @@ function NuevoPedido({
   setClienteSeleccionado: (v: string) => void;
   setObservacion: (v: string) => void;
   setCantidades: (v: Record<string, string>) => void;
+  onAbrirClientes: () => void;
+  onAbrirProductos: () => void;
   onGuardar: () => void;
 }) {
-  const [busquedaCliente, setBusquedaCliente] = useState('');
+  const clienteActual =
+    clientes.find((cliente) => cliente.id === clienteSeleccionado) ?? null;
 
-  const clientesFiltrados = useMemo(() => {
-    const consulta = busquedaCliente.trim().toLocaleLowerCase('es-BO');
-    return clientes.filter((cliente) => {
-      if (!cliente.ubicacion) return false;
-      return (
-        !consulta ||
-        cliente.nombre.toLocaleLowerCase('es-BO').includes(consulta) ||
-        cliente.direccion.toLocaleLowerCase('es-BO').includes(consulta) ||
-        (cliente.telefono ?? '').toLocaleLowerCase('es-BO').includes(consulta)
-      );
-    });
-  }, [busquedaCliente, clientes]);
+  const seleccionados = productos
+    .map((producto) => ({
+      producto,
+      cantidad: Number(cantidades[producto.productoId] ?? '0'),
+    }))
+    .filter(
+      (item) =>
+        Number.isInteger(item.cantidad) &&
+        item.cantidad > 0,
+    );
 
+  const unidades = seleccionados.reduce((acum, item) => acum + item.cantidad, 0);
+  const total = seleccionados.reduce(
+    (acum, item) => acum + item.cantidad * Number(item.producto.precioBob),
+    0,
+  );
   const sinUbicacion = clientes.filter((cliente) => !cliente.ubicacion).length;
+
+  function quitarProducto(productoId: string) {
+    setCantidades({ ...cantidades, [productoId]: '' });
+  }
 
   return (
     <View style={styles.bloque}>
       <Titulo
         titulo="Nuevo pedido"
-        descripcion="Selecciona un cliente con ubicación confirmada y registra solo cantidades con disponibilidad actual."
+        descripcion="Selecciona cliente y productos mediante búsqueda. Al registrar, este formulario queda listo para el siguiente pedido."
       />
 
       <Text style={styles.seccionTitulo}>1. Cliente</Text>
       <View style={styles.tarjeta}>
-        <TextInput
-          value={busquedaCliente}
-          onChangeText={setBusquedaCliente}
-          placeholder="Buscar cliente o dirección"
-          placeholderTextColor="#8a8982"
-          style={styles.input}
-        />
+        {clienteActual ? (
+          <View style={styles.seleccionResumen}>
+            <View style={styles.filaEntre}>
+              <View style={styles.flex}>
+                <Text style={styles.seleccionEtiqueta}>CLIENTE SELECCIONADO</Text>
+                <Text style={styles.tarjetaTitulo}>{clienteActual.nombre}</Text>
+                {clienteActual.telefono ? (
+                  <Text style={styles.textoSecundario}>{clienteActual.telefono}</Text>
+                ) : null}
+                <Text style={styles.direccion}>{clienteActual.direccion}</Text>
+              </View>
+              <Text style={styles.estadoMiniOk}>GPS</Text>
+            </View>
+          </View>
+        ) : (
+          <Text style={styles.textoSecundario}>
+            Ningún cliente seleccionado.
+          </Text>
+        )}
+
+        <View style={styles.fila}>
+          <Pressable onPress={onAbrirClientes} style={styles.botonMapa}>
+            <Text style={styles.botonMapaTexto}>
+              {clienteActual ? 'Cambiar cliente' : 'Buscar y seleccionar cliente'}
+            </Text>
+          </Pressable>
+          {clienteActual ? (
+            <Pressable
+              onPress={() => setClienteSeleccionado('')}
+              style={styles.botonMapaCompacto}
+            >
+              <Text style={styles.botonMapaTexto}>Quitar</Text>
+            </Pressable>
+          ) : null}
+        </View>
+
         {sinUbicacion ? (
-          <Text style={styles.alertaInline}>
-            {sinUbicacion} cliente(s) no aparecen aquí porque todavía no tienen ubicación confirmada.
+          <Text style={styles.textoSecundario}>
+            {sinUbicacion} cliente(s) sin GPS se excluyen del selector de pedidos.
           </Text>
         ) : null}
       </View>
 
-      {!clientesFiltrados.length ? (
-        <Vacio texto="No hay clientes con ubicación confirmada que coincidan con la búsqueda." />
-      ) : (
-        <View style={styles.selectorLista}>
-          {clientesFiltrados.map((cliente) => {
-            const activo = clienteSeleccionado === cliente.id;
-            return (
-              <Pressable
-                key={cliente.id}
-                onPress={() => setClienteSeleccionado(cliente.id)}
-                style={[styles.opcion, activo && styles.opcionActiva]}
-              >
-                <Text style={[styles.opcionTitulo, activo && styles.opcionTituloActiva]}>
-                  {cliente.nombre}
-                </Text>
-                <Text style={styles.opcionSubtitulo}>{cliente.direccion}</Text>
-                <Text style={styles.disponible}>Ubicación confirmada</Text>
-              </Pressable>
-            );
-          })}
-        </View>
-      )}
-
       <Text style={styles.seccionTitulo}>2. Productos</Text>
-      {!productos.length ? (
-        <Vacio texto="No hay productos disponibles en Venta y Despacho." />
-      ) : (
-        productos.map((producto) => (
-          <View key={producto.productoId} style={styles.producto}>
-            <View style={styles.flex}>
-              <Text style={styles.tarjetaTitulo}>{producto.nombre}</Text>
-              <Text style={styles.textoSecundario}>
-                {producto.presentacion} · Bs {producto.precioBob}
-              </Text>
-              <Text style={styles.disponible}>
-                Disponible: {producto.cantidadDisponible}
-              </Text>
-            </View>
-            <TextInput
-              accessibilityLabel={`Cantidad de ${producto.nombre}`}
-              keyboardType="number-pad"
-              placeholder="0"
-              placeholderTextColor="#8a8982"
-              style={styles.cantidad}
-              value={cantidades[producto.productoId] ?? ''}
-              onChangeText={(valor) =>
-                setCantidades({ ...cantidades, [producto.productoId]: valor.replace(/\D/g, '') })
-              }
-            />
+      <View style={styles.tarjeta}>
+        <View style={styles.filaEntre}>
+          <View style={styles.flex}>
+            <Text style={styles.tarjetaTitulo}>Detalle del pedido</Text>
+            <Text style={styles.textoSecundario}>
+              {seleccionados.length} producto(s) · {unidades} unidad(es)
+            </Text>
           </View>
-        ))
-      )}
+          {seleccionados.length ? (
+            <Text style={styles.estadoMiniOk}>Bs {total.toFixed(2)}</Text>
+          ) : null}
+        </View>
+
+        <Pressable onPress={onAbrirProductos} style={styles.botonMapa}>
+          <Text style={styles.botonMapaTexto}>
+            {seleccionados.length ? 'Agregar o cambiar productos' : 'Buscar y agregar productos'}
+          </Text>
+        </Pressable>
+
+        {!productos.length ? (
+          <Text style={styles.alertaInline}>
+            No hay productos disponibles en Venta y Despacho.
+          </Text>
+        ) : null}
+
+        {!seleccionados.length ? (
+          <Text style={styles.textoSecundario}>
+            Todavía no agregaste productos.
+          </Text>
+        ) : (
+          seleccionados.map(({ producto, cantidad }) => (
+            <View key={producto.productoId} style={styles.productoSeleccionado}>
+              <View style={styles.flex}>
+                <Text style={styles.tarjetaTitulo}>{producto.nombre}</Text>
+                <Text style={styles.textoSecundario}>
+                  {producto.codigo} · {producto.presentacion}
+                </Text>
+                <Text style={styles.disponible}>
+                  {cantidad} unidad(es) · disponible ahora: {producto.cantidadDisponible}
+                </Text>
+              </View>
+              <View style={styles.productoSeleccionadoAcciones}>
+                <Text style={styles.productoCantidad}>{cantidad}</Text>
+                <Pressable
+                  onPress={() => quitarProducto(producto.productoId)}
+                  style={styles.quitarProducto}
+                >
+                  <Text style={styles.quitarProductoTexto}>Quitar</Text>
+                </Pressable>
+              </View>
+            </View>
+          ))
+        )}
+
+        <Text style={styles.textoSecundario}>
+          Los lotes concretos se asignan automáticamente al retirar el pedido según disponibilidad y vencimiento; aquí se registran productos y cantidades.
+        </Text>
+      </View>
 
       <Text style={styles.seccionTitulo}>3. Observación</Text>
       <Campo
@@ -1867,12 +1915,14 @@ function NuevoPedido({
 
       <BotonAccion
         texto="Registrar pedido"
+        textoCargando="Registrando y actualizando stock…"
         cargando={guardando}
         onPress={onGuardar}
       />
     </View>
   );
 }
+
 
 function Titulo({ titulo, descripcion }: { titulo: string; descripcion: string }) {
   return (
