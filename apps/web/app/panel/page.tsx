@@ -192,7 +192,7 @@ export default async function Panel({
               token,
             )
           : Promise.resolve(undefined),
-        vista === 'resumen'
+        vista === 'distribucion'
           ? consultar<VentaDespacho>('/api/v1/ubicaciones/venta-despacho', token)
           : Promise.resolve(undefined),
       ]);
@@ -244,7 +244,7 @@ export default async function Panel({
         {parametros.mensaje && <Notificacion key={`${parametros.mensaje ?? parametros.error}-${randomUUID()}`} tipo="exito" mensaje={mensajesOk[parametros.mensaje] ?? 'Operación registrada correctamente.'} />}
         {parametros.error && <Notificacion key={`${parametros.mensaje ?? parametros.error}-${randomUUID()}`} tipo="error" mensaje={mensajes[parametros.error] ?? 'No se pudo completar la operación.'} />}
 
-        <div className="vista-contenido">
+        <div className={`vista-contenido vista-${vista}`}>
           {vista === 'resumen' && (
             <>
               <section className="bienvenida">
@@ -283,6 +283,7 @@ export default async function Panel({
                     <Link href="/panel?vista=condiciones" className="acceso-rapido"><span><Icono nombre="condicion" /></span><div><strong>Condiciones</strong><p>Libera, bloquea y audita.</p></div><b>→</b></Link>
                     <Link href="/panel?vista=movimientos" className="acceso-rapido"><span><Icono nombre="movimiento" /></span><div><strong>Movimientos</strong><p>Registra traslados y consulta historial.</p></div><b>→</b></Link>
                     <Link href="/panel?vista=pedidos" className="acceso-rapido"><span><Icono nombre="historial" /></span><div><strong>Pedidos</strong><p>Revisa operaciones y vendedor responsable.</p></div><b>→</b></Link>
+                    <Link href="/panel?vista=distribucion" className="acceso-rapido"><span><Icono nombre="ubicacion" /></span><div><strong>Distribución</strong><p>Configura el punto de salida para reparto.</p></div><b>→</b></Link>
                   </div>
                 </section>
 
@@ -297,34 +298,28 @@ export default async function Panel({
                 </section>
               </div>
 
-              <section className="card card-modulo">
-                <div className="card-cabecera">
-                  <div>
-                    <span className="eyebrow">DISTRIBUCIÓN / ORIGEN</span>
-                    <h2>Punto de Venta y Despacho</h2>
-                    <p>
-                      Este punto se usa como origen cuando el Vendedor solicita una secuencia
-                      geográfica de reparto.
-                    </p>
-                  </div>
-                </div>
-
-                {ventaDespacho?.estado !== 200 || !ventaDespacho.datos ? (
-                  <div className="estado-vacio estado-error">
-                    <Icono nombre="alerta" />
-                    <p>No se pudo consultar la ubicación de Venta y Despacho.</p>
-                  </div>
-                ) : (
-                  <form action={configurarGeorreferenciaDespacho} className="formulario">
-                    <input type="hidden" name="ubicacionId" value={ventaDespacho.datos.id} />
-                    <MapaUbicacion
-                      latitud={ventaDespacho.datos.ubicacion?.latitud ?? null}
-                      longitud={ventaDespacho.datos.ubicacion?.longitud ?? null}
-                    />
-                  </form>
-                )}
-              </section>
             </>
+          )}
+
+
+          {vista === 'distribucion' && (
+            <section className="card card-modulo card-distribucion">
+              <div className="card-cabecera">
+                <div>
+                  <span className="eyebrow">CONFIGURACIÓN DE REPARTO</span>
+                  <h2>Ubicación de salida</h2>
+                  <p>Marca en el mapa el punto habitual desde donde inicia la distribución. El sistema guarda el marcador y lo muestra nuevamente en cada ingreso.</p>
+                </div>
+              </div>
+              {ventaDespacho?.estado !== 200 || !ventaDespacho.datos ? (
+                <div className="estado-vacio estado-error"><Icono nombre="alerta" /><p>No se pudo consultar la ubicación de salida para reparto.</p></div>
+              ) : (
+                <form action={configurarGeorreferenciaDespacho} className="formulario formulario-mapa">
+                  <input type="hidden" name="ubicacionId" value={ventaDespacho.datos.id} />
+                  <MapaUbicacion latitud={ventaDespacho.datos.ubicacion?.latitud ?? null} longitud={ventaDespacho.datos.ubicacion?.longitud ?? null} />
+                </form>
+              )}
+            </section>
           )}
 
           {vista === 'productos' && (

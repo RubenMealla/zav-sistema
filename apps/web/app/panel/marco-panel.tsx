@@ -4,8 +4,8 @@ import { cerrarSesion } from '../acciones';
 import { Icono } from '../componentes/icono';
 import { Marca } from '../componentes/marca';
 
-export type Vista = 'resumen' | 'productos' | 'lotes' | 'condiciones' | 'movimientos' | 'pedidos';
-type VistaConfig = { titulo: string; descripcion: string; icono: 'inicio' | 'producto' | 'lote' | 'condicion' | 'movimiento' };
+export type Vista = 'resumen' | 'productos' | 'lotes' | 'condiciones' | 'movimientos' | 'pedidos' | 'distribucion';
+type VistaConfig = { titulo: string; descripcion: string; icono: 'inicio' | 'producto' | 'lote' | 'condicion' | 'movimiento' | 'ubicacion' };
 export const vistas: Record<Vista, VistaConfig> = {
   resumen: { titulo: 'Resumen', descripcion: 'Inventario, condición y configuración operativa.', icono: 'inicio' },
   productos: { titulo: 'Productos', descripcion: 'Presentaciones comerciales registradas.', icono: 'producto' },
@@ -13,6 +13,7 @@ export const vistas: Record<Vista, VistaConfig> = {
   condiciones: { titulo: 'Condiciones', descripcion: 'Liberación, bloqueo y auditoría.', icono: 'condicion' },
   movimientos: { titulo: 'Movimientos', descripcion: 'Traslados e historial de inventario.', icono: 'movimiento' },
   pedidos: { titulo: 'Pedidos', descripcion: 'Auditoría de pedidos y responsables.', icono: 'movimiento' },
+  distribucion: { titulo: 'Distribución', descripcion: 'Ubicación de salida usada para organizar los repartos.', icono: 'ubicacion' },
 };
 
 export function MarcoPanel({ vista, perfil, children }: {

@@ -27,11 +27,11 @@ export default async function Acceso({ searchParams }: { searchParams: Promise<{
         </div>
 
         <div className="acceso-identidad-centro">
-          <Marca grande />
-          <div>
-            <span>ADMINISTRACIÓN</span>
-            <h2>Una entrada directa al sistema ZAV.</h2>
-            <p>Inventario, lotes, movimientos, pedidos y control operativo.</p>
+          <span className="acceso-identidad-indice">ADMINISTRACIÓN / ZAV</span>
+          <h2>Control operativo en un solo entorno.</h2>
+          <p>Inventario, lotes, movimientos, pedidos y distribución para el personal autorizado.</p>
+          <div className="acceso-identidad-modulos" aria-label="Áreas del sistema">
+            <span>Inventario</span><span>Pedidos</span><span>Distribución</span>
           </div>
         </div>
 
