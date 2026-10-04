@@ -44,7 +44,7 @@ test('permite gestionar inventario desde módulos, modales y notificaciones', as
 
   await page.goto('/acceso');
   await expect(page.getByRole('heading', { name: 'Iniciar sesión' })).toBeVisible();
-  await page.getByLabel('Identificador de acceso').fill(identificador);
+  await page.getByLabel('Identificador', { exact: true }).fill(identificador);
   await page.getByLabel('Contraseña', { exact: true }).fill(contrasena);
   await page.getByRole('button', { name: /Ingresar al sistema/ }).click();
 

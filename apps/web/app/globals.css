@@ -60,8 +60,8 @@ button:disabled { opacity: .5; cursor: not-allowed; }
   text-align: center;
 }
 
-.boton-primario { color: #fff; background: var(--marca); border-color: var(--marca); }
-.boton-primario:hover:not(:disabled) { background: #ca4d26; border-color: #ca4d26; }
+.boton-primario { color: #fff; background: #ca4d26; border-color: #ca4d26; }
+.boton-primario:hover:not(:disabled) { background: #a73a1d; border-color: #a73a1d; }
 .boton-secundario { color: var(--tinta); background: #fff; border-color: var(--gris-300); }
 .boton-secundario:hover:not(:disabled) { background: #f5f2ec; border-color: #8d877e; }
 .boton-terciario { color: #5d5850; background: transparent; border-color: transparent; }

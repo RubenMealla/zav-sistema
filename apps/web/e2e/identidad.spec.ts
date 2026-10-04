@@ -14,7 +14,7 @@ async function ingresar(page: Page) {
   const clave = process.env.QA_ADMIN_PASSWORD;
   if (!usuario || !clave) throw new Error('Faltan las credenciales sintéticas de QA.');
   await page.goto('/acceso');
-  await page.getByLabel('Identificador de acceso').fill(usuario);
+  await page.getByLabel('Identificador', { exact: true }).fill(usuario);
   await page.getByLabel('Contraseña', { exact: true }).fill(clave);
   await page.getByRole('button', { name: 'Ingresar al sistema' }).click();
   await expect(page.getByRole('heading', { name: 'Resumen' })).toBeVisible();
@@ -158,7 +158,7 @@ test('teclado, contraste y movimiento reducido', async ({ page }) => {
 
 test('credenciales inválidas muestran un error legible', async ({ page }) => {
   await page.goto('/acceso');
-  await page.getByLabel('Identificador de acceso').fill('no-existe.qa');
+  await page.getByLabel('Identificador', { exact: true }).fill('no-existe.qa');
   await page.getByLabel('Contraseña', { exact: true }).fill('No-es-una-cuenta-real');
   await page.getByRole('button', { name: 'Ingresar al sistema' }).click();
   await expect(page.locator('.mensaje-error')).toContainText('Verifica los datos de acceso');

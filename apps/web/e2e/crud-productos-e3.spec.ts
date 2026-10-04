@@ -10,7 +10,7 @@ test('edita y desactiva un producto desde la web', async ({ page }) => {
   const codigo = `QA-CRUD-${Date.now()}`;
 
   await page.goto('/acceso');
-  await page.getByLabel('Identificador de acceso').fill(requerida('QA_ADMIN_IDENTIFICADOR'));
+  await page.getByLabel('Identificador', { exact: true }).fill(requerida('QA_ADMIN_IDENTIFICADOR'));
   await page.getByLabel('Contraseña', { exact: true }).fill(requerida('QA_ADMIN_PASSWORD'));
   await page.getByRole('button', { name: /Ingresar al sistema/ }).click();
 
