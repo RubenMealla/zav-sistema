@@ -222,13 +222,34 @@ export function entregarPedidoConComprobacion(
 
 export type DireccionGeocodificada = {
   direccion: string;
+  principal: string;
+  secundaria: string;
+  tipo: string;
+  departamento: string | null;
+  ciudad: string | null;
+  paisCodigo: string | null;
   latitud: number;
   longitud: number;
 };
 
+export function autocompletarDirecciones(token: string, consulta: string) {
+  return solicitud<{
+    proveedor: 'GEOAPIFY';
+    alcance: 'BOLIVIA';
+    prioridad: 'TARIJA';
+    resultados: DireccionGeocodificada[];
+  }>(
+    `/api/v1/geografia/autocompletar?q=${encodeURIComponent(consulta.trim())}`,
+    {},
+    token,
+  );
+}
+
 export function buscarDirecciones(token: string, consulta: string) {
   return solicitud<{
     proveedor: 'GEOAPIFY';
+    alcance: 'BOLIVIA';
+    prioridad: 'TARIJA';
     resultados: DireccionGeocodificada[];
   }>(
     `/api/v1/geografia/geocodificar?q=${encodeURIComponent(consulta.trim())}`,
@@ -242,7 +263,12 @@ export function direccionInversa(token: string, punto: PuntoGeografico) {
     latitud: String(punto.latitud),
     longitud: String(punto.longitud),
   });
-  return solicitud<{ proveedor: 'GEOAPIFY'; direccion: string | null }>(
+  return solicitud<{
+    proveedor: 'GEOAPIFY';
+    alcance: 'BOLIVIA';
+    direccion: string | null;
+    paisCodigo: string | null;
+  }>(
     `/api/v1/geografia/reversa?${params.toString()}`,
     {},
     token,
