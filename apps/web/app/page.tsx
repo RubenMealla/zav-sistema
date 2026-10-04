@@ -9,10 +9,16 @@ const operaciones = [
   { numero: '03', titulo: 'Movimientos', texto: 'Ingresos y traslados entre ubicaciones operativas.' },
 ];
 
-const seccionesPublicas = [
-  { numero: '01', titulo: 'Catálogo', texto: 'Espacio preparado para productos, familias y presentaciones visibles al cliente.' },
-  { numero: '02', titulo: 'Promociones', texto: 'Zona prevista para campañas comerciales con vigencia y contenido administrable.' },
-  { numero: '03', titulo: 'Noticias', texto: 'Sección prevista para novedades e información institucional de ZAV.' },
+const indiceCatalogo = [
+  { numero: '01', titulo: 'Familias', texto: 'Organización de productos por tipo.' },
+  { numero: '02', titulo: 'Presentaciones', texto: 'Formatos y datos visibles para el cliente.' },
+  { numero: '03', titulo: 'Detalle', texto: 'Información propia de cada producto.' },
+];
+
+const novedadesReferencia = [
+  { numero: '01', categoria: 'NOVEDADES', titulo: 'Un espacio editorial para comunicar lanzamientos y cambios relevantes.' },
+  { numero: '02', categoria: 'INFORMACIÓN', titulo: 'Contenido útil para clientes y visitantes sin mezclarlo con la operación interna.' },
+  { numero: '03', categoria: 'MARCA', titulo: 'La identidad de ZAV como parte visible del sitio, no como un bloque genérico.' },
 ];
 
 export default function Inicio() {
@@ -26,7 +32,7 @@ export default function Inicio() {
         <div className="contenedor-publico publico-header-interior">
           <Link href="/" aria-label="ZAV, inicio" className="publico-marca">
             <Marca compacta />
-            <span><strong>ZAV</strong><small>Fiambres &amp; embutidos</small></span>
+            <span className="publico-marca-texto"><strong>ZAV</strong><small>Fiambres &amp; embutidos</small></span>
           </Link>
 
           {mostrarLandingExtendida ? (
@@ -50,81 +56,120 @@ export default function Inicio() {
         <section className="publico-hero">
           <div className="contenedor-publico publico-hero-grid">
             <div className="publico-hero-contenido">
-              <span className="publico-kicker">FIAMBRES &amp; EMBUTIDOS · TARIJA, BOLIVIA</span>
-              <h1>Identidad de marca.<br /><em>Gestión con trazabilidad.</em></h1>
-              <p>Un punto de entrada claro para ZAV: información pública cuando corresponda y acceso separado al sistema interno de gestión.</p>
+              <span className="publico-kicker">ZAV · FIAMBRES &amp; EMBUTIDOS · TARIJA</span>
+              <h1>Una identidad propia para presentar <em>ZAV.</em></h1>
+              <p>La presencia pública de la empresa y el acceso al sistema interno se mantienen claramente separados, con una experiencia visual coherente con la marca.</p>
               <div className="publico-hero-acciones">
                 {mostrarLandingExtendida ? (
                   <a className="boton boton-primario boton-grande" href="#productos">
-                    Explorar el sitio <Icono nombre="flecha" tamano={17} />
+                    Conocer la propuesta <Icono nombre="flecha" tamano={17} />
                   </a>
                 ) : null}
                 <Link className={mostrarLandingExtendida ? 'publico-boton-secundario' : 'boton boton-primario boton-grande'} href="/acceso">
                   Ingresar al sistema <Icono nombre="flecha" tamano={17} />
                 </Link>
               </div>
-              <span className="publico-nota"><Icono nombre="escudo" tamano={15} /> El sistema administrativo requiere autenticación.</span>
+              <span className="publico-nota"><Icono nombre="escudo" tamano={15} /> El entorno administrativo requiere autenticación.</span>
             </div>
 
-            <div className="publico-hero-marca" aria-label="Identidad ZAV">
-              <span className="publico-hero-marca-etiqueta">ZAV / 2026</span>
+            <div className="publico-hero-marca" aria-label="Identidad visual ZAV">
+              <span className="publico-hero-marca-etiqueta">FIAMBRES / EMBUTIDOS</span>
               <Marca etiqueta grande />
-              <div className="publico-hero-marca-pie"><span>Fiambres &amp; embutidos</span><span>Tarija</span></div>
+              <div className="publico-hero-marca-pie"><span>ZAV</span><span>Tarija · Bolivia</span></div>
             </div>
           </div>
         </section>
 
         {mostrarLandingExtendida ? (
           <>
-            <section id="productos" className="publico-seccion contenedor-publico publico-seccion-futura" aria-labelledby="productos-titulo">
-              <header className="publico-seccion-cabecera">
-                <div>
-                  <span className="eyebrow">CATÁLOGO</span>
-                  <h2 id="productos-titulo">Los productos pueden ser el centro de la experiencia pública.</h2>
-                </div>
-                <p>La estructura queda preparada para enlazar productos reales cuando el módulo público esté implementado.</p>
-              </header>
-              <div className="publico-futuro-grid">
-                {seccionesPublicas.map((item) => (
-                  <article key={item.numero}>
-                    <span>{item.numero}</span>
-                    <h3>{item.titulo}</h3>
-                    <p>{item.texto}</p>
-                    <small>Sección preparada</small>
+            <section id="productos" className="publico-seccion publico-catalogo">
+              <div className="contenedor-publico">
+                <header className="publico-seccion-cabecera">
+                  <div>
+                    <span className="eyebrow">CATÁLOGO / PRODUCTOS</span>
+                    <h2 id="productos-titulo">El producto debe ocupar espacio, no quedar reducido a una tarjeta.</h2>
+                  </div>
+                  <p>La sección queda preparada para incorporar productos reales cuando exista una fuente pública validada. La estructura prioriza fotografía, presentación y lectura antes que iconos decorativos.</p>
+                </header>
+
+                <div className="publico-catalogo-editorial" aria-labelledby="productos-titulo">
+                  <article className="publico-catalogo-principal">
+                    <div className="publico-catalogo-fondo" aria-hidden="true">
+                      <span>ZAV</span>
+                      <b>01</b>
+                    </div>
+                    <div className="publico-catalogo-principal-contenido">
+                      <span className="publico-kicker">PRODUCTO DESTACADO</span>
+                      <h3>Una composición reservada para una fotografía real de producto.</h3>
+                      <p>Cuando el catálogo público esté implementado, este espacio podrá mostrar una presentación concreta sin convertir toda la portada en una cuadrícula repetitiva.</p>
+                    </div>
                   </article>
-                ))}
+
+                  <aside className="publico-catalogo-indice" aria-label="Estructura prevista del catálogo">
+                    <span className="publico-catalogo-indice-titulo">ESTRUCTURA</span>
+                    {indiceCatalogo.map((item) => (
+                      <div key={item.numero} className="publico-catalogo-fila">
+                        <span>{item.numero}</span>
+                        <div><strong>{item.titulo}</strong><p>{item.texto}</p></div>
+                      </div>
+                    ))}
+                  </aside>
+                </div>
               </div>
             </section>
 
             <section id="promociones" className="publico-promo">
               <div className="contenedor-publico publico-promo-grid">
-                <div>
+                <div className="publico-promo-numero" aria-hidden="true">02</div>
+                <div className="publico-promo-contenido">
                   <span className="publico-kicker">PROMOCIONES</span>
-                  <h2>Un espacio propio para campañas, sin mezclarlo con la operación interna.</h2>
+                  <h2>Las campañas necesitan una pausa visual propia.</h2>
+                  <p>Este bloque está pensado como una pieza editorial de alto contraste para una promoción vigente, un combo o una comunicación comercial. No comparte el mismo patrón visual del catálogo ni de las noticias.</p>
+                  <span className="publico-promo-linea">Contenido dinámico cuando el módulo esté disponible</span>
                 </div>
-                <p>Si el alcance lo permite, esta sección podrá conectarse a contenido administrable. Si no, puede ocultarse con una sola configuración sin eliminar el diseño.</p>
               </div>
             </section>
 
-            <section id="novedades" className="publico-seccion contenedor-publico publico-novedades" aria-labelledby="novedades-titulo">
-              <div>
+            <section id="novedades" className="publico-seccion publico-novedades contenedor-publico" aria-labelledby="novedades-titulo">
+              <div className="publico-novedades-intro">
                 <span className="eyebrow">NOTICIAS / INFORMACIÓN</span>
-                <h2 id="novedades-titulo">Contenido institucional con jerarquía y lectura clara.</h2>
+                <h2 id="novedades-titulo">Una sección de lectura, no otra colección de tarjetas.</h2>
+                <p>La jerarquía se apoya en títulos, líneas, numeración y espacio. Cuando existan publicaciones reales, podrán reemplazar estos textos de referencia.</p>
               </div>
               <div className="publico-novedades-lista">
-                <article><span>01</span><div><small>NOTICIAS</small><h3>Espacio para novedades de la empresa.</h3></div></article>
-                <article><span>02</span><div><small>INFORMACIÓN</small><h3>Contenido útil para clientes y visitantes.</h3></div></article>
-                <article><span>03</span><div><small>MARCA</small><h3>Comunicación institucional separada del sistema interno.</h3></div></article>
+                {novedadesReferencia.map((novedad) => (
+                  <article key={novedad.numero}>
+                    <span>{novedad.numero}</span>
+                    <div><small>{novedad.categoria}</small><h3>{novedad.titulo}</h3></div>
+                    <b aria-hidden="true">↗</b>
+                  </article>
+                ))}
               </div>
             </section>
           </>
         ) : null}
 
-        <section id="zav" className="publico-operaciones">
+        <section id="zav" className="publico-zav">
+          <div className="contenedor-publico publico-zav-grid">
+            <div className="publico-zav-marca">
+              <span className="publico-zav-rotulo">ZAV / TARIJA</span>
+              <Marca grande />
+            </div>
+            <div className="publico-zav-texto">
+              <span className="publico-kicker">NOSOTROS / IDENTIDAD ZAV</span>
+              <h2>Una empresa de fiambres y embutidos con una presencia digital propia.</h2>
+              <p>ZAV se presenta desde Tarija, Bolivia. La información institucional detallada se incorporará únicamente a partir de datos confirmados de la empresa, evitando publicar historia, cifras o atributos que no hayan sido validados.</p>
+              <p>El sitio público está pensado para comunicar productos, promociones, noticias e información de ZAV; el personal autorizado accede al sistema administrativo por una ruta separada.</p>
+              <Link className="publico-link" href="/acceso">Ir al acceso administrativo <Icono nombre="flecha" tamano={16} /></Link>
+            </div>
+          </div>
+        </section>
+
+        <section id="sistema" className="publico-operaciones">
           <div className="contenedor-publico">
             <div className="publico-seccion-titulo">
               <span className="eyebrow">SISTEMA INTERNO</span>
-              <h2>La gestión operativa permanece separada de la comunicación pública.</h2>
+              <h2>La operación administrativa permanece fuera del recorrido público.</h2>
             </div>
             <div className="publico-registros">
               {operaciones.map((operacion) => (
