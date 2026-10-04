@@ -626,7 +626,11 @@ const styles = StyleSheet.create({
   mapaContenedor: { flex: 1, marginHorizontal: 16, overflow: 'hidden', borderRadius: 10 },
   mapa: { flex: 1 },
   mapaCargando: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
     backgroundColor: 'rgba(246,245,240,0.92)',
     alignItems: 'center',
     justifyContent: 'center',
