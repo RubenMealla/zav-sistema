@@ -550,4 +550,33 @@ describe('Pedidos y distribucion E3 (e2e)', () => {
     expect(venta.cantidad_fisica).toBe(14);
     expect(distribucion).toBeUndefined();
   });
+
+  it('permite al Administrador auditar el pedido y el Vendedor responsable', async () => {
+    const auditoria = await prepararProducto(`QA-AUD-${randomUUID().slice(0, 8)}`, 2);
+    const clienteId = await crearCliente(`AUD-${randomUUID().slice(0, 8)}`);
+    const pedido = await crearPedido(clienteId, auditoria.productoId, 1).expect(201);
+
+    const respuesta = await request(app.getHttpServer())
+      .get('/api/v1/admin/pedidos?limit=50')
+      .set('Authorization', `Bearer ${tokenAdmin}`)
+      .expect(200);
+
+    const encontrado = respuesta.body.items.find(
+      (item: { id: string }) => item.id === pedido.body.id,
+    );
+    expect(encontrado).toEqual(
+      expect.objectContaining({
+        id: pedido.body.id,
+        vendedor: expect.objectContaining({
+          identificador: vendedor.identificador,
+        }),
+      }),
+    );
+
+    await request(app.getHttpServer())
+      .get('/api/v1/admin/pedidos?limit=50')
+      .set('Authorization', `Bearer ${tokenVendedor}`)
+      .expect(403);
+  });
+
 });
