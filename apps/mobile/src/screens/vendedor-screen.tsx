@@ -1533,33 +1533,48 @@ function Clientes({
 }) {
   const [busqueda, setBusqueda] = useState('');
   const [filtroUbicacion, setFiltroUbicacion] = useState<'TODOS' | 'CON' | 'SIN'>('TODOS');
+  const [orden, setOrden] = useState<'AZ' | 'ZA'>('AZ');
+  const [limite, setLimite] = useState(8);
+
   const editando = Boolean(clienteEditando);
   const formNombre = editando ? editNombre : nombre;
   const formTelefono = editando ? editTelefono : telefono;
   const formDireccion = editando ? editDireccion : direccion;
   const formUbicacion = editando ? editUbicacion : ubicacion;
 
-  const clientesVisibles = useMemo(() => {
+  useEffect(() => {
+    setLimite(8);
+  }, [busqueda, filtroUbicacion, orden]);
+
+  const clientesFiltrados = useMemo(() => {
     const consulta = busqueda.trim().toLocaleLowerCase('es-BO');
-    return clientes.filter((cliente) => {
-      const coincide =
-        !consulta ||
-        cliente.nombre.toLocaleLowerCase('es-BO').includes(consulta) ||
-        (cliente.telefono ?? '').toLocaleLowerCase('es-BO').includes(consulta) ||
-        cliente.direccion.toLocaleLowerCase('es-BO').includes(consulta);
-      const coincideUbicacion =
-        filtroUbicacion === 'TODOS' ||
-        (filtroUbicacion === 'CON' && Boolean(cliente.ubicacion)) ||
-        (filtroUbicacion === 'SIN' && !cliente.ubicacion);
-      return coincide && coincideUbicacion;
-    });
-  }, [busqueda, clientes, filtroUbicacion]);
+    return clientes
+      .filter((cliente) => {
+        const coincide =
+          !consulta ||
+          cliente.nombre.toLocaleLowerCase('es-BO').includes(consulta) ||
+          (cliente.telefono ?? '').toLocaleLowerCase('es-BO').includes(consulta) ||
+          cliente.direccion.toLocaleLowerCase('es-BO').includes(consulta);
+        const coincideUbicacion =
+          filtroUbicacion === 'TODOS' ||
+          (filtroUbicacion === 'CON' && Boolean(cliente.ubicacion)) ||
+          (filtroUbicacion === 'SIN' && !cliente.ubicacion);
+        return coincide && coincideUbicacion;
+      })
+      .sort((a, b) => {
+        const comparacion = a.nombre.localeCompare(b.nombre, 'es');
+        return orden === 'AZ' ? comparacion : -comparacion;
+      });
+  }, [busqueda, clientes, filtroUbicacion, orden]);
+
+  const clientesMostrados = clientesFiltrados.slice(0, limite);
+  const restantes = Math.max(0, clientesFiltrados.length - clientesMostrados.length);
 
   return (
     <View style={styles.bloque}>
       <Titulo
         titulo="Clientes"
-        descripcion="Alta y edición usan el mismo formulario."
+        descripcion="El formulario siempre queda arriba; la lista se mantiene compacta y buscable."
       />
 
       <View style={[styles.tarjeta, editando && styles.tarjetaEdicion]}>
@@ -1613,6 +1628,7 @@ function Clientes({
 
         <BotonAccion
           texto={editando ? 'Guardar cambios' : 'Guardar cliente'}
+          textoCargando={editando ? 'Guardando cambios…' : 'Guardando cliente…'}
           cargando={guardando}
           onPress={editando ? onGuardarEdicion : onGuardar}
         />
@@ -1625,18 +1641,30 @@ function Clientes({
       </View>
 
       <View style={styles.tarjeta}>
+        <View style={styles.filaEntre}>
+          <View style={styles.flex}>
+            <Text style={styles.tarjetaTitulo}>Directorio de clientes</Text>
+            <Text style={styles.textoSecundario}>
+              Busca antes de recorrer la lista.
+            </Text>
+          </View>
+          <Text style={styles.estadoMiniOk}>{clientes.length}</Text>
+        </View>
+
         <TextInput
           value={busqueda}
           onChangeText={setBusqueda}
-          placeholder="Buscar nombre, teléfono o dirección"
+          placeholder="Nombre, teléfono o dirección"
           placeholderTextColor="#8a8982"
           style={styles.input}
         />
+
+        <Text style={styles.seccionTitulo}>Ubicación</Text>
         <View style={styles.filtros}>
           {[
             ['TODOS', 'Todos'],
-            ['CON', 'Con ubicación'],
-            ['SIN', 'Sin ubicación'],
+            ['CON', 'Con GPS'],
+            ['SIN', 'Sin GPS'],
           ].map(([valor, texto]) => (
             <Pressable
               key={valor}
@@ -1649,15 +1677,34 @@ function Clientes({
             </Pressable>
           ))}
         </View>
+
+        <Text style={styles.seccionTitulo}>Orden</Text>
+        <View style={styles.filtros}>
+          {[
+            ['AZ', 'A → Z'],
+            ['ZA', 'Z → A'],
+          ].map(([valor, texto]) => (
+            <Pressable
+              key={valor}
+              onPress={() => setOrden(valor as 'AZ' | 'ZA')}
+              style={[styles.filtroChip, orden === valor && styles.filtroChipActivo]}
+            >
+              <Text style={[styles.filtroChipTexto, orden === valor && styles.filtroChipTextoActivo]}>
+                {texto}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+
         <Text style={styles.contador}>
-          {clientesVisibles.length} de {clientes.length} cliente(s)
+          Mostrando {clientesMostrados.length} de {clientesFiltrados.length} coincidencia(s).
         </Text>
       </View>
 
-      {!clientesVisibles.length ? (
+      {!clientesMostrados.length ? (
         <Vacio texto="No hay clientes que coincidan con los filtros." />
       ) : (
-        clientesVisibles.map((cliente) => (
+        clientesMostrados.map((cliente) => (
           <View key={cliente.id} style={styles.tarjetaCompacta}>
             <View style={styles.filaEntre}>
               <View style={styles.flex}>
@@ -1667,7 +1714,7 @@ function Clientes({
                 ) : null}
               </View>
               <Text style={cliente.ubicacion ? styles.estadoMiniOk : styles.estadoMiniPendiente}>
-                {cliente.ubicacion ? 'Ubicado' : 'Sin GPS'}
+                {cliente.ubicacion ? 'GPS' : 'Sin GPS'}
               </Text>
             </View>
             <Text style={styles.direccion}>{cliente.direccion}</Text>
@@ -1677,6 +1724,18 @@ function Clientes({
           </View>
         ))
       )}
+
+      {restantes > 0 ? (
+        <Pressable onPress={() => setLimite((actual) => actual + 8)} style={styles.botonMapa}>
+          <Text style={styles.botonMapaTexto}>Ver 8 más · quedan {restantes}</Text>
+        </Pressable>
+      ) : null}
+
+      {limite > 8 && clientesFiltrados.length > 8 ? (
+        <Pressable onPress={() => setLimite(8)} style={styles.enlaceBoton}>
+          <Text style={styles.enlaceSecundario}>Mostrar menos</Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
