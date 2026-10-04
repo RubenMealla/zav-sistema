@@ -110,19 +110,22 @@ export function MapaUbicacion({
       .then((L) => {
         if (!activo || !contenedorRef.current) return;
 
-        const centro = inicial ?? CENTRO_TARIJA;
+        const tieneInicial = latitudInicial !== null && longitudInicial !== null;
+        const centro = tieneInicial
+          ? { latitud: latitudInicial, longitud: longitudInicial }
+          : CENTRO_TARIJA;
         const mapa = L.map(contenedorRef.current, {
           zoomControl: true,
           attributionControl: true,
-        }).setView([centro.latitud, centro.longitud], inicial ? 17 : 14);
+        }).setView([centro.latitud, centro.longitud], tieneInicial ? 17 : 15);
 
         L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
           maxZoom: 19,
           attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>',
         }).addTo(mapa);
 
-        if (inicial) {
-          marcadorRef.current = L.marker([inicial.latitud, inicial.longitud])
+        if (tieneInicial) {
+          marcadorRef.current = L.marker([latitudInicial, longitudInicial])
             .addTo(mapa)
             .bindPopup('Ubicación guardada de Venta y Despacho');
         }
@@ -160,7 +163,7 @@ export function MapaUbicacion({
   }, [latitudInicial, longitudInicial]);
 
   function centrarTarija() {
-    mapaRef.current?.setView([CENTRO_TARIJA.latitud, CENTRO_TARIJA.longitud], 14);
+    mapaRef.current?.setView([CENTRO_TARIJA.latitud, CENTRO_TARIJA.longitud], 15);
   }
 
   return (

@@ -58,7 +58,7 @@ test('permite gestionar inventario desde módulos, modales y notificaciones', as
 
   await modulos.getByRole('link', { name: 'Productos', exact: true }).click();
   await expect(page).toHaveURL(/\/panel\?vista=productos$/);
-  await expect(page.getByRole('heading', { name: 'Productos' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Productos', exact: true })).toBeVisible();
   await expect(page.getByRole('table', { name: 'Productos registrados' })).toBeVisible();
   await captura(page, 'identidad-productos-listado.png');
 
