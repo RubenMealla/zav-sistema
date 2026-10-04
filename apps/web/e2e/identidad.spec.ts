@@ -39,7 +39,7 @@ for (const ancho of [390, 768, 1440]) {
     await page.getByRole('link', { name: 'Acceso interno' }).first().click();
     await expect(page).toHaveURL(/\/acceso$/);
     await expect(page.getByRole('heading', { name: 'Inicia sesión.' })).toBeVisible();
-    await expect(page.getByRole('img', { name: 'ZAV · Fiambres y embutidos' }).filter({ visible: true })).toBeVisible();
+    await expect(page.getByRole('img', { name: 'ZAV · Fiambres y embutidos' }).first()).toBeVisible();
     await page.getByLabel('Contraseña', { exact: true }).fill('Prueba-visual');
     await page.getByRole('button', { name: 'Mostrar contraseña' }).click();
     await expect(page.getByLabel('Contraseña', { exact: true })).toHaveAttribute('type', 'text');
