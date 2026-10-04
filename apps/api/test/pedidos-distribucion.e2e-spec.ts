@@ -165,6 +165,18 @@ describe('Pedidos y distribucion E3 (e2e)', () => {
     expect(invalido.body).toEqual(
       expect.objectContaining({ statusCode: 400, path: '/api/v1/clientes' }),
     );
+
+    const sinUbicacion = await request(app.getHttpServer())
+      .post('/api/v1/clientes')
+      .set('Authorization', `Bearer ${tokenVendedor}`)
+      .send({
+        nombre: 'Cliente sin GPS',
+        telefono: '70000001',
+        direccion: 'Referencia válida, Tarija',
+      })
+      .expect(400);
+
+    expect(String(sinUbicacion.body.message)).toContain('ubicación');
   });
 
   it('protege la geocodificación externa y no exige una credencial en el cliente móvil', async () => {
