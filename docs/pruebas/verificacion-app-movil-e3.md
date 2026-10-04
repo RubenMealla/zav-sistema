@@ -261,3 +261,39 @@ La revisión técnica que fundamenta estos cambios se documenta en:
 `docs/investigacion/revision-ux-movil-pedidos-distribucion-e3.md`
 
 Se utilizaron fuentes oficiales de Route4Me, Onfleet, Shopify POS y MapLibre React Native. La revisión sirve para justificar patrones de interacción; no implica que ZAV replique el alcance funcional de esas plataformas.
+
+
+## Quinta validación física · refinamiento de selección y recorrido
+
+**Evidencia reportada por el estudiante el 4 de octubre de 2026:** la cuarta versión fue validada en Android y el flujo principal funciona correctamente. Se detectaron tres mejoras antes del cierre de E3.
+
+### Hallazgo F-18 · Safe Area ausente en selectores de Pedido
+
+Los modales de selección de Cliente y productos utilizaban el `SafeAreaView` nativo de React Native, por lo que en el dispositivo físico la cabecera y el pie podían superponerse con la barra de estado y la navegación del sistema.
+
+**Corrección en código:** ambos selectores utilizan `SafeAreaView` de `react-native-safe-area-context` con bordes superior e inferior.
+
+**Estado:** IMPLEMENTADO EN CÓDIGO / PENDIENTE DE REVALIDAR EN ANDROID.
+
+### Hallazgo F-19 · nuevos Pedidos no podían incorporarse a un recorrido activo
+
+Una planificación existente debía cancelarse y generarse de nuevo para incluir Pedidos registrados durante la distribución.
+
+**Corrección en código:** mientras existe un recorrido activo, la app detecta Pedidos con GPS que todavía no pertenecen a la planificación. La acción **Añadir** captura la ubicación actual del Vendedor, combina las paradas existentes con los nuevos Pedidos y solicita una nueva secuencia sin cancelar previamente el recorrido.
+
+Las paradas existentes se preservan aunque no estén visibles en la página actual del historial.
+
+**Estado:** IMPLEMENTADO EN CÓDIGO / PENDIENTE DE REVALIDAR CON ALTA DE PEDIDO DURANTE RECORRIDO.
+
+### Hallazgo F-20 · selección duplicada y exceso de controles
+
+Las acciones “Seleccionar pendientes” y “Seleccionar registrados” podían mostrar cantidades iguales y obligaban al Vendedor a interpretar una diferencia de estados que no era necesaria para la operación cotidiana.
+
+**Corrección en código:** se sustituyeron por una única acción **Seleccionar visibles**. Las acciones posteriores se habilitan según los estados reales de lo seleccionado:
+- organizar si hay dos o más Pedidos georreferenciados;
+- retirar únicamente los seleccionados que siguen en REGISTRADO;
+- la entrega continúa individual por GPS puntual.
+
+La tarjeta de recorrido activo también se compactó y agrupa en una misma fila Actualizar ubicación / Finalizar organización.
+
+**Estado:** IMPLEMENTADO EN CÓDIGO / PENDIENTE DE REVALIDAR EN ANDROID.
