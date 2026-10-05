@@ -328,3 +328,6 @@ td small,.codigo,.badge,.saldos-inline b,.saldos-inline strong{font-size:13px}
 .ubicacion-buscador-campo input{font-size:16px}
 .ubicacion-buscando,.ubicacion-busqueda-error{font-size:13px}
 .ubicacion-sugerencias strong{font-size:15px}.ubicacion-sugerencias span{font-size:14px}
+
+.ubicacion-buscador{width:min(100%,720px)}
+.ubicacion-busqueda-vacia{margin:8px 0 0;color:#68635a;font-size:13px;line-height:1.45}
