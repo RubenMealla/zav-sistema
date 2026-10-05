@@ -135,7 +135,7 @@ async function capturaError(page: Page, evidencia: Evidencia) {
 }
 
 test.describe('Evidencias HTTP E3', () => {
-  test('genera capturas 400, 401, 403, 404 y 409', async ({ page, request }) => {
+  test('genera capturas 400, 401, 403, 404, 409 y 503', async ({ page, request }) => {
     const adminId = process.env.QA_ADMIN_IDENTIFICADOR;
     const adminPassword = process.env.QA_ADMIN_PASSWORD;
     const vendedorId = process.env.QA_VENDEDOR_IDENTIFICADOR;
@@ -206,6 +206,20 @@ test.describe('Evidencias HTTP E3', () => {
       ruta: `/api/v1/clientes/${inexistenteId}`,
       autenticacion: 'Vendedor QA autenticado',
       respuesta: await inexistente.json(),
+    });
+
+    const proveedorNoDisponible = await request.get(
+      `${API}/api/v1/geografia/geocodificar?q=Tarija`,
+      { headers: { Authorization: `Bearer ${tokenVendedor}` } },
+    );
+    expect(proveedorNoDisponible.status()).toBe(503);
+    await capturaError(page, {
+      codigo: 503,
+      titulo: 'Servicio externo de geocodificación no disponible',
+      metodo: 'GET',
+      ruta: '/api/v1/geografia/geocodificar?q=Tarija',
+      autenticacion: 'Vendedor QA autenticado',
+      respuesta: await proveedorNoDisponible.json(),
     });
 
     const codigo = `QA-DUP-${randomUUID().slice(0, 8).toUpperCase()}`;
