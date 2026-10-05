@@ -17,7 +17,11 @@ import { AccionesProducto } from './acciones-producto';
 import { Paginacion } from '../componentes/paginacion';
 
 const API = process.env.API_BASE_URL ?? (process.env.NODE_ENV === 'production' ? 'https://zav-api-2026.onrender.com' : 'http://localhost:3001');
-const LIMITE_TABLA = 20;
+const LIMITES_TABLA = [10, 20, 30, 50, 100, 150] as const;
+function limiteSeguro(valor: string | undefined) {
+  const numero = Number.parseInt(valor ?? '20', 10);
+  return LIMITES_TABLA.includes(numero as (typeof LIMITES_TABLA)[number]) ? numero : 20;
+}
 
 function paginaSegura(valor: string | undefined) {
   const numero = Number.parseInt(valor ?? '1', 10);
@@ -140,6 +144,10 @@ export default async function Panel({
     historialCondicionPagina?: string;
     pedidoPagina?: string;
     movimientoPagina?: string;
+    limite?: string;
+    pedidoQ?: string;
+    pedidoDesde?: string;
+    pedidoHasta?: string;
   }>;
 }) {
   const token = (await cookies()).get('zav_acceso')?.value;
@@ -153,6 +161,7 @@ export default async function Panel({
   const historialCondicionPagina = paginaSegura(parametros.historialCondicionPagina);
   const pedidoPagina = paginaSegura(parametros.pedidoPagina);
   const movimientoPagina = paginaSegura(parametros.movimientoPagina);
+  const limiteTabla = limiteSeguro(parametros.limite);
 
   const vacia = <T,>(): { estado: number; datos?: Pagina<T> } => ({
     estado: 200,
@@ -170,7 +179,7 @@ export default async function Panel({
     const necesitaProductos = vista === 'resumen' || vista === 'productos' || vista === 'lotes';
     const necesitaLotes = vista !== 'productos';
 
-    const productoParametros = new URLSearchParams({ limit: vista === 'productos' ? String(LIMITE_TABLA) : '100' });
+    const productoParametros = new URLSearchParams({ limit: vista === 'productos' ? String(limiteTabla) : '100' });
     if (vista === 'productos') productoParametros.set('page', String(productoPagina));
     if (vista === 'productos' && parametros.productoQ?.trim()) {
       productoParametros.set('q', parametros.productoQ.trim());
@@ -180,7 +189,7 @@ export default async function Panel({
     }
 
     const loteParametros = new URLSearchParams({
-      limit: vista === 'lotes' || vista === 'condiciones' ? String(LIMITE_TABLA) : '50',
+      limit: vista === 'lotes' || vista === 'condiciones' ? String(limiteTabla) : '50',
     });
     if (vista === 'lotes') loteParametros.set('page', String(lotePagina));
     if (vista === 'condiciones') loteParametros.set('page', String(condicionPagina));
@@ -206,13 +215,13 @@ export default async function Panel({
           : Promise.resolve(vacia<Lote>()),
         vista === 'movimientos' && parametros.historialLoteId
           ? consultar<Pagina<Movimiento>>(
-              `/api/v1/movimientos?loteId=${encodeURIComponent(parametros.historialLoteId)}&page=${movimientoPagina}&limit=${LIMITE_TABLA}`,
+              `/api/v1/movimientos?loteId=${encodeURIComponent(parametros.historialLoteId)}&page=${movimientoPagina}&limit=${limiteTabla}`,
               token,
             )
           : Promise.resolve(undefined),
         vista === 'condiciones' && parametros.historialCondicionLoteId
           ? consultar<Pagina<EventoCondicion>>(
-              `/api/v1/lotes/${encodeURIComponent(parametros.historialCondicionLoteId)}/condiciones?page=${historialCondicionPagina}&limit=${LIMITE_TABLA}`,
+              `/api/v1/lotes/${encodeURIComponent(parametros.historialCondicionLoteId)}/condiciones?page=${historialCondicionPagina}&limit=${limiteTabla}`,
               token,
             )
           : Promise.resolve(undefined),
@@ -228,10 +237,13 @@ export default async function Panel({
     condiciones = respuestaCondiciones;
     ventaDespacho = respuestaVentaDespacho;
     if (vista === 'pedidos') {
-      const pedidoParametros = new URLSearchParams({ page: String(pedidoPagina), limit: String(LIMITE_TABLA) });
+      const pedidoParametros = new URLSearchParams({ page: String(pedidoPagina), limit: String(limiteTabla) });
       if (parametros.pedidoEstado && ['REGISTRADO', 'EN_DISTRIBUCION', 'ENTREGADO', 'CANCELADO'].includes(parametros.pedidoEstado)) {
         pedidoParametros.set('estado', parametros.pedidoEstado);
       }
+      if (parametros.pedidoQ?.trim()) pedidoParametros.set('q', parametros.pedidoQ.trim());
+      if (parametros.pedidoDesde) pedidoParametros.set('desde', parametros.pedidoDesde);
+      if (parametros.pedidoHasta) pedidoParametros.set('hasta', parametros.pedidoHasta);
       pedidos = await consultar<Pagina<PedidoAuditoria>>(`/api/v1/admin/pedidos?${pedidoParametros.toString()}`, token);
     }
   } catch {
@@ -414,7 +426,7 @@ export default async function Panel({
                   </table>
                 </div>
               )}
-              <Paginacion pagina={productoPagina} total={productos.datos?.total ?? 0} limite={LIMITE_TABLA} parametro="productoPagina" parametros={{ vista: 'productos', productoQ: parametros.productoQ, productoActivo: parametros.productoActivo }} />
+              <Paginacion pagina={productoPagina} total={productos.datos?.total ?? 0} limite={limiteTabla} parametro="productoPagina" parametros={{ vista: 'productos', productoQ: parametros.productoQ, productoActivo: parametros.productoActivo }} />
             </section>
           )}
 
@@ -504,7 +516,7 @@ export default async function Panel({
                   </table>
                 </div>
               )}
-              <Paginacion pagina={lotePagina} total={lotes.datos?.total ?? 0} limite={LIMITE_TABLA} parametro="lotePagina" parametros={{ vista: 'lotes', loteProductoId: parametros.loteProductoId, loteVigencia: parametros.loteVigencia }} />
+              <Paginacion pagina={lotePagina} total={lotes.datos?.total ?? 0} limite={limiteTabla} parametro="lotePagina" parametros={{ vista: 'lotes', loteProductoId: parametros.loteProductoId, loteVigencia: parametros.loteVigencia }} />
             </section>
           )}
 
@@ -544,7 +556,7 @@ export default async function Panel({
                     </div>
                   ))}
                 </div>
-                <Paginacion pagina={condicionPagina} total={lotes.datos?.total ?? 0} limite={LIMITE_TABLA} parametro="condicionPagina" parametros={{ vista: 'condiciones', historialCondicionLoteId: parametros.historialCondicionLoteId }} />
+                <Paginacion pagina={condicionPagina} total={lotes.datos?.total ?? 0} limite={limiteTabla} parametro="condicionPagina" parametros={{ vista: 'condiciones', historialCondicionLoteId: parametros.historialCondicionLoteId }} />
               </section>
 
               <section className="card card-modulo">
@@ -578,7 +590,7 @@ export default async function Panel({
                     ))}
                   </div>
                 )}
-                <Paginacion pagina={historialCondicionPagina} total={condiciones?.datos?.total ?? 0} limite={LIMITE_TABLA} parametro="historialCondicionPagina" parametros={{ vista: 'condiciones', historialCondicionLoteId: parametros.historialCondicionLoteId, condicionPagina: parametros.condicionPagina }} />
+                <Paginacion pagina={historialCondicionPagina} total={condiciones?.datos?.total ?? 0} limite={limiteTabla} parametro="historialCondicionPagina" parametros={{ vista: 'condiciones', historialCondicionLoteId: parametros.historialCondicionLoteId, condicionPagina: parametros.condicionPagina }} />
               </section>
             </div>
           )}
@@ -595,15 +607,27 @@ export default async function Panel({
 
               <form method="get" className="barra-filtros filtros-principales filtros-pedidos">
                 <input type="hidden" name="vista" value="pedidos" />
+                <label className="filtro-campo filtro-busqueda">
+                  <span>Buscar</span>
+                  <input name="pedidoQ" defaultValue={parametros.pedidoQ ?? ''} placeholder="Cliente, vendedor o destino" />
+                </label>
                 <label className="filtro-campo">
-                  <span>Estado del pedido</span>
+                  <span>Estado</span>
                   <select name="pedidoEstado" defaultValue={parametros.pedidoEstado ?? ''}>
-                    <option value="">Todos los estados</option>
+                    <option value="">Todos</option>
                     <option value="REGISTRADO">Registrado</option>
                     <option value="EN_DISTRIBUCION">En distribución</option>
                     <option value="ENTREGADO">Entregado</option>
                     <option value="CANCELADO">Cancelado</option>
                   </select>
+                </label>
+                <label className="filtro-campo">
+                  <span>Desde</span>
+                  <input type="date" name="pedidoDesde" defaultValue={parametros.pedidoDesde ?? ''} />
+                </label>
+                <label className="filtro-campo">
+                  <span>Hasta</span>
+                  <input type="date" name="pedidoHasta" defaultValue={parametros.pedidoHasta ?? ''} />
                 </label>
                 <div className="filtros-acciones">
                   <button type="submit" className="boton boton-secundario">Aplicar filtro</button>
@@ -618,9 +642,6 @@ export default async function Panel({
                 </div>
               ) : (
                 <>
-                  <p className="alcance-datos">
-                    Mostrando {itemsPedidos.length} de {pedidos.datos?.total ?? 0} pedido(s) en esta página.
-                  </p>
                   <div className="tabla-contenedor" role="region" tabIndex={0} aria-label="Pedidos registrados; tabla desplazable">
                     <table>
                       <caption className="solo-lectores">Auditoría de pedidos</caption>
@@ -688,7 +709,7 @@ export default async function Panel({
                       </tbody>
                     </table>
                   </div>
-                  <Paginacion pagina={pedidoPagina} total={pedidos.datos?.total ?? 0} limite={LIMITE_TABLA} parametro="pedidoPagina" parametros={{ vista: 'pedidos', pedidoEstado: parametros.pedidoEstado }} />
+                  <Paginacion pagina={pedidoPagina} total={pedidos.datos?.total ?? 0} limite={limiteTabla} parametro="pedidoPagina" parametros={{ vista: 'pedidos', pedidoEstado: parametros.pedidoEstado, pedidoQ: parametros.pedidoQ, pedidoDesde: parametros.pedidoDesde, pedidoHasta: parametros.pedidoHasta }} />
                 </>
               )}
             </section>
@@ -714,8 +735,8 @@ export default async function Panel({
                 </Modal>
               </div>
 
-              <div className="barra-filtros">
-                <div><Icono nombre="historial" tamano={17} /><span>Historial por lote</span></div>
+              <div className="barra-filtros barra-historial">
+                <div className="historial-etiqueta"><Icono nombre="historial" tamano={19} /><span>Historial por lote</span></div>
                 <form method="get" className="filtro-inline">
                   <input type="hidden" name="vista" value="movimientos" />
                   <select name="historialLoteId" defaultValue={parametros.historialLoteId ?? ''} required aria-label="Ver historial del lote">
@@ -765,7 +786,7 @@ export default async function Panel({
                   </table>
                 </div>
               )}
-              <Paginacion pagina={movimientoPagina} total={movimientos?.datos?.total ?? 0} limite={LIMITE_TABLA} parametro="movimientoPagina" parametros={{ vista: 'movimientos', historialLoteId: parametros.historialLoteId }} />
+              <Paginacion pagina={movimientoPagina} total={movimientos?.datos?.total ?? 0} limite={limiteTabla} parametro="movimientoPagina" parametros={{ vista: 'movimientos', historialLoteId: parametros.historialLoteId }} />
             </section>
           )}
         </div>

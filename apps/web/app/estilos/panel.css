@@ -364,3 +364,20 @@
 .acceso-rapido p{font-size:12px}
 .nota-card{font-size:12px}
 .condicion-fila div span,.timeline-superior time,.timeline-item small{font-size:12px}
+
+/* Refinamiento global de escala y alineación. */
+.sidebar-marca{min-height:96px;padding:18px 20px;border-bottom:1px solid #31302b}
+.nav-item{min-height:48px;font-size:15px}
+.sidebar-seccion{font-size:12px}
+.topbar h1{font-size:31px}
+.topbar p{font-size:15px}
+.breadcrumb{font-size:13px}
+.card-cabecera h2{font-size:24px}
+.card-cabecera p{font-size:14px}
+.bienvenida p,.nota-card,.acceso-rapido p{font-size:14px}
+.metrica-card span,.metrica-card small{font-size:13px}
+.barra-historial{align-items:center}
+.historial-etiqueta{display:flex;align-items:center;gap:9px;min-width:145px;font-size:15px;font-weight:700;color:#34312c}
+.historial-etiqueta .icono{flex:none}
+.filtros-pedidos .filtro-busqueda{flex:1 1 300px}
+.filtros-pedidos .filtro-campo{flex:1 1 170px}

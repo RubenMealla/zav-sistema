@@ -284,3 +284,25 @@ td small,.saldos-inline b,.saldos-inline strong{font-size:12px}
 .ubicacion-buscando,.ubicacion-sugerencias span,.ubicacion-busqueda-error{font-size:12px}
 .detalle-grid dt{font-size:12px}
 .detalle-grid dd{font-size:14px}
+
+/* Legibilidad y paginación configurable. */
+.campo,.filtro-campo{font-size:14px}
+.campo input,.campo select,.filtro-campo input,.filtro-campo select,.filtro-inline select{font-size:15px}
+th{font-size:12px}
+td{font-size:14px}
+td small,.codigo,.badge{font-size:12px}
+.tabla-vacia,.estado-vacio p{font-size:14px}
+.paginacion{display:flex;align-items:center;justify-content:space-between;gap:18px;min-height:68px;padding:14px 16px}
+.paginacion-info{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.paginacion-resumen{font-size:14px}
+.paginacion-tamano{display:flex;align-items:center;gap:8px;color:#625d55;font-size:13px}
+.paginacion-tamano select{height:36px;padding:0 30px 0 10px;border:1px solid #c8c3b9;background:#fff;color:#2e2c28;font-size:14px}
+.ubicacion-buscador{width:min(100%,820px)}
+.ubicacion-buscador-campo input{padding-right:130px;font-size:15px}
+.ubicacion-buscador-acciones{position:absolute;right:8px;display:flex;align-items:center;gap:8px}
+.ubicacion-limpiar{width:34px;height:34px;border:0;background:#f1eee8;color:#625d55;font-size:22px;line-height:1}
+.ubicacion-limpiar:hover{background:#e7e1d7;color:#a73a1d}
+.ubicacion-sugerencias{z-index:30}
+.ubicacion-sugerencias strong{font-size:14px}
+.ubicacion-sugerencias span{font-size:13px}
+@media(max-width:700px){.paginacion{align-items:stretch;flex-direction:column}.paginacion-info{justify-content:space-between}.paginacion-controles{justify-content:space-between}}

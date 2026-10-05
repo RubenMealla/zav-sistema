@@ -7,8 +7,8 @@ export async function GET(solicitud: Request) {
   if (!token) return Response.json({ message: 'Sesión requerida.' }, { status: 401 });
 
   const q = new URL(solicitud.url).searchParams.get('q')?.trim() ?? '';
-  if (q.length < 2 || q.length > 200) {
-    return Response.json({ message: 'La búsqueda debe contener entre 2 y 200 caracteres.' }, { status: 400 });
+  if (q.length < 1 || q.length > 200) {
+    return Response.json({ message: 'La búsqueda debe contener entre 1 y 200 caracteres.' }, { status: 400 });
   }
 
   try {
