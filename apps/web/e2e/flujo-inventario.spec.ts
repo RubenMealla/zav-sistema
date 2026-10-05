@@ -99,8 +99,8 @@ test('permite gestionar inventario desde módulos, modales y notificaciones', as
   await expect(page).toHaveURL(/\/panel\?vista=lotes&mensaje=lote$/);
   await expect(page.getByRole('status')).toContainText('Lote e ingreso inicial registrados correctamente');
   const filaLote = page.getByRole('row').filter({ has: page.getByRole('cell', { name: loteCodigo }) });
-  await expect(filaLote.getByText('RETENIDO')).toBeVisible();
-  await expect(filaLote.getByText('Producción y Almacenamiento')).toBeVisible();
+  await expect(filaLote.locator('td').nth(1).getByText('RETENIDO', { exact: true })).toBeVisible();
+  await expect(filaLote.locator('td').nth(3).getByText('Producción y Almacenamiento', { exact: true })).toBeVisible();
   await captura(page, '06-lote-registrado.png');
 
   await modulos.getByRole('link', { name: 'Movimientos', exact: true }).click();
