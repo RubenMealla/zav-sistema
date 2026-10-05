@@ -1,0 +1,52 @@
+name: Smoke público E3
+
+on:
+  push:
+    branches:
+      - pruebas/e3-evidencias-http
+  workflow_dispatch:
+
+jobs:
+  verificar-api-publica:
+    name: Verificar API pública sin credenciales persistidas
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      API: https://zav-api-2026.onrender.com
+
+    steps:
+      - name: Verificar salud pública
+        shell: bash
+        run: |
+          set -euo pipefail
+          cuerpo="$(curl --fail-with-body --retry 3 --retry-delay 5 --max-time 30 "$API/api/v1/salud")"
+          python -c 'import json,sys; d=json.loads(sys.argv[1]); assert d.get("estado")=="ok", d' "$cuerpo"
+
+      - name: Verificar rechazo de credenciales inválidas
+        shell: bash
+        run: |
+          set -euo pipefail
+          codigo="$(curl -sS -o "$RUNNER_TEMP/login-invalido.json" -w "%{http_code}" \
+            -H "Content-Type: application/json" \
+            -d '{"identificador":"qa.invalido@saf.ts","contrasena":"credencial-invalida"}' \
+            "$API/api/v1/auth/login")"
+          test "$codigo" = "401"
+          python - "$RUNNER_TEMP/login-invalido.json" <<'PY'
+          import json,sys
+          with open(sys.argv[1], encoding="utf-8") as f:
+              d=json.load(f)
+          assert d.get("statusCode")==401
+          PY
+
+      - name: Verificar 401 sin token
+        shell: bash
+        run: |
+          set -euo pipefail
+          codigo="$(curl -sS -o "$RUNNER_TEMP/401.json" -w "%{http_code}" "$API/api/v1/productos")"
+          test "$codigo" = "401"
+          python - "$RUNNER_TEMP/401.json" <<'PY'
+          import json,sys
+          with open(sys.argv[1], encoding="utf-8") as f:
+              d=json.load(f)
+          assert d.get("statusCode")==401
+          PY
