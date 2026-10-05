@@ -401,6 +401,8 @@ export class PedidosService {
     const total = await this.db.query(
       `SELECT count(*)::int AS total
        FROM pedido pe
+       JOIN cliente c ON c.id = pe.cliente_id
+       JOIN usuario u ON u.id = pe.vendedor_id
        ${where}`,
       totalParametros,
     ) as Array<{ total: number }>;

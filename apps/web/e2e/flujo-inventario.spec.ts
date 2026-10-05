@@ -24,7 +24,7 @@ test('muestra una portada profesional y protege el panel sin sesion', async ({ p
 
   await expect(page.getByRole('heading', { name: /Fiambres y embutidos ZAV/ })).toBeVisible();
   await expect(page.getByRole('link', { name: /Acceso interno/ }).first()).toBeVisible();
-  await expect(page.getByRole('heading', { name: /ZAV · Fiambres/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Fiambres y Embutidos ZAV, Tarija/ })).toBeVisible();
   await captura(page, '01-inicio-redisenado.png');
 
   await page.goto('/panel');

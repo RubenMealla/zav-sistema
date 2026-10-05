@@ -11,7 +11,7 @@ export default async function Acceso({searchParams}:{searchParams:Promise<{error
  return <main className="acceso-layout">
   <section className="acceso-identidad" aria-label="ZAV, acceso interno">
    <div className="acceso-identidad-cabecera"><Link href="/" aria-label="ZAV, inicio" className="acceso-identidad-marca"><Marca compacta/></Link><span>GESTIÓN INTERNA</span></div>
-   <div className="acceso-identidad-centro"><div className="acceso-emblema"><Marca grande/></div><div className="acceso-identidad-copy"><span>ADMINISTRACIÓN ZAV</span><h2>Control operativo en un solo entorno.</h2><p>Acceso reservado para la gestión de inventario, trazabilidad, pedidos y distribución.</p></div></div>
+   <div className="acceso-identidad-centro"><div className="acceso-emblema"><Marca grande soloSimbolo/></div><div className="acceso-identidad-copy"><span>ADMINISTRACIÓN</span><h2>Gestión interna clara y segura.</h2><p>Inventario, trazabilidad, pedidos y distribución en un entorno reservado para el personal autorizado.</p></div></div>
    <div className="acceso-identidad-pie"><span>Tarija · Bolivia</span><span>Personal autorizado</span></div>
   </section>
   <section className="acceso-panel" aria-labelledby="acceso-titulo">
