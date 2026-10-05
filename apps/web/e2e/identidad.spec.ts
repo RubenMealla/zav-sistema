@@ -104,24 +104,28 @@ for (const ancho of [390, 768, 1440]) {
 }
 
 
-test('landing extendida conserva jerarquía editorial y secciones públicas', async ({ page }) => {
+test('landing pública conserva la nueva jerarquía editorial', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto('/');
 
-  await expect(page.getByRole('navigation', { name: 'Navegación principal' })).toBeVisible();
-  await expect(page.locator('#productos')).toBeVisible();
-  await expect(page.locator('#promociones')).toBeVisible();
+  const nav = page.getByRole('navigation', { name: 'Navegación principal' });
+  await expect(nav).toBeVisible();
+  await expect(nav.getByRole('link', { name: 'Noticias' })).toBeVisible();
+  await expect(nav.getByRole('link', { name: 'Productos' })).toBeVisible();
+  await expect(nav.getByRole('link', { name: 'Nosotros' })).toBeVisible();
+  await expect(nav.getByRole('link', { name: 'Promociones' })).toHaveCount(0);
   await expect(page.locator('#novedades')).toBeVisible();
+  await expect(page.locator('#productos')).toBeVisible();
   await expect(page.locator('#zav')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Siete familias. Una identidad.' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Mortadelas' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Fiambres especiales' })).toBeVisible();
+  await expect(page.getByRole('img', { name: 'Mortadela Primavera' })).toBeVisible();
 
-  await expect(page.getByRole('heading', { name: 'Catálogo público.' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: /Un espacio independiente para campañas vigentes/ })).toBeVisible();
-  await expect(page.getByRole('heading', { name: /Información sin ruido visual/ })).toBeVisible();
-  await expect(page.getByRole('heading', { name: /ZAV · Fiambres/ })).toBeVisible();
-
-  await expect(page.locator('.publico-futuro-grid')).toHaveCount(0);
+  await nav.getByRole('link', { name: 'Productos' }).click();
+  await expect.poll(async () => nav.getByRole('link', { name: 'Productos' }).getAttribute('class')).toContain('activo');
   await sinDesborde(page);
-  await captura(page, 'landing-extendida-editorial-1440.png');
+  await captura(page, 'landing-editorial-1440.png');
 });
 
 test('teclado, contraste y movimiento reducido', async ({ page }) => {

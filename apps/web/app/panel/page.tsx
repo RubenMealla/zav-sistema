@@ -723,10 +723,10 @@ export default async function Panel({
               ) : (
                 <div className="tabla-contenedor" role="region" tabIndex={0} aria-label="Movimientos del lote; tabla desplazable">
                   <table><caption className="solo-lectores">Movimientos del lote</caption>
-                    <thead><tr><th scope="col">Fecha</th><th scope="col">Lote</th><th scope="col">Movimiento</th><th scope="col">Origen</th><th scope="col">Destino</th><th scope="col">Cantidad</th><th scope="col">Usuario</th></tr></thead>
+                    <thead><tr><th scope="col">Fecha</th><th scope="col">Lote</th><th scope="col">Movimiento</th><th scope="col">Origen</th><th scope="col">Destino</th><th scope="col">Cantidad</th><th scope="col">Usuario</th><th scope="col" className="acciones-columna">Acciones</th></tr></thead>
                     <tbody>
                       {itemsMovimientos.length === 0 ? (
-                        <tr><td colSpan={7}><div className="tabla-vacia">El lote no tiene movimientos.</div></td></tr>
+                        <tr><td colSpan={8}><div className="tabla-vacia">El lote no tiene movimientos.</div></td></tr>
                       ) : itemsMovimientos.map((movimiento) => (
                         <tr key={movimiento.id}>
                           <td className="dato-nowrap"><time dateTime={movimiento.creadoEn}>{fechaBolivia(movimiento.creadoEn)}</time></td>
@@ -736,12 +736,26 @@ export default async function Panel({
                           <td>{movimiento.destino?.nombre ?? '—'}</td>
                           <td className="numero"><strong>{movimiento.cantidad}</strong></td>
                           <td className="dato-nowrap">{movimiento.usuario.identificador}</td>
+                          <td className="acciones-columna">
+                            <Modal boton="Detalles" titulo="Detalle del movimiento" etiqueta="MOVIMIENTO" variante="terciaria" icono="historial">
+                              <dl className="detalle-grid">
+                                <div><dt>Fecha</dt><dd>{fechaBolivia(movimiento.creadoEn)}</dd></div>
+                                <div><dt>Tipo</dt><dd><span className="badge badge-azul">{movimiento.tipo}</span></dd></div>
+                                <div><dt>Origen</dt><dd>{movimiento.origen?.nombre ?? '—'}</dd></div>
+                                <div><dt>Destino</dt><dd>{movimiento.destino?.nombre ?? '—'}</dd></div>
+                                <div><dt>Cantidad</dt><dd>{movimiento.cantidad}</dd></div>
+                                <div><dt>Usuario</dt><dd>{movimiento.usuario.identificador}</dd></div>
+                                <div className="detalle-ancho"><dt>Referencia</dt><dd>{movimiento.referencia ?? 'Sin referencia'}</dd></div>
+                              </dl>
+                            </Modal>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
               )}
+              <Paginacion pagina={movimientoPagina} total={movimientos?.datos?.total ?? 0} limite={LIMITE_TABLA} parametro="movimientoPagina" parametros={{ vista: 'movimientos', historialLoteId: parametros.historialLoteId }} />
             </section>
           )}
         </div>
