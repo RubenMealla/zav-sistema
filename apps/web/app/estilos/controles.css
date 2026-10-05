@@ -264,3 +264,23 @@ tbody tr:hover .acciones-columna{background:#faf8f4}
 .paginacion-numero:hover{border-color:#c8c3b9;background:#fff}.paginacion-numero.activo{border-color:#e45a2e;background:#fff4ef;color:#a73a1d}
 .paginacion-elipsis{min-width:20px;text-align:center;color:#8b857b}
 @media(max-width:700px){.acciones-columna{position:static;box-shadow:none}.modal-cabecera{padding:18px}.modal-contenido{padding:16px}.paginacion-numeros{display:none}.condicion-fila{align-items:flex-start}.condicion-fila-acciones{align-items:flex-end;flex-direction:column}}
+
+
+/* Legibilidad final: escala consistente sin perder densidad administrativa. */
+.campo,.filtro-campo{font-size:13px}
+.campo input,.campo select,.filtro-campo input,.filtro-campo select,.filtro-inline select{font-size:14px}
+.mensaje-inline{font-size:13px}
+th{font-size:12px}
+td{font-size:14px}
+td small,.saldos-inline b,.saldos-inline strong{font-size:12px}
+.codigo{font-size:13px}
+.badge{font-size:12px}
+.estado-vacio p{font-size:13px}
+.modal-cabecera p{font-size:13px}
+.opcional{font-size:12px}
+.toast strong{font-size:13px}
+.toast p{font-size:12px}
+.paginacion-resumen,.paginacion-actual,.paginacion-numero{font-size:13px}
+.ubicacion-buscando,.ubicacion-sugerencias span,.ubicacion-busqueda-error{font-size:12px}
+.detalle-grid dt{font-size:12px}
+.detalle-grid dd{font-size:14px}
