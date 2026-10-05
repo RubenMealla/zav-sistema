@@ -170,6 +170,20 @@ paths:
         '409': { $ref: '#/components/responses/Error409' }
         '500': { $ref: '#/components/responses/Error500' }
 
+  /api/v1/lotes/{id}:
+    get:
+      tags: [Lotes]
+      summary: Consultar lote
+      description: Requiere rol ADMINISTRADOR.
+      parameters: [ { $ref: '#/components/parameters/Id' } ]
+      responses:
+        '200': { description: Lote }
+        '400': { $ref: '#/components/responses/Error400' }
+        '401': { $ref: '#/components/responses/Error401' }
+        '403': { $ref: '#/components/responses/Error403' }
+        '404': { $ref: '#/components/responses/Error404' }
+        '500': { $ref: '#/components/responses/Error500' }
+
   /api/v1/lotes/{id}/liberar:
     post:
       tags: [Lotes]
@@ -198,6 +212,40 @@ paths:
         '403': { $ref: '#/components/responses/Error403' }
         '404': { $ref: '#/components/responses/Error404' }
         '409': { $ref: '#/components/responses/Error409' }
+        '500': { $ref: '#/components/responses/Error500' }
+
+  /api/v1/lotes/{id}/condiciones:
+    get:
+      tags: [Lotes]
+      summary: Consultar historial de condición del lote
+      description: Requiere rol ADMINISTRADOR.
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+        - { in: query, name: page, schema: { type: integer, minimum: 1 } }
+        - { in: query, name: limit, schema: { type: integer, minimum: 1 } }
+      responses:
+        '200': { description: Historial paginado }
+        '400': { $ref: '#/components/responses/Error400' }
+        '401': { $ref: '#/components/responses/Error401' }
+        '403': { $ref: '#/components/responses/Error403' }
+        '404': { $ref: '#/components/responses/Error404' }
+        '500': { $ref: '#/components/responses/Error500' }
+
+  /api/v1/movimientos:
+    get:
+      tags: [Movimientos]
+      summary: Listar movimientos de un lote
+      description: Requiere rol ADMINISTRADOR.
+      parameters:
+        - { in: query, name: loteId, required: true, schema: { type: string, format: uuid } }
+        - { in: query, name: page, schema: { type: integer, minimum: 1 } }
+        - { in: query, name: limit, schema: { type: integer, minimum: 1 } }
+      responses:
+        '200': { description: Movimientos paginados }
+        '400': { $ref: '#/components/responses/Error400' }
+        '401': { $ref: '#/components/responses/Error401' }
+        '403': { $ref: '#/components/responses/Error403' }
+        '404': { $ref: '#/components/responses/Error404' }
         '500': { $ref: '#/components/responses/Error500' }
 
   /api/v1/movimientos/traslado:
@@ -251,6 +299,20 @@ paths:
     patch:
       tags: [Clientes]
       summary: Editar cliente
+      description: Requiere rol VENDEDOR.
+      parameters: [ { $ref: '#/components/parameters/Id' } ]
+      responses:
+        '200': { description: Cliente actualizado }
+        '400': { $ref: '#/components/responses/Error400' }
+        '401': { $ref: '#/components/responses/Error401' }
+        '403': { $ref: '#/components/responses/Error403' }
+        '404': { $ref: '#/components/responses/Error404' }
+        '500': { $ref: '#/components/responses/Error500' }
+
+  /api/v1/clientes/{id}/ubicacion:
+    patch:
+      tags: [Clientes]
+      summary: Actualizar ubicación confirmada del cliente
       description: Requiere rol VENDEDOR.
       parameters: [ { $ref: '#/components/parameters/Id' } ]
       responses:

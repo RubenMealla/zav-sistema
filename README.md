@@ -6,8 +6,8 @@ Sistema web y móvil para la gestión de productos terminados, pedidos y distrib
 
 La solución se organiza como un monorepo con una API REST central y dos clientes diferenciados por rol:
 
-- **Administrador — aplicación web:** autenticación, productos, lotes, condición comercial e inventario administrativo.
-- **Vendedor — aplicación móvil:** clientes, pedidos, retiro, distribución y entrega con ubicación GPS puntual.
+- **Administrador — aplicación web:** autenticación, productos, lotes, condición comercial, inventario administrativo, auditoría de pedidos y configuración de Venta y Despacho.
+- **Vendedor — aplicación móvil:** clientes, pedidos, retiro, organización de reparto y entrega con ubicación GPS puntual.
 - **Acceso público:** únicamente las funciones que se habiliten expresamente sin autenticación. El catálogo/noticias/promociones no forman parte de los Must de E3.
 
 No se incluyen materias primas, recetas, proveedores, compras, costos de producción, facturación fiscal, seguimiento GPS continuo ni optimización automática de rutas.
@@ -23,7 +23,7 @@ Next.js / React (Administrador)
              |
              | PostgreSQL
              v
-          Neon
+      Neon development
 
 React Native / Expo (Vendedor)
              |
@@ -31,6 +31,8 @@ React Native / Expo (Vendedor)
 ```
 
 La API concentra autenticación, autorización y reglas de negocio. Los permisos no dependen de ocultar botones en los clientes.
+
+La aplicación móvil utiliza MapLibre React Native con OpenFreeMap y `expo-location`. La búsqueda y geocodificación de direcciones se realizan a través del backend, que integra Geoapify cuando la clave está configurada. La mejora web en PR #40 incorpora el mapa administrativo de Distribución como trabajo aún no fusionado.
 
 ## Modelo de inventario
 
@@ -48,6 +50,7 @@ El modelo principal de E3 se limita a ocho entidades de negocio:
 |---|---|
 | Web | Next.js 16.3.5, React 19.2.8, TypeScript |
 | Móvil | React Native 0.86.3, Expo SDK 57, Expo Router, TypeScript |
+| Mapas móvil | MapLibre React Native, OpenFreeMap, expo-location |
 | API | NestJS 12, Node.js 24, TypeScript, TypeORM |
 | Datos | PostgreSQL 18, Neon |
 | Web pública | Vercel |
@@ -57,20 +60,24 @@ El modelo principal de E3 se limita a ocho entidades de negocio:
 
 Las versiones efectivas de dependencias se encuentran en los archivos `package.json` y `pnpm-lock.yaml`.
 
-## URLs de revisión
+## Entornos y URLs de revisión
 
-- Web: https://zav-sistema.vercel.app
-- API: https://zav-api-2026.onrender.com
-- Salud de la API: https://zav-api-2026.onrender.com/api/v1/salud
+- Web estable: https://zav-sistema.vercel.app
+- API estable: https://zav-api-2026.onrender.com
+- Salud: https://zav-api-2026.onrender.com/api/v1/salud
 - Repositorio: https://github.com/RubenMealla/zav-sistema
+- Base de datos utilizada durante E3: rama Neon `development`
+- Rama Neon `production`: reservada para el cierre productivo posterior
+
+**Vercel Production** sigue la rama Git `main`.  
+**Render `zav-api-2026`** sigue la rama Git `main`.  
+El servicio `zav-api-e3-dev` se conserva temporalmente como entorno histórico/de desarrollo y no se considera la API canónica.
 
 La ruta de salud responde:
 
 ```json
 {"estado":"ok"}
 ```
-
-La URL de salud se considera evidencia de producción únicamente después de que la versión correspondiente haya sido integrada y desplegada.
 
 ## Ejecución local
 
@@ -100,7 +107,7 @@ pnpm --filter @zav/mobile start
 
 ## Variables de entorno
 
-La API documenta su configuración en `apps/api/.env.example`. Los valores reales deben permanecer fuera de Git.
+La API documenta su configuración en `apps/api/.env.example`. Los valores reales permanecen fuera de Git.
 
 Variables principales:
 
@@ -110,9 +117,10 @@ PORT=3001
 DATABASE_URL=postgresql://...
 CORS_ORIGINS=http://localhost:3000,https://zav-sistema.vercel.app
 JWT_SECRET=
+GEOAPIFY_API_KEY=
 ```
 
-Nunca se versionan archivos `.env`, cadenas de conexión reales, tokens, contraseñas ni claves de servicio.
+Nunca se versionan archivos `.env`, cadenas de conexión reales, tokens, contraseñas válidas ni claves de servicio.
 
 ## Seguridad
 
@@ -123,10 +131,13 @@ Nunca se versionan archivos `.env`, cadenas de conexión reales, tokens, contras
 - Un usuario autenticado con rol incorrecto responde 403.
 - Validación de entrada en servidor y validación de usabilidad en los clientes.
 - CORS restringido a los orígenes web configurados.
-- Los errores internos no deben exponer trazas, contraseñas ni secretos.
+- Los errores internos no exponen trazas, contraseñas ni secretos.
 - La baja de Producto es lógica y preserva trazabilidad histórica.
+- Los smoke tests públicos no almacenan credenciales válidas en el repositorio.
 
 ## API E3
+
+El contrato completo y versionado se encuentra en `docs/api/openapi-e3.yaml`. Resumen de rutas principales:
 
 | Método | Ruta | Rol |
 |---|---|---|
@@ -134,25 +145,25 @@ Nunca se versionan archivos `.env`, cadenas de conexión reales, tokens, contras
 | POST | `/api/v1/auth/login` | Público |
 | GET | `/api/v1/auth/me` | Autenticado |
 | GET | `/api/v1/productos` | Administrador / Vendedor |
-| POST | `/api/v1/productos` | Administrador |
-| GET | `/api/v1/productos/:id` | Administrador / Vendedor |
-| PATCH | `/api/v1/productos/:id` | Administrador |
-| PATCH | `/api/v1/productos/:id/baja` | Administrador |
+| POST/PATCH | `/api/v1/productos...` | Administrador |
 | GET/POST | `/api/v1/lotes` | Administrador |
-| POST | `/api/v1/movimientos/traslado` | Administrador |
-| GET | `/api/v1/movimientos?loteId=...` | Administrador |
 | POST | `/api/v1/lotes/:id/liberar` | Administrador |
 | POST | `/api/v1/lotes/:id/bloquear` | Administrador |
-| GET | `/api/v1/lotes/:id/condiciones` | Administrador |
-| GET/POST | `/api/v1/clientes` | Vendedor |
-| GET | `/api/v1/clientes/:id` | Vendedor |
-| GET | `/api/v1/pedidos/disponibilidad` | Vendedor |
-| GET/POST | `/api/v1/pedidos` | Vendedor |
-| GET | `/api/v1/pedidos/:id` | Vendedor |
+| POST | `/api/v1/movimientos/traslado` | Administrador |
+| GET/POST/PATCH | `/api/v1/clientes...` | Vendedor |
+| GET/POST/PATCH | `/api/v1/pedidos...` | Vendedor |
 | POST | `/api/v1/pedidos/:id/retiro` | Vendedor |
+| POST | `/api/v1/pedidos/retiros` | Vendedor |
 | POST | `/api/v1/pedidos/:id/entrega` | Vendedor |
+| POST | `/api/v1/pedidos/:id/cancelacion` | Vendedor |
+| POST | `/api/v1/pedidos/planificacion` | Vendedor |
+| GET | `/api/v1/pedidos/disponibilidad` | Vendedor |
+| GET | `/api/v1/admin/pedidos` | Administrador |
+| GET | `/api/v1/geografia/*` | Vendedor |
+| GET | `/api/v1/ubicaciones/venta-despacho` | Autenticado |
+| PATCH | `/api/v1/ubicaciones/:id/georreferencia` | Administrador |
 
-Los comandos de inventario usan `operacionClave` para idempotencia. Repetir la misma operación con los mismos datos no duplica movimientos; reutilizar la misma clave para una operación diferente se rechaza.
+Los comandos críticos utilizan `operacionClave` para idempotencia. Repetir la misma operación con los mismos datos no duplica movimientos; reutilizar la misma clave para una operación diferente se rechaza.
 
 ## Pruebas
 
@@ -180,7 +191,16 @@ pnpm --filter @zav/mobile lint
 pnpm --filter @zav/mobile exec tsc --noEmit
 ```
 
-GitHub Actions ejecuta QA con PostgreSQL aislado. Los reportes y artifacts de cada ejecución se conservan como evidencia. Durante el desarrollo se mantienen también los fallos reales detectados y sus correcciones; una ejecución final verde no significa que el desarrollo no haya tenido incidencias.
+GitHub Actions ejecuta QA con PostgreSQL aislado. Los reportes y artifacts se conservan como evidencia. Los errores y runs fallidos reales también se conservan; una ejecución final verde no borra el historial de incidencias.
+
+La documentación de QA de E3 incluye:
+
+- `docs/pruebas/matriz-qa-e3.md`;
+- `docs/pruebas/registro-defectos-e3.md`;
+- evidencias Playwright de 400, 401, 403, 404, 409 y 503;
+- cobertura E2E del 500 y rollback transaccional;
+- validación física de ZAV Vendedor 1.0.0;
+- build APK firmado y versionado.
 
 ## Kanban y trazabilidad
 
@@ -198,30 +218,40 @@ Tablero: https://trello.com/b/Tn5elZCY/zav-2026-desarrollo-del-sistema-kanban
 
 ## Estado de E3
 
-**Desplegado desde la corrección T3:**
+**Integrado y estable en `main`:**
 
-- autenticación JWT y roles en servidor;
-- CRUD de Producto;
-- lotes, condición comercial y traslados;
-- Movimiento como fuente de verdad y `saldo_inventario`;
-- `/api/v1/salud`;
-- formato uniforme de errores y controles 401/403.
-
-**Implementado en backend y verificado por QA en `desarrollo/e3-pedidos-distribucion`:**
-
-- Cliente;
+- autenticación JWT y autorización por roles en servidor;
+- productos, lotes, condición comercial, movimientos y traslados;
+- Movimiento como fuente de verdad y vista `saldo_inventario`;
+- Cliente y georreferenciación dentro de Tarija;
 - Pedido y DetallePedido;
-- disponibilidad que descuenta compromisos de pedidos registrados;
+- disponibilidad con compromisos de pedidos registrados;
 - Retiro FEFO hacia `EN_DISTRIBUCION`;
-- Entrega con coordenadas GPS puntuales;
-- idempotencia de Retiro/Entrega;
-- protección de stock reservado frente a traslados y bloqueos administrativos.
+- Entrega con GPS puntual;
+- idempotencia de Retiro y Entrega;
+- auditoría del Vendedor responsable;
+- aplicación **ZAV Vendedor 1.0.0**, validada físicamente el 04/10/2026;
+- APK release firmado y pipeline de QA.
 
-La última regresión backend de esta iteración obtuvo **11/11 unitarias y 18/18 E2E**. El reporte versionado está en `docs/pruebas/verificacion-pedidos-distribucion-e3.md`.
+**QA/documentación de cierre E3:** PR #42 incorpora contrato OpenAPI, matriz de QA, registro de defectos y evidencias HTTP. Se conserva su rama después del merge.
 
-**Pendiente para completar E3:** integrar/desplegar este backend y sustituir el starter Expo por la aplicación móvil exclusiva del Vendedor. La captura GPS se declarará implementada en el cliente únicamente después de probarla en un dispositivo o APK.
+**Línea activa después del documento E3:** Issue #39 / PR #40 / rama `mejora/ui-web-consolidada`. Contiene la interfaz web recuperada y mejorada: landing, login, panel, tablas, filtros, marca transparente y módulo Distribución. Su QA técnico está verde, pero **no se fusiona hasta aprobación visual explícita**.
+
+**Capturas Android automatizadas:** Issue #43 queda separado de la aplicación estable. Los intentos fallidos del workflow se conservan como evidencia de QA y se retomarán después de ordenar la línea web.
 
 No se considera una funcionalidad implementada únicamente porque aparezca diseñada o documentada.
+
+## Política de ramas y evidencia
+
+Para preservar la trazabilidad del Trabajo Final:
+
+- no se eliminan ramas históricas;
+- no se reescribe ni elimina el historial de commits;
+- las ramas ya integradas se conservan como evidencia de evolución;
+- las ramas de intentos de QA fallidos también se conservan;
+- cada rama debe interpretarse por su estado documentado: activa, integrada, experimental o histórica;
+- `main` representa la versión estable integrada;
+- la clasificación detallada se mantiene en `docs/gestion/estado-repositorio-e3.md`.
 
 ## Autor
 
