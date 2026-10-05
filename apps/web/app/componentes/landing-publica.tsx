@@ -1,252 +1,43 @@
 'use client';
-
 import Image from 'next/image';
 import Link from 'next/link';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { Icono } from './icono';
-import { Marca } from './marca';
+import {useEffect,useMemo,useState,type ReactNode} from 'react';
+import {Icono} from './icono';
+import {Marca} from './marca';
 
-type Familia = {
-  id: string;
-  nombre: string;
-  descripcion: string;
-  icono: ReactNode;
-  imagen?: string;
-  productos: Array<{ nombre: string; imagen?: string }>;
-};
+type Familia={id:string;nombre:string;descripcion:string;icono:ReactNode;productos:Array<{nombre:string;imagen:string}>};
 
-const familias: Familia[] = [
-  {
-    id: 'mortadelas',
-    nombre: 'Mortadelas',
-    descripcion: 'Explora los productos de esta familia disponibles en el catálogo visual de ZAV.',
-    imagen: '/catalogo/mortadelas-mortadela-primavera.webp',
-    icono: <><path d="M5 8.5c2.6-2.7 11.4-2.7 14 0v7c-2.6 2.7-11.4 2.7-14 0Z"/><path d="M8 9.5v5M12 8.8v6.4M16 9.5v5"/></>,
-    productos: [
-      { nombre: 'Mortadela Jamonada' },
-      { nombre: 'Mortadela Primavera', imagen: '/catalogo/mortadelas-mortadela-primavera.webp' },
-      { nombre: 'Mortadela Tradicional' },
-    ],
-  },
-  {
-    id: 'chorizos',
-    nombre: 'Chorizos',
-    descripcion: 'Explora los productos de esta familia disponibles en el catálogo visual de ZAV.',
-    imagen: '/catalogo/chorizos-chorizo-coctelero.webp',
-    icono: <><path d="M7 5c2 2 2 12 0 14M17 5c-2 2-2 12 0 14"/><path d="M7 7c3-1.4 7-1.4 10 0M7 17c3 1.4 7 1.4 10 0"/></>,
-    productos: [
-      { nombre: 'Chorizo Coctelero', imagen: '/catalogo/chorizos-chorizo-coctelero.webp' },
-      { nombre: 'Chorizo Parrillero' },
-      { nombre: 'Chorizo Precocido' },
-      { nombre: 'Chorizo Tipo Español' },
-    ],
-  },
-  {
-    id: 'salchichas',
-    nombre: 'Salchichas',
-    descripcion: 'Explora los productos de esta familia disponibles en el catálogo visual de ZAV.',
-    icono: <><path d="M5 9c0-2 1.6-3.5 3.5-3.5h7C17.4 5.5 19 7 19 9s-1.6 3.5-3.5 3.5h-7C6.6 12.5 5 11 5 9Z"/><path d="M5 15h14M8 12.5V15M16 12.5V15"/></>,
-    productos: [
-      { nombre: 'Salchicha Tipo Súper Pancho' },
-      { nombre: 'Salchicha Tipo Viena' },
-    ],
-  },
-  {
-    id: 'morcillas',
-    nombre: 'Morcillas',
-    descripcion: 'Explora los productos de esta familia disponibles en el catálogo visual de ZAV.',
-    icono: <><path d="M7 6.5c3-2 7-2 10 0 2.7 1.8 2.7 9.2 0 11-3 2-7 2-10 0-2.7-1.8-2.7-9.2 0-11Z"/><path d="m8.5 7.5 7 9M15.5 7.5l-7 9"/></>,
-    productos: [{ nombre: 'Morcilla Artesanal' }],
-  },
-  {
-    id: 'jamones',
-    nombre: 'Jamones',
-    descripcion: 'Explora los productos de esta familia disponibles en el catálogo visual de ZAV.',
-    icono: <><path d="M6 8c0-2 1.8-3 4-3h5.5A3.5 3.5 0 0 1 19 8.5v7A3.5 3.5 0 0 1 15.5 19H10c-2.2 0-4-1-4-3Z"/><path d="M9 9h7M9 12h7M9 15h5"/></>,
-    productos: [{ nombre: 'Jamón Cocido Light' }],
-  },
-  {
-    id: 'tocinos-ahumados',
-    nombre: 'Tocinos y ahumados',
-    descripcion: 'Explora los productos de esta familia disponibles en el catálogo visual de ZAV.',
-    icono: <><path d="M5 8c3-2 5 2 8 0s4-1 6 0v8c-2-1-3-2-6 0s-5-2-8 0Z"/><path d="M6 11c2-1 4 1 6 0s4-1 6 0M6 14c2-1 4 1 6 0s4-1 6 0"/></>,
-    productos: [{ nombre: 'Tocino Ahumado' }],
-  },
-  {
-    id: 'fiambres-especiales',
-    nombre: 'Fiambres especiales',
-    descripcion: 'Explora los productos de esta familia disponibles en el catálogo visual de ZAV.',
-    icono: <><path d="M12 4 19 8v8l-7 4-7-4V8Z"/><path d="m8 10 4-2 4 2v4l-4 2-4-2Z"/></>,
-    productos: [{ nombre: 'Queso de Chancho' }],
-  },
-];
+const familias:Familia[]=[
+{id:'mortadelas',nombre:'Mortadelas',descripcion:'Tres presentaciones del catálogo fotográfico ZAV.',icono:<><path d="M5 8c0-2 2-3 5-3h5c2.8 0 4 1.7 4 4v7c0 2-1.7 3-4 3h-5c-3 0-5-1-5-3Z"/><circle cx="10" cy="10" r=".9"/><circle cx="14.5" cy="13" r=".9"/><circle cx="9" cy="15" r=".7"/></>,productos:[{nombre:'Mortadela Jamonada',imagen:'/catalogo/mortadelas-mortadela-jamonada.webp'},{nombre:'Mortadela Primavera',imagen:'/catalogo/mortadelas-mortadela-primavera.webp'},{nombre:'Mortadela Tradicional',imagen:'/catalogo/mortadelas-mortadela-tradicional.webp'}]},
+{id:'chorizos',nombre:'Chorizos',descripcion:'Coctelero, parrillero, precocido y tipo español.',icono:<><path d="M7 5c-2 2-2 5 0 7s2 5 0 7M12 4c-2 2-2 5 0 8s2 5 0 8M17 5c-2 2-2 5 0 7s2 5 0 7"/><path d="M6 6l2-1M11 5l2-1M16 6l2-1M6 18l2 1M11 19l2 1M16 18l2 1"/></>,productos:[{nombre:'Chorizo Coctelero',imagen:'/catalogo/chorizos-chorizo-coctelero.webp'},{nombre:'Chorizo Parrillero',imagen:'/catalogo/chorizos-chorizo-parrillero.webp'},{nombre:'Chorizo Precocido',imagen:'/catalogo/chorizos-chorizo-precocido.webp'},{nombre:'Chorizo Tipo Español',imagen:'/catalogo/chorizos-chorizo-tipo-espanol.webp'}]},
+{id:'salchichas',nombre:'Salchichas',descripcion:'Presentaciones tipo Súper Pancho y tipo Viena.',icono:<><rect x="4.5" y="6" width="15" height="4.2" rx="2.1"/><rect x="4.5" y="13.8" width="15" height="4.2" rx="2.1"/><path d="M3 8h1.5M19.5 8H21M3 16h1.5M19.5 16H21"/></>,productos:[{nombre:'Salchicha Tipo Súper Pancho',imagen:'/catalogo/salchichas-salchicha-tipo-super-pancho.webp'},{nombre:'Salchicha Tipo Viena',imagen:'/catalogo/salchichas-salchicha-tipo-viena.webp'}]},
+{id:'morcillas',nombre:'Morcillas',descripcion:'Morcilla artesanal dentro del catálogo ZAV.',icono:<><path d="M7 5c5-3 11 0 11 5 0 4-3 8-7 8-3 0-5-2-5-5 0-2 1-4 3-5"/><path d="M7 5 5 4M18 9l2-1"/></>,productos:[{nombre:'Morcilla Artesanal',imagen:'/catalogo/morcillas-morcilla-artesanal.webp'}]},
+{id:'jamones',nombre:'Jamones',descripcion:'Jamón cocido light del catálogo fotográfico.',icono:<><path d="M6 7c2-3 7-4 11-1 3 2 3 7 1 10-2 3-7 4-10 1-3-2-4-7-2-10Z"/><circle cx="9" cy="12" r="2.2"/><path d="m17 6 2-2m0 0 2 1m-2-1-1 3"/></>,productos:[{nombre:'Jamón Cocido Light',imagen:'/catalogo/jamones-jamon-cocido-light.webp'}]},
+{id:'tocinos-ahumados',nombre:'Tocinos y ahumados',descripcion:'Tocino ahumado como presentación de esta familia.',icono:<><path d="M4 7c4-3 6 3 10 0 2-2 4-1 6 0v10c-2-1-4-2-6 0-4 3-6-3-10 0Z"/><path d="M5 10c3-2 5 2 8 0 3-2 5-1 6 0M5 14c3-2 5 2 8 0 3-2 5-1 6 0"/></>,productos:[{nombre:'Tocino Ahumado',imagen:'/catalogo/tocinos-y-ahumados-tocino-ahumado.webp'}]},
+{id:'fiambres-especiales',nombre:'Fiambres especiales',descripcion:'Queso de chancho dentro de la línea de fiambres especiales.',icono:<><circle cx="12" cy="12" r="7.5"/><path d="M8 8.5 10 10l2-2 2 2 2-1M8 14l2-1 2 2 2-2 2 1"/><circle cx="9" cy="16" r=".7"/><circle cx="15" cy="16" r=".7"/></>,productos:[{nombre:'Queso de Chancho',imagen:'/catalogo/fiambres-especiales-queso-de-chancho.webp'}]}];
 
-const destacados = [
-  { etiqueta: 'NOVEDADES ZAV', titulo: 'Mortadela Primavera', texto: 'Conoce esta presentación dentro de la familia de mortadelas ZAV.', imagen: '/catalogo/mortadelas-mortadela-primavera.webp' },
-  { etiqueta: 'NOVEDADES ZAV', titulo: 'Chorizo Coctelero', texto: 'Conoce esta presentación dentro de la familia de chorizos ZAV.', imagen: '/catalogo/chorizos-chorizo-coctelero.webp' },
-];
+const destacados=[
+{etiqueta:'CATÁLOGO ZAV',titulo:'Mortadela Primavera',texto:'Una de las presentaciones de la familia de mortadelas.',imagen:'/catalogo/mortadelas-mortadela-primavera.webp'},
+{etiqueta:'CATÁLOGO ZAV',titulo:'Chorizo Coctelero',texto:'Presentación de la familia de chorizos ZAV.',imagen:'/catalogo/chorizos-chorizo-coctelero.webp'},
+{etiqueta:'CATÁLOGO ZAV',titulo:'Salchicha Tipo Viena',texto:'Presentación disponible en la familia de salchichas.',imagen:'/catalogo/salchichas-salchicha-tipo-viena.webp'}];
 
-function Pictograma({ children }: { children: ReactNode }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.45" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      {children}
-    </svg>
-  );
-}
+function Pictograma({children}:{children:ReactNode}){return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{children}</svg>}
 
-export function LandingPublica() {
-  const [seccionActiva, setSeccionActiva] = useState('novedades');
-  const [destacado, setDestacado] = useState(0);
-  const [familiaActiva, setFamiliaActiva] = useState(familias[0].id);
-  const familia = useMemo(() => familias.find((item) => item.id === familiaActiva) ?? familias[0], [familiaActiva]);
-
-  useEffect(() => {
-    const secciones = ['novedades', 'productos', 'zav']
-      .map((id) => document.getElementById(id))
-      .filter((elemento): elemento is HTMLElement => Boolean(elemento));
-    const observador = new IntersectionObserver(
-      (entradas) => {
-        const visible = entradas.filter((entrada) => entrada.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-        if (visible?.target.id) setSeccionActiva(visible.target.id);
-      },
-      { rootMargin: '-25% 0px -55% 0px', threshold: [0.05, 0.2, 0.45] },
-    );
-    secciones.forEach((seccion) => observador.observe(seccion));
-    return () => observador.disconnect();
-  }, []);
-
-  function moverDestacado(delta: number) {
-    setDestacado((actual) => (actual + delta + destacados.length) % destacados.length);
-  }
-
-  return (
-    <div className="sitio-publico">
-      <a className="saltar-contenido" href="#principal">Saltar al contenido</a>
-
-      <header className="publico-header">
-        <div className="contenedor-publico publico-header-interior">
-          <Link href="/" aria-label="ZAV, inicio" className="publico-marca"><Marca compacta /></Link>
-          <nav className="publico-nav" aria-label="Navegación principal">
-            {[
-              ['novedades', 'Noticias'],
-              ['productos', 'Productos'],
-              ['zav', 'Nosotros'],
-            ].map(([id, texto]) => (
-              <a key={id} href={'#' + id} className={seccionActiva === id ? 'activo' : ''} aria-current={seccionActiva === id ? 'location' : undefined}>
-                {texto}
-              </a>
-            ))}
-          </nav>
-          <Link className="publico-acceso" href="/acceso">Acceso interno <Icono nombre="flecha" tamano={15} /></Link>
-        </div>
-      </header>
-
-      <main id="principal" tabIndex={-1}>
-        <section id="novedades" className="publico-hero publico-seccion-ancla">
-          <div className="contenedor-publico publico-hero-grid">
-            <div className="publico-hero-copy">
-              <span className="publico-kicker">TARIJA · BOLIVIA</span>
-              <h1>Fiambres y embutidos <em>ZAV.</em></h1>
-              <p>Novedades y productos ZAV, desde Tarija para quienes quieren conocer nuestro catálogo.</p>
-              <a className="publico-link-hero" href="#productos">Ver productos <Icono nombre="flecha" tamano={16} /></a>
-            </div>
-
-            <div className="publico-noticia" aria-roledescription="carrusel" aria-label="Contenido destacado de ZAV">
-              <div className="publico-noticia-imagen">
-                <Image key={destacados[destacado].imagen} src={destacados[destacado].imagen} alt={destacados[destacado].titulo} fill priority sizes="(max-width: 900px) 100vw, 52vw" />
-              </div>
-              <div className="publico-noticia-contenido" aria-live="polite">
-                <div>
-                  <span>{destacados[destacado].etiqueta}</span>
-                  <h2>{destacados[destacado].titulo}</h2>
-                  <p>{destacados[destacado].texto}</p>
-                </div>
-                <div className="publico-noticia-controles">
-                  <button type="button" onClick={() => moverDestacado(-1)} aria-label="Contenido anterior">←</button>
-                  <div className="publico-noticia-puntos" aria-label="Seleccionar contenido destacado">
-                    {destacados.map((item, indice) => (
-                      <button type="button" key={item.titulo} className={indice === destacado ? 'activo' : ''} aria-label={'Ver destacado ' + (indice + 1) + ': ' + item.titulo} aria-pressed={indice === destacado} onClick={() => setDestacado(indice)} />
-                    ))}
-                  </div>
-                  <button type="button" onClick={() => moverDestacado(1)} aria-label="Contenido siguiente">→</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section id="productos" className="publico-productos publico-seccion-ancla">
-          <div className="contenedor-publico">
-            <header className="publico-seccion-intro publico-productos-intro">
-              <span className="eyebrow">PRODUCTOS</span>
-              <h2>Siete familias. Una identidad.</h2>
-              <p>Selecciona una familia para explorar sus productos y presentaciones.</p>
-            </header>
-
-            <div className="familias-grid" role="group" aria-label="Familias de productos">
-              {familias.map((item) => (
-                <button type="button" key={item.id} className={familiaActiva === item.id ? 'familia-card activa' : 'familia-card'} aria-pressed={familiaActiva === item.id} onClick={() => setFamiliaActiva(item.id)}>
-                  <span className="familia-icono"><Pictograma>{item.icono}</Pictograma></span>
-                  <span>{item.nombre}</span>
-                </button>
-              ))}
-            </div>
-
-            <div className="catalogo-familia" aria-live="polite">
-              <div className="catalogo-familia-cabecera">
-                <div>
-                  <span className="eyebrow">{familia.nombre.toUpperCase()}</span>
-                  <h3>{familia.nombre}</h3>
-                  <p>{familia.descripcion}</p>
-                </div>
-                <span className="catalogo-conteo">{familia.productos.length.toString().padStart(2, '0')} productos</span>
-              </div>
-              <div className="productos-grid">
-                {familia.productos.map((producto) => (
-                  <article className="producto-publico" key={producto.nombre}>
-                    <div className="producto-publico-imagen">
-                      {producto.imagen ? (
-                        <Image src={producto.imagen} alt={producto.nombre} fill sizes="(max-width: 640px) 78vw, (max-width: 980px) 40vw, 24vw" />
-                      ) : (
-                        <div className="producto-publico-pendiente" aria-label={`Fotografía de ${producto.nombre} pendiente de versionar`}>
-                          <span>ZAV</span>
-                          <small>Fotografía pendiente</small>
-                        </div>
-                      )}
-                    </div>
-                    <div className="producto-publico-pie">
-                      <span>{familia.nombre}</span>
-                      <h4>{producto.nombre}</h4>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section id="zav" className="publico-zav publico-seccion-ancla">
-          <div className="contenedor-publico publico-zav-grid">
-            <div className="publico-zav-marca"><Marca grande /></div>
-            <div className="publico-zav-copy">
-              <span className="eyebrow">NOSOTROS</span>
-              <h2>ZAV · Fiambres &amp; Embutidos.</h2>
-              <p>Tarija, Bolivia.</p>
-              <p>Conoce el catálogo y las novedades de ZAV desde su sitio público.</p>
-              <Link className="publico-link" href="/acceso">Acceso al sistema interno <Icono nombre="flecha" tamano={16} /></Link>
-            </div>
-          </div>
-        </section>
-      </main>
-
-      <footer className="publico-footer">
-        <div className="contenedor-publico publico-footer-grid">
-          <div className="publico-footer-identidad"><Marca compacta /><p>Fiambres &amp; Embutidos · Tarija, Bolivia</p></div>
-          <nav aria-label="Navegación del pie"><a href="#novedades">Noticias</a><a href="#productos">Productos</a><a href="#zav">Nosotros</a><Link href="/acceso">Acceso interno</Link></nav>
-          <div className="publico-footer-redes" aria-label="Redes sociales de ZAV"><span>Facebook</span><span>Instagram</span><span>WhatsApp</span><span>TikTok</span></div>
-        </div>
-        <div className="contenedor-publico publico-footer-legal"><span>ZAV · Fiambres &amp; Embutidos</span><span>© 2026</span></div>
-      </footer>
-    </div>
-  );
+export function LandingPublica(){
+ const[seccionActiva,setSeccionActiva]=useState('novedades');
+ const[destacado,setDestacado]=useState(0);
+ const[familiaActiva,setFamiliaActiva]=useState(familias[0].id);
+ const familia=useMemo(()=>familias.find(x=>x.id===familiaActiva)??familias[0],[familiaActiva]);
+ useEffect(()=>{const ss=['novedades','productos','zav'].map(id=>document.getElementById(id)).filter((e):e is HTMLElement=>Boolean(e));const o=new IntersectionObserver(es=>{const v=es.filter(e=>e.isIntersecting).sort((a,b)=>b.intersectionRatio-a.intersectionRatio)[0];if(v?.target.id)setSeccionActiva(v.target.id)},{rootMargin:'-25% 0px -55% 0px',threshold:[.05,.2,.45]});ss.forEach(s=>o.observe(s));return()=>o.disconnect()},[]);
+ const mover=(d:number)=>setDestacado(a=>(a+d+destacados.length)%destacados.length);
+ return <div className="sitio-publico">
+ <a className="saltar-contenido" href="#principal">Saltar al contenido</a>
+ <header className="publico-header"><div className="contenedor-publico publico-header-interior"><Link href="/" aria-label="ZAV, inicio" className="publico-marca"><Marca compacta/></Link><nav className="publico-nav" aria-label="Navegación principal">{[['novedades','Noticias'],['productos','Productos'],['zav','Nosotros']].map(([id,t])=><a key={id} href={'#'+id} className={seccionActiva===id?'activo':''} aria-current={seccionActiva===id?'location':undefined}>{t}</a>)}</nav><Link className="publico-acceso" href="/acceso">Acceso interno <Icono nombre="flecha" tamano={15}/></Link></div></header>
+ <main id="principal" tabIndex={-1}>
+  <section id="novedades" className="publico-hero publico-seccion-ancla"><div className="contenedor-publico publico-hero-grid"><div className="publico-hero-copy"><span className="publico-kicker">TARIJA · BOLIVIA</span><h1>Fiambres y embutidos <em>ZAV.</em></h1><p>Catálogo público de productos y novedades de Fiambres y Embutidos ZAV.</p><a className="publico-link-hero" href="#productos">Explorar catálogo <Icono nombre="flecha" tamano={16}/></a></div><div className="publico-noticia" aria-roledescription="carrusel" aria-label="Contenido destacado de ZAV"><div className="publico-noticia-imagen"><Image key={destacados[destacado].imagen} src={destacados[destacado].imagen} alt={destacados[destacado].titulo} fill priority sizes="(max-width:900px) 100vw,52vw"/></div><div className="publico-noticia-contenido" aria-live="polite"><div><span>{destacados[destacado].etiqueta}</span><h2>{destacados[destacado].titulo}</h2><p>{destacados[destacado].texto}</p></div><div className="publico-noticia-controles"><button type="button" onClick={()=>mover(-1)} aria-label="Contenido anterior">←</button><div className="publico-noticia-puntos">{destacados.map((x,i)=><button type="button" key={x.titulo} className={i===destacado?'activo':''} onClick={()=>setDestacado(i)} aria-label={'Ver '+x.titulo} aria-pressed={i===destacado}/>)}</div><button type="button" onClick={()=>mover(1)} aria-label="Contenido siguiente">→</button></div></div></div></div></section>
+  <section id="productos" className="publico-productos publico-seccion-ancla"><div className="contenedor-publico"><header className="publico-seccion-intro publico-productos-intro"><div><span className="eyebrow">PRODUCTOS</span><h2>Siete familias de productos ZAV.</h2></div><p>Selecciona una familia para ver sus presentaciones y fotografías reales del catálogo.</p></header><div className="familias-grid" role="group" aria-label="Familias de productos">{familias.map(x=><button type="button" key={x.id} className={familiaActiva===x.id?'familia-card activa':'familia-card'} aria-pressed={familiaActiva===x.id} onClick={()=>setFamiliaActiva(x.id)}><span className="familia-icono"><Pictograma>{x.icono}</Pictograma></span><span>{x.nombre}</span></button>)}</div><div className="catalogo-familia" aria-live="polite"><div className="catalogo-familia-cabecera"><div><span className="eyebrow">{familia.nombre.toUpperCase()}</span><h3>{familia.nombre}</h3><p>{familia.descripcion}</p></div><span className="catalogo-conteo">{familia.productos.length.toString().padStart(2,'0')} productos</span></div><div className="productos-grid">{familia.productos.map(p=><article className="producto-publico" key={p.nombre}><div className="producto-publico-imagen"><Image src={p.imagen} alt={p.nombre} fill sizes="(max-width:640px)78vw,(max-width:980px)40vw,24vw"/></div><div className="producto-publico-pie"><span>{familia.nombre}</span><h4>{p.nombre}</h4></div></article>)}</div></div></div></section>
+  <section id="zav" className="publico-zav publico-seccion-ancla"><div className="contenedor-publico publico-zav-grid"><div className="publico-zav-marca"><Marca grande/></div><div className="publico-zav-copy"><span className="eyebrow">NOSOTROS</span><h2>Fiambres y Embutidos ZAV, Tarija.</h2><p>Fiambres y Embutidos ZAV es una empresa tarijeña dedicada a la elaboración y comercialización de fiambres y embutidos.</p><p>Este sitio reúne su catálogo público y sirve como punto de acceso al sistema interno de gestión.</p><div className="publico-zav-datos"><div className="publico-zav-dato"><span>ORIGEN</span><strong>Tarija, Bolivia</strong></div><div className="publico-zav-dato"><span>ACTIVIDAD</span><strong>Fiambres y embutidos</strong></div><div className="publico-zav-dato"><span>CATÁLOGO</span><strong>7 familias visibles</strong></div><div className="publico-zav-dato"><span>GESTIÓN</span><strong>Acceso interno separado</strong></div></div><Link className="publico-link" href="/acceso">Ir al sistema interno <Icono nombre="flecha" tamano={16}/></Link></div></div></section>
+ </main>
+ <footer className="publico-footer"><div className="contenedor-publico publico-footer-grid"><div className="publico-footer-identidad"><Marca compacta/><p>Catálogo público de Fiambres y Embutidos ZAV.</p><p>Tarija, Bolivia.</p></div><nav aria-label="Navegación del pie"><h3>Explorar</h3><a href="#novedades">Noticias</a><a href="#productos">Productos</a><a href="#zav">Nosotros</a></nav><div className="publico-footer-col"><h3>Familias</h3><a href="#productos">Mortadelas</a><a href="#productos">Chorizos</a><a href="#productos">Salchichas</a><a href="#productos">Fiambres especiales</a></div><div className="publico-footer-col"><h3>Canales</h3><div className="publico-footer-redes"><a href="https://facebook.com/863449187010368" target="_blank" rel="noreferrer">Facebook</a><span>Instagram</span><span>WhatsApp</span><span>TikTok</span></div><Link className="publico-link" href="/acceso">Acceso interno</Link></div></div><div className="contenedor-publico publico-footer-legal"><span>ZAV · Fiambres &amp; Embutidos</span><span>© 2026</span></div></footer>
+ </div>;
 }
