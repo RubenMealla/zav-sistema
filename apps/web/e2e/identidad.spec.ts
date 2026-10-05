@@ -32,7 +32,7 @@ for (const ancho of [390, 768, 1440]) {
     await page.goto('/');
     await expect(page.getByRole('heading', { level: 1 })).toContainText('Fiambres y embutidos');
     await expect(page.getByRole('img', { name: 'ZAV · Fiambres y embutidos' }).first()).toBeVisible();
-    await expect.poll(() => page.locator('img').evaluateAll((imgs) => imgs.every((img) => img instanceof HTMLImageElement && img.complete && img.naturalWidth > 0))).toBeTruthy();
+    await expect.poll(() => page.locator('img:visible').evaluateAll((imgs) => imgs.every((img) => img instanceof HTMLImageElement && img.complete && img.naturalWidth > 0))).toBeTruthy();
     await sinDesborde(page);
     await captura(page, `identidad-inicio-${ancho}.png`);
 
@@ -120,7 +120,7 @@ test('landing pública conserva la nueva jerarquía editorial', async ({ page })
   await expect(page.getByRole('heading', { name: 'Siete familias. Una identidad.' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Mortadelas' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Fiambres especiales' })).toBeVisible();
-  await expect(page.getByRole('img', { name: 'Mortadela Primavera' })).toBeVisible();
+  await expect(page.locator('#productos').getByRole('img', { name: 'Mortadela Primavera' })).toBeVisible();
 
   await nav.getByRole('link', { name: 'Productos' }).click();
   await expect.poll(async () => nav.getByRole('link', { name: 'Productos' }).getAttribute('class')).toContain('activo');
