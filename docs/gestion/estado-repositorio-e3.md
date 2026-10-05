@@ -19,14 +19,14 @@ Las ramas históricas no se consideran trabajo pendiente únicamente por seguir 
 
 | Estado | Rama / referencia | Uso |
 |---|---|---|
-| Estable | `main` · `5e5b50c2` | Versión integrada utilizada por Vercel Production y Render `zav-api-2026`; incluye el cierre QA/API de PR #42. |
+| Estable | `main` | Versión integrada utilizada por Vercel Production y Render `zav-api-2026`; incluye el cierre QA/API de PR #42. |
 | Activa | `mejora/ui-web-consolidada` · PR #40 · Issue #39 | Última línea válida de interfaz web recuperada y mejorada. Pendiente de nueva revisión visual antes de merge. |
 | Integrada / evidencia | `pruebas/e3-evidencias-http` · PR #42 · Issue #41 | OpenAPI, matriz QA, evidencias HTTP y smoke público sin credenciales válidas. Fusionada a `main` mediante `5e5b50c2`; la rama se conserva. |
 | Pausada | `pruebas/e3-capturas-android-v2` · Issue #43 | Automatización experimental de capturas Android. La app estable no depende de este workflow. |
 | Evidencia de intento anterior | `pruebas/e3-capturas-android` | Primer intento de screenshots Android; se conserva con sus fallos. |
 | Referencia recuperada | `revision/ui-web-local-recuperada` | Recuperación de trabajo local usada como fuente para reconstruir selectivamente PR #40. No se fusiona de forma automática. |
 | Histórica de desarrollo móvil | `desarrollo/e3-app-movil-vendedor` | Línea previa a ZAV Vendedor 1.0.0; conserva un ajuste de usuarios demo y alimenta temporalmente `zav-api-e3-dev`. No debe fusionarse directamente a `main`. |
-| Mantenimiento en cierre | `mantenimiento/estado-repositorio-e3` · PR #45 · Issue #44 | Actualiza README, clasificación de ramas y normaliza el APK de revisión para usar la API estable. Se conservará tras el merge. |
+| Integrada / evidencia de mantenimiento | `mantenimiento/estado-repositorio-e3` · PR #45 · Issue #44 | Actualiza README, clasificación de ramas y normaliza el APK de revisión para usar la API estable. La rama se conserva después del merge. |
 
 ## Ramas integradas que se conservan como evidencia
 
@@ -57,10 +57,9 @@ Su presencia en GitHub es intencional y no representa deuda técnica activa.
 - **PR #40 / Issue #39:** interfaz web consolidada. Línea funcional activa.
 - **PR #42 / Issue #41:** **COMPLETADO**. Fusionado a `main` mediante `5e5b50c2`; rama preservada.
 - **Issue #43:** screenshots Android automáticos. Pausado; fallos conservados.
-- **PR #45 / Issue #44:** mantenimiento y orden del repositorio; en cierre.
 - **Issue #37:** Venta Directa. Propuesta futura, pendiente de validar.
 
-Los Issues #32 y #34 fueron cerrados como completados porque su alcance quedó integrado en ZAV Vendedor 1.0.0 mediante PR #35.
+Los Issues #32 y #34 fueron cerrados como completados porque su alcance quedó integrado en ZAV Vendedor 1.0.0 mediante PR #35. El Issue #41 se cerró al integrar PR #42. El Issue #44 se cierra con PR #45; ambas ramas se preservan.
 
 ## Infraestructura confirmada
 
