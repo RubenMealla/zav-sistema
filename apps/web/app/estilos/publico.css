@@ -7,3 +7,10 @@
 .productos-lista .producto-publico>span{color:#9a604b;font-size:10px;letter-spacing:.08em}
 .productos-lista .producto-publico h4{margin:0;font-size:15px;font-weight:650}
 @media(max-width:760px){.catalogo-familia-contenido{grid-template-columns:1fr}.catalogo-familia-imagen{min-height:330px}}
+
+.producto-publico-pendiente{
+  position:absolute;inset:0;display:grid;place-content:center;gap:.35rem;text-align:center;
+  background:linear-gradient(145deg,#f4f0e8,#e7e1d6);color:#272522
+}
+.producto-publico-pendiente span{font-weight:800;letter-spacing:.16em;font-size:1.05rem}
+.producto-publico-pendiente small{font-size:.72rem;color:#777064}
