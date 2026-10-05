@@ -109,7 +109,7 @@ export function MapaUbicacion({ latitud, longitud }: { latitud: number | null; l
 
   useEffect(() => {
     const q = consulta.trim();
-    if (q.length < 2) { setResultados([]); setBuscando(false); setErrorBusqueda(''); return; }
+    if (q.length < 2) return;
     const controlador = new AbortController();
     const temporizador = window.setTimeout(async () => {
       setBuscando(true); setErrorBusqueda('');
@@ -141,7 +141,15 @@ export function MapaUbicacion({ latitud, longitud }: { latitud: number | null; l
         <label htmlFor="buscar-direccion-tarija">Buscar dirección en Tarija</label>
         <div className="ubicacion-buscador-campo">
           <Icono nombre="ubicacion" tamano={18} />
-          <input id="buscar-direccion-tarija" type="search" value={consulta} onChange={(e) => setConsulta(e.target.value)} placeholder="Barrio, calle, localidad o referencia" autoComplete="off" aria-autocomplete="list" aria-expanded={resultados.length > 0} aria-controls="sugerencias-direccion" />
+          <input id="buscar-direccion-tarija" type="search" role="combobox" value={consulta} onChange={(e) => {
+            const valor = e.target.value;
+            setConsulta(valor);
+            if (valor.trim().length < 2) {
+              setResultados([]);
+              setBuscando(false);
+              setErrorBusqueda('');
+            }
+          }} placeholder="Barrio, calle, localidad o referencia" autoComplete="off" aria-autocomplete="list" aria-expanded={resultados.length > 0} aria-controls="sugerencias-direccion" />
           {buscando && <span className="ubicacion-buscando">Buscando…</span>}
         </div>
         {resultados.length > 0 && (
