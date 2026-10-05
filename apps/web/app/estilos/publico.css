@@ -43,3 +43,43 @@
 .publico-footer-redes{align-items:flex-start}
 .publico-footer-redes a,.publico-footer-redes span{display:inline-flex;align-items:center;min-height:36px}
 @media(max-width:680px){.publico-zav-enlaces{align-items:flex-start;flex-direction:column;gap:0}.publico-zav-marca-leyenda{font-size:11px}}
+
+
+/* Revisión de landing: menos espacio muerto, hero completo y tipografía ligeramente mayor. */
+.publico-seccion-ancla{scroll-margin-top:76px}
+.publico-nav a{font-size:14px}
+.publico-acceso{font-size:13px}
+.publico-kicker{font-size:12px}
+.publico-hero-grid{min-height:calc(100svh - 78px);padding-block:28px}
+.publico-hero-copy>p{font-size:18px}
+.publico-link-hero{font-size:14px}
+.publico-noticia{min-height:min(560px,calc(100svh - 118px));grid-template-rows:minmax(300px,1fr) auto}
+.publico-noticia-imagen{background:#ece7dd}
+.publico-noticia-contenido{min-height:148px;padding:22px 26px}
+.publico-noticia-contenido>div:first-child>span{font-size:11px}
+.publico-noticia-contenido p{font-size:15px}
+.publico-productos{padding-block:clamp(48px,5vw,72px)}
+.publico-seccion-intro p,.publico-zav-copy p{font-size:16px}
+.familias-grid{margin-top:28px}
+.familia-card{font-size:14px}
+.catalogo-familia{margin-top:32px}
+.catalogo-familia-cabecera p{font-size:14px}
+.catalogo-conteo{font-size:12px}
+.producto-publico-pie span{font-size:11px}.producto-publico-pie h4{font-size:17px}
+.publico-zav{padding-block:clamp(48px,5vw,72px)}
+.publico-zav-marca-leyenda{font-size:13px}
+.publico-zav-dato span{font-size:12px}.publico-zav-dato strong{font-size:16px}
+.publico-link{font-size:14px}
+.publico-footer h3{font-size:14px}
+.publico-footer p,.publico-footer a,.publico-footer span{font-size:14px}
+.publico-footer-legal{font-size:11px}
+.foto-sprite{background-color:#ece7dd;background-position:center;background-repeat:no-repeat}
+@media(max-width:900px){
+  .publico-hero-grid{padding-block:34px 46px}
+  .publico-noticia{min-height:520px}
+}
+@media(max-width:680px){
+  .publico-hero-grid{padding-block:32px 40px}
+  .publico-noticia{min-height:500px}
+  .publico-productos,.publico-zav{padding-block:42px}
+}
