@@ -1,4 +1,3 @@
-import Image from 'next/image';
 import styles from './marca.module.css';
 
 export function Marca({ grande=false, compacta=false, soloSimbolo=false, soloLettering=false }:{
@@ -6,7 +5,7 @@ export function Marca({ grande=false, compacta=false, soloSimbolo=false, soloLet
 }) {
   const clases=[styles.marca,grande?styles.grande:'',compacta?styles.compacta:'',soloSimbolo?styles.soloSimbolo:'',soloLettering?styles.soloLettering:''].filter(Boolean).join(' ');
   return <span className={clases}>
-    {!soloLettering && <span className={styles.simbolo}><Image src="/marca/zav-oficial.svg" alt="" width={820} height={590} priority={grande}/></span>}
-    {!soloSimbolo && <span className={styles.lettering}><Image src="/marca/zav-oficial.svg" alt="ZAV · Fiambres y Embutidos" width={820} height={590} priority={grande}/></span>}
+    {!soloLettering && <span className={styles.simbolo} aria-hidden="true"><svg viewBox="315 278 445 220" focusable="false"><use href="/marca/zav-oficial.svg#zav-cerdo-base"/><use href="/marca/zav-oficial.svg#zav-cerdo-color"/></svg></span>}
+    {!soloSimbolo && <span className={styles.lettering}><svg viewBox="120 552 850 270" role="img" aria-label="ZAV · Fiambres y Embutidos" focusable="false"><use href="/marca/zav-oficial.svg#zav-lettering"/></svg></span>}
   </span>;
 }

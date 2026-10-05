@@ -1,13 +1,9 @@
-.marca{display:inline-flex;align-items:center;gap:11px;flex:none}
-.simbolo,.lettering{position:relative;display:block;overflow:hidden;flex:none}
-.simbolo{width:56px;aspect-ratio:452/238}
-.simbolo img{position:absolute;width:238.94%;height:auto;max-width:none;left:-70.35%;top:-114.29%}
-.lettering{width:112px;aspect-ratio:835/259}
-.lettering img{position:absolute;width:129.34%;height:auto;max-width:none;left:-14.73%;top:-214.29%}
-.compacta .simbolo{width:48px}.compacta .lettering{width:96px}
-.grande{display:grid;gap:20px;justify-items:start}
-.grande .simbolo{width:min(100%,300px)}
-.grande .lettering{width:min(100%,470px)}
-.soloSimbolo .lettering{display:none}
-.soloLettering .simbolo{display:none}
-@media(max-width:640px){.compacta .simbolo{width:42px}.compacta .lettering{width:84px}}
+.marca{display:inline-flex;align-items:center;gap:12px;flex:none}
+.simbolo,.lettering{display:block;flex:none;line-height:0}
+.simbolo{width:64px}.lettering{width:122px}
+.simbolo svg,.lettering svg{display:block;width:100%;height:auto;overflow:visible}
+.compacta .simbolo{width:54px}.compacta .lettering{width:104px}
+.grande{display:grid;gap:18px;justify-items:start}
+.grande .simbolo{width:min(100%,360px)}.grande .lettering{width:min(100%,520px)}
+.soloSimbolo .lettering{display:none}.soloLettering .simbolo{display:none}
+@media(max-width:640px){.compacta .simbolo{width:46px}.compacta .lettering{width:90px}}
