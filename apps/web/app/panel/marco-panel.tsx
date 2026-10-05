@@ -40,10 +40,7 @@ export function MarcoPanel({ vista, perfil, children }: {
       <a className="saltar-contenido" href="#contenido-panel">Saltar al contenido</a>
 
       <aside className="sidebar">
-        <Link href="/" aria-label="ZAV, inicio" className="sidebar-marca">
-          <Marca compacta />
-          <span><strong>ZAV</strong><small>Gestión</small></span>
-        </Link>
+        <Link href="/" aria-label="ZAV, inicio" className="sidebar-marca"><Marca compacta /></Link>
 
         <nav className="sidebar-nav" aria-label="Módulos del sistema">
           <span className="sidebar-seccion">ADMINISTRACIÓN</span>
@@ -63,7 +60,7 @@ export function MarcoPanel({ vista, perfil, children }: {
 
       <div className="contenido">
         <div className="cabecera-movil">
-          <Link href="/" aria-label="ZAV, inicio" className="cabecera-movil-marca"><Marca compacta /><strong>ZAV</strong></Link>
+          <Link href="/" aria-label="ZAV, inicio" className="cabecera-movil-marca"><Marca compacta /></Link>
           <form action={cerrarSesion}><button type="submit" className="boton-cerrar-sesion">Salir <span aria-hidden="true">↗</span></button></form>
         </div>
 

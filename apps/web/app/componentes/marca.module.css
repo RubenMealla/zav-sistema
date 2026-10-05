@@ -1,17 +1,1 @@
-.marca {
-  display: block;
-  flex: none;
-  width: 160px;
-  aspect-ratio: 820 / 590;
-  background: transparent;
-}
-
-.marca img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-
-.compacta { width: 116px; }
-.grande { width: min(100%, 420px); }
+.marca{display:inline-flex;align-items:center;gap:10px;flex:none}.simbolo,.lettering{position:relative;display:block;overflow:hidden;flex:none}.simbolo{width:54px;aspect-ratio:455/235}.simbolo img{position:absolute;width:180.22%;height:auto;max-width:none;left:-31.87%;top:-10.6%}.lettering{width:108px;aspect-ratio:775/270}.lettering img{position:absolute;width:105.81%;height:auto;max-width:none;left:-1.94%;top:-111.2%}.compacta .simbolo{width:48px}.compacta .lettering{width:96px}.grande{display:grid;gap:18px;justify-items:start}.grande .simbolo{width:min(100%,300px)}.grande .lettering{width:min(100%,470px)}.soloSimbolo .lettering{display:none}.soloLettering .simbolo{display:none}@media(max-width:640px){.compacta .simbolo{width:42px}.compacta .lettering{width:84px}}
