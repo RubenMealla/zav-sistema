@@ -1,8 +1,8 @@
 .marca {
   display: block;
   flex: none;
-  width: 96px;
-  aspect-ratio: 1;
+  width: 160px;
+  aspect-ratio: 820 / 590;
   background: transparent;
 }
 
@@ -13,10 +13,5 @@
   object-fit: contain;
 }
 
-.compacta {
-  width: 54px;
-}
-
-.grande {
-  width: min(100%, 340px);
-}
+.compacta { width: 116px; }
+.grande { width: min(100%, 420px); }

@@ -5,7 +5,14 @@ export function Marca({ grande = false, compacta = false }: { etiqueta?: boolean
   const clases = [styles.marca, grande ? styles.grande : '', compacta ? styles.compacta : ''].filter(Boolean).join(' ');
   return (
     <span className={clases}>
-      <Image src="/marca/zav-transparente.svg" alt="ZAV · Fiambres y embutidos" width={1024} height={1024} priority={grande} sizes={grande ? '(max-width: 900px) 280px, 340px' : compacta ? '54px' : '96px'} />
+      <Image
+        src="/marca/zav-oficial.svg"
+        alt="ZAV · Fiambres y embutidos"
+        width={820}
+        height={590}
+        priority={grande}
+        sizes={grande ? '(max-width: 900px) 320px, 420px' : compacta ? '116px' : '160px'}
+      />
     </span>
   );
 }
