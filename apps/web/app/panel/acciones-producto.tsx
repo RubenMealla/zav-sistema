@@ -33,12 +33,12 @@ export function AccionesProducto({ producto }: { producto: ProductoEditable }) {
                 <label className="campo">Peso (gramos)<input name="pesoGramos" type="number" min={1} step={1} required defaultValue={producto.pesoGramos} /></label>
                 <label className="campo">Precio (Bs)<input name="precioBob" type="number" min={0} step="0.01" required defaultValue={producto.precioBob} /></label>
               </div>
-              <div className="modal-acciones"><BotonEnviar pendiente="Guardando…">Guardar cambios</BotonEnviar></div>
+              <div className="modal-acciones"><BotonEnviar pendiente="Guardando…" confirmacion={{ titulo: 'Guardar cambios del producto', mensaje: 'Se actualizarán los datos comerciales del producto. El historial de lotes no se modificará.', confirmar: 'Sí, guardar cambios' }}>Guardar cambios</BotonEnviar></div>
             </form>
           </Modal>
           <form action={darBajaProducto}>
             <input type="hidden" name="productoId" value={producto.id} />
-            <BotonEnviar className="boton boton-secundario boton-peligro-suave" pendiente="Procesando…">Desactivar</BotonEnviar>
+            <BotonEnviar className="boton boton-secundario boton-peligro-suave" pendiente="Procesando…" confirmacion={{ titulo: 'Desactivar producto', mensaje: `¿Confirmas que deseas desactivar “${producto.nombre}”? El registro permanecerá en el historial, pero dejará de estar disponible para nuevas operaciones.`, confirmar: 'Sí, desactivar', variante: 'peligro' }}>Desactivar</BotonEnviar>
           </form>
         </>
       )}

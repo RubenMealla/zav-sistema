@@ -42,5 +42,5 @@ export async function iniciarSesion(formulario: FormData) {
 
 export async function cerrarSesion() {
   (await cookies()).delete(COOKIE);
-  redirect('/acceso');
+  redirect('/acceso?mensaje=sesion-cerrada');
 }

@@ -85,7 +85,10 @@ const mensajes: Record<string, string> = {
   'lote-duplicado': 'El código de lote o la clave de operación ya está registrado.',
   'traslado-conflicto': 'No se pudo trasladar. Revisa el saldo disponible.',
   'condicion-conflicto': 'No se pudo cambiar la condición. Revisa estado, vigencia y producto.',
-  conexion: 'No se pudo conectar con la API de ZAV.',
+  conexion: 'No se pudo conectar con la API de ZAV. Comprueba la conexión e inténtalo nuevamente.',
+  'solicitud-invalida': 'Hay datos incompletos o inválidos. Revisa los campos y vuelve a intentar.',
+  'registro-no-encontrado': 'El registro ya no existe o cambió desde la última consulta. Actualiza la pantalla y vuelve a intentar.',
+  servicio: 'El servicio de ZAV no pudo completar la operación. Inténtalo nuevamente; si persiste, revisa el estado de la API.',
   producto: 'No se registró el producto. Revisa los datos.',
   'producto-edicion': 'No se pudo actualizar el producto. Revisa los datos.',
   'producto-baja': 'No se pudo desactivar el producto.',
@@ -376,7 +379,7 @@ export default async function Panel({
                       <label className="campo">Peso (gramos)<input name="pesoGramos" type="number" min={1} step={1} required /></label>
                       <label className="campo">Precio (Bs)<input name="precioBob" type="number" min={0} step="0.01" required /></label>
                     </div>
-                    <div className="modal-acciones"><BotonEnviar>Guardar producto</BotonEnviar></div>
+                    <div className="modal-acciones"><BotonEnviar confirmacion={{ titulo: 'Registrar producto', mensaje: 'Se agregará esta presentación al catálogo interno de ZAV.', confirmar: 'Sí, registrar producto' }}>Guardar producto</BotonEnviar></div>
                   </form>
                 </Modal>
               </div>
@@ -449,7 +452,7 @@ export default async function Panel({
                       <label className="campo">Cantidad inicial<input name="cantidadInicial" type="number" min={1} step={1} required /></label>
                       <label className="campo">Ubicación inicial<input value="Producción y Almacenamiento" readOnly aria-label="Ubicación inicial" /></label>
                     </div>
-                    <div className="modal-acciones"><BotonEnviar disabled={itemsProductos.length === 0}>Guardar lote e ingreso</BotonEnviar></div>
+                    <div className="modal-acciones"><BotonEnviar disabled={itemsProductos.length === 0} confirmacion={{ titulo: 'Registrar lote e ingreso', mensaje: 'Se creará el lote con su existencia inicial en Producción y Almacenamiento. La operación quedará en la trazabilidad.', confirmar: 'Sí, registrar lote' }}>Guardar lote e ingreso</BotonEnviar></div>
                   </form>
                 </Modal>
               </div>
@@ -533,7 +536,7 @@ export default async function Panel({
                         <label className="campo">Acción<select name="accion" required defaultValue="liberar"><option value="liberar">Liberar para disponibilidad comercial</option><option value="bloquear">Bloquear lote</option></select></label>
                         <label className="campo">Motivo<input name="motivo" maxLength={250} required placeholder="Motivo de la decisión" /></label>
                       </div>
-                      <div className="modal-acciones"><BotonEnviar disabled={itemsLotes.length === 0}>Guardar condición</BotonEnviar></div>
+                      <div className="modal-acciones"><BotonEnviar disabled={itemsLotes.length === 0} confirmacion={{ titulo: 'Confirmar cambio de condición', mensaje: 'Se registrará la liberación o bloqueo del lote con el motivo indicado y quedará asociado al usuario autenticado.', confirmar: 'Sí, guardar condición' }}>Guardar condición</BotonEnviar></div>
                     </form>
                   </Modal>
                 </div>
@@ -730,7 +733,7 @@ export default async function Panel({
                       <label className="campo">Referencia <span className="opcional">Opcional</span><input name="referencia" maxLength={80} placeholder="Ej. TR-001" /></label>
                       <label className="campo">Motivo <span className="opcional">Opcional</span><input name="motivo" maxLength={250} placeholder="Motivo del movimiento" /></label>
                     </div>
-                    <div className="modal-acciones"><BotonEnviar disabled={itemsLotes.length === 0}>Guardar traslado</BotonEnviar></div>
+                    <div className="modal-acciones"><BotonEnviar disabled={itemsLotes.length === 0} confirmacion={{ titulo: 'Registrar traslado', mensaje: 'Se moverá existencia física entre ubicaciones y el movimiento quedará registrado en el historial del lote.', confirmar: 'Sí, registrar traslado' }}>Guardar traslado</BotonEnviar></div>
                   </form>
                 </Modal>
               </div>

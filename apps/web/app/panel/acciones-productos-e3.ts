@@ -1,7 +1,7 @@
 'use server';
 
 import { redirect } from 'next/navigation';
-import { enviar } from './acciones';
+import { claveErrorOperacion, enviar } from './acciones';
 
 export async function editarProducto(formulario: FormData) {
   const productoId = String(formulario.get('productoId') ?? '');
@@ -21,9 +21,7 @@ export async function editarProducto(formulario: FormData) {
   if (estado === 401 || estado === 403) redirect('/acceso?error=sesion');
   if (estado === 200) redirect('/panel?vista=productos&mensaje=producto-editado');
 
-  const error =
-    estado === 409 ? 'codigo' : estado === 'conexion' ? 'conexion' : 'producto-edicion';
-  redirect(`/panel?vista=productos&error=${error}`);
+  redirect(`/panel?vista=productos&error=${claveErrorOperacion(estado, 'producto-edicion', 'codigo')}`);
 }
 
 export async function darBajaProducto(formulario: FormData) {
@@ -37,6 +35,5 @@ export async function darBajaProducto(formulario: FormData) {
   if (estado === 401 || estado === 403) redirect('/acceso?error=sesion');
   if (estado === 200) redirect('/panel?vista=productos&mensaje=producto-baja');
 
-  const error = estado === 'conexion' ? 'conexion' : 'producto-baja';
-  redirect(`/panel?vista=productos&error=${error}`);
+  redirect(`/panel?vista=productos&error=${claveErrorOperacion(estado, 'producto-baja')}`);
 }

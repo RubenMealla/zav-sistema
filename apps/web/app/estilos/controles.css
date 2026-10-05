@@ -331,3 +331,17 @@ td small,.codigo,.badge,.saldos-inline b,.saldos-inline strong{font-size:13px}
 
 .ubicacion-buscador{width:min(100%,720px)}
 .ubicacion-busqueda-vacia{margin:8px 0 0;color:#68635a;font-size:13px;line-height:1.45}
+
+
+/* Confirmaciones de seguridad para operaciones que modifican datos. */
+.confirmacion-capa{position:fixed;inset:0;z-index:220;display:grid;place-items:center;padding:20px;background:#11110fb8}
+.confirmacion-caja{width:min(480px,100%);display:grid;grid-template-columns:36px minmax(0,1fr);gap:14px;padding:22px;border:1px solid #c9c4ba;border-top:4px solid #e45a2e;border-radius:8px;background:#fff;box-shadow:0 26px 90px #11110f52}
+.confirmacion-icono{width:36px;height:36px;display:grid;place-items:center;border-radius:50%;background:#fff0e9;color:#a73a1d}
+.confirmacion-texto h2{margin:0;color:#26241f;font-size:20px;line-height:1.2}
+.confirmacion-texto p{margin:8px 0 0;color:#676159;font-size:14px;line-height:1.55}
+.confirmacion-acciones{grid-column:1/-1;display:flex;justify-content:flex-end;gap:9px;padding-top:6px}
+.confirmacion-peligro{border-top-color:var(--rojo)}
+.confirmacion-peligro .confirmacion-icono{background:var(--rojo-fondo);color:var(--rojo)}
+.boton-peligro{border-color:var(--rojo);background:var(--rojo);color:#fff}
+.boton-peligro:hover:not(:disabled){border-color:#7d281d;background:#7d281d}
+@media(max-width:520px){.confirmacion-caja{padding:18px}.confirmacion-acciones{flex-direction:column-reverse}.confirmacion-acciones .boton{width:100%}}

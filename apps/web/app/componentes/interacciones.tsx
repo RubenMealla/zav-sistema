@@ -4,9 +4,84 @@ import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { useFormStatus } from 'react-dom';
 import { Icono, type NombreIcono } from './icono';
 
-export function BotonEnviar({ children, pendiente = 'Guardando…', className = 'boton boton-primario', disabled = false }: { children: ReactNode; pendiente?: string; className?: string; disabled?: boolean }) {
+type ConfirmacionEnvio = {
+  titulo: string;
+  mensaje: string;
+  confirmar?: string;
+  variante?: 'normal' | 'peligro';
+};
+
+export function BotonEnviar({
+  children,
+  pendiente = 'Guardando…',
+  className = 'boton boton-primario',
+  disabled = false,
+  confirmacion,
+}: {
+  children: ReactNode;
+  pendiente?: string;
+  className?: string;
+  disabled?: boolean;
+  confirmacion?: ConfirmacionEnvio;
+}) {
   const { pending } = useFormStatus();
-  return <button type="submit" className={className} disabled={disabled || pending} aria-busy={pending}>{pending ? pendiente : children}</button>;
+  const [confirmando, setConfirmando] = useState(false);
+  const id = useId();
+
+  if (!confirmacion) {
+    return <button type="submit" className={className} disabled={disabled || pending} aria-busy={pending}>{pending ? pendiente : children}</button>;
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        className={className}
+        disabled={disabled || pending}
+        aria-haspopup="dialog"
+        onClick={(evento) => {
+          const formulario = evento.currentTarget.form;
+          if (formulario && !formulario.reportValidity()) return;
+          setConfirmando(true);
+        }}
+      >
+        {children}
+      </button>
+      {confirmando && (
+        <div
+          className="confirmacion-capa"
+          onMouseDown={(evento) => {
+            if (evento.target === evento.currentTarget && !pending) setConfirmando(false);
+          }}
+          onKeyDown={(evento) => {
+            if (evento.key === 'Escape' && !pending) setConfirmando(false);
+          }}
+        >
+          <section
+            className={`confirmacion-caja ${confirmacion.variante === 'peligro' ? 'confirmacion-peligro' : ''}`}
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby={`${id}-confirmacion-titulo`}
+            aria-describedby={`${id}-confirmacion-mensaje`}
+          >
+            <span className="confirmacion-icono" aria-hidden="true">
+              <Icono nombre={confirmacion.variante === 'peligro' ? 'alerta' : 'check'} tamano={20} />
+            </span>
+            <div className="confirmacion-texto">
+              <h2 id={`${id}-confirmacion-titulo`}>{confirmacion.titulo}</h2>
+              <p id={`${id}-confirmacion-mensaje`}>{confirmacion.mensaje}</p>
+            </div>
+            <div className="confirmacion-acciones">
+              <button type="button" className="boton boton-terciario" disabled={pending} autoFocus onClick={() => setConfirmando(false)}>Cancelar</button>
+              <button type="submit" className={confirmacion.variante === 'peligro' ? 'boton boton-primario boton-peligro' : 'boton boton-primario'} disabled={pending} aria-busy={pending}>
+                {pending ? pendiente : (confirmacion.confirmar ?? 'Confirmar')}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+    </>
+  );
 }
 
 export function Modal({

@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { cerrarSesion } from '../acciones';
 import { Icono } from '../componentes/icono';
+import { BotonEnviar } from '../componentes/interacciones';
 import { Marca } from '../componentes/marca';
 
 export type Vista = 'resumen' | 'productos' | 'lotes' | 'condiciones' | 'movimientos' | 'pedidos' | 'distribucion';
@@ -53,7 +54,7 @@ export function MarcoPanel({ vista, perfil, children }: {
             <div><strong>{perfil.nombre}</strong><span>{perfil.identificador}</span></div>
           </div>
           <form action={cerrarSesion}>
-            <button type="submit" className="boton-cerrar-sesion">Cerrar sesión <span aria-hidden="true">↗</span></button>
+            <BotonEnviar className="boton-cerrar-sesion" pendiente="Saliendo…" confirmacion={{ titulo: 'Cerrar sesión', mensaje: 'Se cerrará tu sesión administrativa en este navegador.', confirmar: 'Sí, cerrar sesión' }}>Cerrar sesión <span aria-hidden="true">↗</span></BotonEnviar>
           </form>
         </div>
       </aside>
@@ -61,7 +62,7 @@ export function MarcoPanel({ vista, perfil, children }: {
       <div className="contenido">
         <div className="cabecera-movil">
           <Link href="/" aria-label="ZAV, inicio" className="cabecera-movil-marca"><Marca compacta /></Link>
-          <form action={cerrarSesion}><button type="submit" className="boton-cerrar-sesion">Salir <span aria-hidden="true">↗</span></button></form>
+          <form action={cerrarSesion}><BotonEnviar className="boton-cerrar-sesion" pendiente="Saliendo…" confirmacion={{ titulo: 'Cerrar sesión', mensaje: 'Se cerrará tu sesión administrativa en este navegador.', confirmar: 'Sí, cerrar sesión' }}>Salir <span aria-hidden="true">↗</span></BotonEnviar></form>
         </div>
 
         <header className="topbar">

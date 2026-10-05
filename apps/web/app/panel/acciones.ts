@@ -5,6 +5,15 @@ import { redirect } from 'next/navigation';
 
 const API = process.env.API_BASE_URL ?? (process.env.NODE_ENV === 'production' ? 'https://zav-api-2026.onrender.com' : 'http://localhost:3001');
 
+export function claveErrorOperacion(estado: number | 'conexion', fallback: string, conflicto?: string): string {
+  if (estado === 'conexion') return 'conexion';
+  if (estado === 400 || estado === 422) return 'solicitud-invalida';
+  if (estado === 404) return 'registro-no-encontrado';
+  if (estado === 409 && conflicto) return conflicto;
+  if (estado >= 500) return 'servicio';
+  return fallback;
+}
+
 export async function enviar(ruta: string, datos: Record<string, unknown>, metodo: 'POST' | 'PATCH' = 'POST'): Promise<number | 'conexion'> {
   const token = (await cookies()).get('zav_acceso')?.value;
   if (!token) redirect('/acceso?error=sesion');
@@ -34,7 +43,7 @@ export async function registrarProducto(formulario: FormData) {
   if (estado === 201) {
     redirect('/panel?vista=productos&mensaje=producto');
   }
-  redirect(`/panel?vista=productos&error=${estado === 409 ? 'codigo' : estado === 'conexion' ? 'conexion' : 'producto'}`);
+  redirect(`/panel?vista=productos&error=${claveErrorOperacion(estado, 'producto', 'codigo')}`);
 }
 
 export async function registrarLote(formulario: FormData) {
@@ -51,7 +60,7 @@ export async function registrarLote(formulario: FormData) {
   if (estado === 201) {
     redirect('/panel?vista=lotes&mensaje=lote');
   }
-  redirect(`/panel?vista=lotes&error=${estado === 409 ? 'lote-duplicado' : estado === 'conexion' ? 'conexion' : 'lote'}`);
+  redirect(`/panel?vista=lotes&error=${claveErrorOperacion(estado, 'lote', 'lote-duplicado')}`);
 }
 
 export async function registrarTraslado(formulario: FormData) {
@@ -73,7 +82,7 @@ export async function registrarTraslado(formulario: FormData) {
   if (estado === 201) {
     redirect(`/panel?vista=movimientos&mensaje=traslado&historialLoteId=${encodeURIComponent(loteId)}`);
   }
-  redirect(`/panel?vista=movimientos&error=${estado === 409 ? 'traslado-conflicto' : estado === 'conexion' ? 'conexion' : 'traslado'}`);
+  redirect(`/panel?vista=movimientos&error=${claveErrorOperacion(estado, 'traslado', 'traslado-conflicto')}`);
 }
 
 export async function cambiarCondicionLote(formulario: FormData) {
@@ -88,7 +97,7 @@ export async function cambiarCondicionLote(formulario: FormData) {
   if (estado === 201) {
     redirect(`/panel?vista=condiciones&mensaje=condicion&historialCondicionLoteId=${encodeURIComponent(loteId)}`);
   }
-  redirect(`/panel?vista=condiciones&error=${estado === 409 ? 'condicion-conflicto' : estado === 'conexion' ? 'conexion' : 'condicion'}`);
+  redirect(`/panel?vista=condiciones&error=${claveErrorOperacion(estado, 'condicion', 'condicion-conflicto')}`);
 }
 
 
@@ -109,8 +118,6 @@ export async function configurarGeorreferenciaDespacho(formulario: FormData) {
   if (estado === 401 || estado === 403) redirect('/acceso?error=sesion');
   if (estado === 200) redirect('/panel?vista=resumen&mensaje=despacho-geo');
   redirect(
-    `/panel?vista=resumen&error=${
-      estado === 'conexion' ? 'conexion' : 'despacho-geo'
-    }`,
+    `/panel?vista=resumen&error=${claveErrorOperacion(estado, 'despacho-geo')}`,
   );
 }

@@ -186,7 +186,7 @@ export function MapaUbicacion({ latitud, longitud }: { latitud: number | null; l
         </div>
         <div className="ubicacion-editor-acciones">
           <button type="button" className="boton boton-secundario" onClick={() => mapaRef.current?.setView([CENTRO_TARIJA.latitud, CENTRO_TARIJA.longitud], 15)}>Centrar en Tarija</button>
-          <BotonEnviar disabled={!punto}>{inicial ? 'Actualizar ubicación' : 'Guardar ubicación'}</BotonEnviar>
+          <BotonEnviar disabled={!punto} confirmacion={{ titulo: inicial ? 'Actualizar ubicación de despacho' : 'Guardar ubicación de despacho', mensaje: 'El punto seleccionado se utilizará como referencia de salida para la organización de repartos.', confirmar: inicial ? 'Sí, actualizar ubicación' : 'Sí, guardar ubicación' }}>{inicial ? 'Actualizar ubicación' : 'Guardar ubicación'}</BotonEnviar>
         </div>
       </div>
     </div>
