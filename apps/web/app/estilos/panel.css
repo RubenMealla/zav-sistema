@@ -343,3 +343,24 @@
 .acceso-rapido strong{font-size:13px}.acceso-rapido p{font-size:11px}.estado-resumen>div{font-size:12px}.nota-card{font-size:11px}
 .condicion-fila strong,.timeline-superior strong{font-size:12px}.condicion-fila div span,.timeline-superior time,.timeline-item small{font-size:11px}
 .ubicacion-editor-pie strong{font-size:13px}.ubicacion-editor-pie span{font-size:12px}
+
+
+/* Legibilidad final del shell administrativo. */
+.sidebar-seccion{font-size:12px}
+.nav-item{font-size:14px}
+.sidebar-marca small{font-size:12px}
+.perfil-mini strong{font-size:13px}
+.perfil-mini span{font-size:12px}
+.boton-cerrar-sesion{font-size:13px}
+.breadcrumb{font-size:12px}
+.topbar p{font-size:13px}
+.topbar-perfil strong{font-size:13px}
+.topbar-perfil span{font-size:12px}
+.bienvenida p{font-size:13px}
+.bienvenida-sello{font-size:11px}
+.metrica-card span,.metrica-card small{font-size:12px}
+.alcance-datos{font-size:12px}
+.card-cabecera p{font-size:13px}
+.acceso-rapido p{font-size:12px}
+.nota-card{font-size:12px}
+.condicion-fila div span,.timeline-superior time,.timeline-item small{font-size:12px}
