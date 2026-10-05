@@ -35,5 +35,7 @@ describe('Validacion del inventario', () => {
     expect(() => objeto({ codigo: 'X', condicion: 'LIBERADO' }, ['codigo'])).toThrow(BadRequestException);
     expect(() => paginacion({ page: '0' }, ['page', 'limit'])).toThrow(BadRequestException);
     expect(paginacion({}, ['page', 'limit'])).toEqual({ page: 1, limit: 20 });
+    expect(paginacion({ limit: '150' }, ['page', 'limit'])).toEqual({ page: 1, limit: 150 });
+    expect(() => paginacion({ limit: '151' }, ['page', 'limit'])).toThrow(BadRequestException);
   });
 });

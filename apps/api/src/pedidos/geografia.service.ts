@@ -60,8 +60,8 @@ function consultaDireccion(valor: unknown): string {
     throw new BadRequestException('q es obligatorio.');
   }
   const consulta = valor.trim();
-  if (consulta.length < 2 || consulta.length > 200) {
-    throw new BadRequestException('q debe contener entre 2 y 200 caracteres.');
+  if (consulta.length < 1 || consulta.length > 200) {
+    throw new BadRequestException('q debe contener entre 1 y 200 caracteres.');
   }
   return consulta;
 }
@@ -500,4 +500,4 @@ export class GeografiaService {
   }
 }
 
-export { combinarResultados, direccionHumana, distanciaHaversine };
+export { combinarResultados, consultaDireccion, direccionHumana, distanciaHaversine };

@@ -83,7 +83,7 @@ export function paginacion(consulta: Record<string, unknown>, permitidos: readon
   };
   return {
     page: validar(consulta.page, 'page', 100000, 1),
-    limit: validar(consulta.limit, 'limit', 100, 20),
+    limit: validar(consulta.limit, 'limit', 150, 20),
   };
 }
 

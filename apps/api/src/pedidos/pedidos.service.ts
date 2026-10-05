@@ -331,7 +331,7 @@ export class PedidosService {
   }
 
   async listarAdmin(consulta: Record<string, unknown>) {
-    const { page, limit } = paginacion(consulta, ['estado', 'vendedorId', 'page', 'limit']);
+    const { page, limit } = paginacion(consulta, ['estado', 'vendedorId', 'q', 'page', 'limit']);
     const parametros: unknown[] = [];
     const filtros: string[] = [];
 
@@ -348,7 +348,15 @@ export class PedidosService {
 
     if (consulta.vendedorId !== undefined) {
       parametros.push(uuid(consulta.vendedorId, 'vendedorId'));
-      filtros.push(`pe.vendedor_id = $${parametros.length}::uuid`);
+      filtros.push(`pe.vendedor_id = ${parametros.length}::uuid`);
+    }
+
+    if (consulta.q !== undefined) {
+      if (typeof consulta.q !== 'string' || !consulta.q.trim() || consulta.q.trim().length > 120) {
+        throw new BadRequestException('q no es valido.');
+      }
+      parametros.push(`%${consulta.q.trim()}%`);
+      filtros.push(`(c.nombre ILIKE ${parametros.length} OR u.nombre ILIKE ${parametros.length} OR u.identificador ILIKE ${parametros.length} OR pe.direccion_entrega ILIKE ${parametros.length})`);
     }
 
     const where = filtros.length ? `WHERE ${filtros.join(' AND ')}` : '';
@@ -375,10 +383,12 @@ export class PedidosService {
       parametros,
     ) as Array<Record<string, unknown>>;
 
-    const totalParametros = parametros.slice(0, filtros.length);
+    const totalParametros = parametros.slice(0, parametros.length - 2);
     const total = await this.db.query(
       `SELECT count(*)::int AS total
        FROM pedido pe
+       JOIN cliente c ON c.id = pe.cliente_id
+       JOIN usuario u ON u.id = pe.vendedor_id
        ${where}`,
       totalParametros,
     ) as Array<{ total: number }>;

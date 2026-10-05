@@ -1,10 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import {
   combinarResultados,
+  consultaDireccion,
   direccionHumana,
 } from './geografia.service.js';
 
 describe('geografia: normalizacion de resultados', () => {
+  it('acepta una sola letra para autocompletado progresivo', () => {
+    expect(consultaDireccion(' s ')).toBe('s');
+    expect(() => consultaDireccion('')).toThrow();
+  });
+
   it('elimina plus codes de la direccion visible cuando existen datos legibles', () => {
     const direccion = direccionHumana({
       address_line1: 'F67P+GQ3',
