@@ -26,12 +26,14 @@ export function BotonEnviar({
 }) {
   const { pending } = useFormStatus();
   const [confirmando, setConfirmando] = useState(false);
+  const [destinoConfirmacion, setDestinoConfirmacion] = useState<HTMLElement | null>(null);
   const id = useId();
   const formularioRef = useRef<HTMLFormElement | null>(null);
   const disparadorRef = useRef<HTMLButtonElement | null>(null);
 
   function cerrarConfirmacion() {
     setConfirmando(false);
+    setDestinoConfirmacion(null);
     window.requestAnimationFrame(() => disparadorRef.current?.focus());
   }
 
@@ -51,12 +53,13 @@ export function BotonEnviar({
           const formulario = evento.currentTarget.form;
           if (formulario && !formulario.reportValidity()) return;
           formularioRef.current = formulario;
+          setDestinoConfirmacion(evento.currentTarget.closest('dialog') ?? document.body);
           setConfirmando(true);
         }}
       >
         {children}
       </button>
-      {confirmando && typeof document !== 'undefined' && createPortal(
+      {confirmando && destinoConfirmacion && createPortal(
         <div
           className="confirmacion-capa"
           onMouseDown={(evento) => {
@@ -95,7 +98,7 @@ export function BotonEnviar({
             </div>
           </section>
         </div>,
-        disparadorRef.current?.closest('dialog') ?? document.body,
+        destinoConfirmacion,
       )}
     </>
   );
