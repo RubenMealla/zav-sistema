@@ -95,7 +95,7 @@ export function BotonEnviar({
             </div>
           </section>
         </div>,
-        document.body,
+        disparadorRef.current?.closest('dialog') ?? document.body,
       )}
     </>
   );
