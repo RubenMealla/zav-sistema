@@ -530,7 +530,17 @@ export default async function Panel({
                   {itemsLotes.length === 0 ? <div className="estado-vacio"><p>No hay lotes registrados.</p></div> : itemsLotes.map((lote) => (
                     <div className="condicion-fila" key={lote.id}>
                       <div><strong>{lote.codigo}</strong><span>Vence {lote.venceEl}</span></div>
-                      <span className={condicionClase(lote.condicion)}>{lote.condicion}</span>
+                      <div className="condicion-fila-acciones">
+                        <span className={condicionClase(lote.condicion)}>{lote.condicion}</span>
+                        <Modal boton="Detalles" titulo="Detalle de condición" etiqueta="LOTE" variante="terciaria" icono="historial">
+                          <dl className="detalle-grid">
+                            <div><dt>Lote</dt><dd><span className="codigo">{lote.codigo}</span></dd></div>
+                            <div><dt>Condición</dt><dd><span className={condicionClase(lote.condicion)}>{lote.condicion}</span></dd></div>
+                            <div><dt>Vencimiento</dt><dd>{lote.venceEl}</dd></div>
+                            <div className="detalle-ancho"><dt>Existencias</dt><dd>{(lote.existencias ?? []).map((saldo) => `${saldo.codigo}: ${saldo.cantidad_fisica}`).join(' · ') || 'Sin existencias'}</dd></div>
+                          </dl>
+                        </Modal>
+                      </div>
                     </div>
                   ))}
                 </div>
