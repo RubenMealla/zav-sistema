@@ -242,3 +242,25 @@ body:has(dialog[open]) { overflow: hidden; }
 .campo-con-icono input{padding-right:48px}
 .campo-con-icono button{width:42px;min-width:42px;color:#565149}
 @media(max-width:600px){.detalle-grid{grid-template-columns:1fr}.detalle-grid .detalle-ancho{grid-column:auto}.paginacion{align-items:stretch;flex-direction:column}.paginacion-controles{justify-content:space-between}.paginacion-actual{align-self:center}}
+
+/* Refinamiento visual E3: tablas, acciones, modales y paginación. */
+th{padding:12px 14px;font-size:11px}
+td{padding:13px 14px;font-size:13px}
+td small{font-size:11px}.codigo{font-size:12px}.badge{font-size:11px}
+.acciones-columna{position:sticky;right:0;z-index:2;background:#fff;box-shadow:-1px 0 0 #e5e0d7}
+thead .acciones-columna{z-index:4;background:#efede7}
+tbody tr:hover .acciones-columna{background:#faf8f4}
+.modal{width:min(720px,calc(100% - 28px));border-radius:8px;box-shadow:0 24px 80px #11110f42}
+.modal-amplio{width:min(920px,calc(100% - 28px))}
+.modal-cabecera{padding:21px 22px 18px;border-top:4px solid #e45a2e}
+.modal-cabecera h2{font-size:22px;letter-spacing:-.025em}.modal-cabecera p{max-width:620px;font-size:12px}
+.modal-contenido{padding:22px;background:#fdfcf9}.formulario-modal{gap:20px}
+.detalle-grid>div{padding:15px 16px;background:#fff}.detalle-grid dt{font-size:11px}.detalle-grid dd{font-size:14px}
+.boton-detalle{min-height:34px;border-color:#c8c3b9;background:#fff}.boton-detalle:hover{border-color:#e45a2e;color:#9f3d20;background:#fff8f4}
+.condicion-fila-acciones{display:flex;align-items:center;justify-content:flex-end;gap:8px}
+.paginacion{min-height:62px;padding:12px 16px}.paginacion-controles{flex-wrap:wrap}
+.paginacion-numeros{display:flex;align-items:center;gap:4px}
+.paginacion-numero{width:34px;height:34px;display:grid;place-items:center;border:1px solid transparent;color:#5f5a52;font-size:12px;font-weight:700}
+.paginacion-numero:hover{border-color:#c8c3b9;background:#fff}.paginacion-numero.activo{border-color:#e45a2e;background:#fff4ef;color:#a73a1d}
+.paginacion-elipsis{min-width:20px;text-align:center;color:#8b857b}
+@media(max-width:700px){.acciones-columna{position:static;box-shadow:none}.modal-cabecera{padding:18px}.modal-contenido{padding:16px}.paginacion-numeros{display:none}.condicion-fila{align-items:flex-start}.condicion-fila-acciones{align-items:flex-end;flex-direction:column}}
