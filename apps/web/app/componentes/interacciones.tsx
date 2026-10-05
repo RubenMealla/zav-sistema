@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
-import { useFormStatus } from 'react-dom';
+import { createPortal, useFormStatus } from 'react-dom';
 import { Icono, type NombreIcono } from './icono';
 
 type ConfirmacionEnvio = {
@@ -27,6 +27,13 @@ export function BotonEnviar({
   const { pending } = useFormStatus();
   const [confirmando, setConfirmando] = useState(false);
   const id = useId();
+  const formularioRef = useRef<HTMLFormElement | null>(null);
+  const disparadorRef = useRef<HTMLButtonElement | null>(null);
+
+  function cerrarConfirmacion() {
+    setConfirmando(false);
+    window.requestAnimationFrame(() => disparadorRef.current?.focus());
+  }
 
   if (!confirmacion) {
     return <button type="submit" className={className} disabled={disabled || pending} aria-busy={pending}>{pending ? pendiente : children}</button>;
@@ -35,6 +42,7 @@ export function BotonEnviar({
   return (
     <>
       <button
+        ref={disparadorRef}
         type="button"
         className={className}
         disabled={disabled || pending}
@@ -42,19 +50,20 @@ export function BotonEnviar({
         onClick={(evento) => {
           const formulario = evento.currentTarget.form;
           if (formulario && !formulario.reportValidity()) return;
+          formularioRef.current = formulario;
           setConfirmando(true);
         }}
       >
         {children}
       </button>
-      {confirmando && (
+      {confirmando && typeof document !== 'undefined' && createPortal(
         <div
           className="confirmacion-capa"
           onMouseDown={(evento) => {
-            if (evento.target === evento.currentTarget && !pending) setConfirmando(false);
+            if (evento.target === evento.currentTarget && !pending) cerrarConfirmacion();
           }}
           onKeyDown={(evento) => {
-            if (evento.key === 'Escape' && !pending) setConfirmando(false);
+            if (evento.key === 'Escape' && !pending) cerrarConfirmacion();
           }}
         >
           <section
@@ -65,20 +74,28 @@ export function BotonEnviar({
             aria-describedby={`${id}-confirmacion-mensaje`}
           >
             <span className="confirmacion-icono" aria-hidden="true">
-              <Icono nombre={confirmacion.variante === 'peligro' ? 'alerta' : 'check'} tamano={20} />
+              <Icono nombre={confirmacion.variante === 'peligro' ? 'alerta' : 'check'} tamano={22} />
             </span>
             <div className="confirmacion-texto">
+              <span className="confirmacion-etiqueta">{confirmacion.variante === 'peligro' ? 'ACCIÓN SENSIBLE' : 'CONFIRMAR OPERACIÓN'}</span>
               <h2 id={`${id}-confirmacion-titulo`}>{confirmacion.titulo}</h2>
               <p id={`${id}-confirmacion-mensaje`}>{confirmacion.mensaje}</p>
             </div>
             <div className="confirmacion-acciones">
-              <button type="button" className="boton boton-terciario" disabled={pending} autoFocus onClick={() => setConfirmando(false)}>Cancelar</button>
-              <button type="submit" className={confirmacion.variante === 'peligro' ? 'boton boton-primario boton-peligro' : 'boton boton-primario'} disabled={pending} aria-busy={pending}>
+              <button type="button" className="boton boton-terciario" disabled={pending} autoFocus onClick={cerrarConfirmacion}>Cancelar</button>
+              <button
+                type="button"
+                className={confirmacion.variante === 'peligro' ? 'boton boton-primario boton-peligro' : 'boton boton-primario'}
+                disabled={pending}
+                aria-busy={pending}
+                onClick={() => formularioRef.current?.requestSubmit()}
+              >
                 {pending ? pendiente : (confirmacion.confirmar ?? 'Confirmar')}
               </button>
             </div>
           </section>
-        </div>
+        </div>,
+        document.body,
       )}
     </>
   );

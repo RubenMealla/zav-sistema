@@ -1,5 +1,6 @@
 import { BotonEnviar, Modal } from '../componentes/interacciones';
-import { darBajaProducto, editarProducto } from './acciones-productos-e3';
+import { FormularioEditarProducto } from '../componentes/formularios-inventario';
+import { darBajaProducto } from './acciones-productos-e3';
 
 type ProductoEditable = {
   id: string; codigo: string; nombre: string; familia: string; presentacion: string;
@@ -22,19 +23,8 @@ export function AccionesProducto({ producto }: { producto: ProductoEditable }) {
       </Modal>
       {producto.activo && (
         <>
-          <Modal boton="Editar" titulo="Editar producto" descripcion="Actualiza los datos comerciales sin modificar el historial de lotes." variante="secundaria" icono={null}>
-            <form action={editarProducto} className="formulario formulario-modal">
-              <input type="hidden" name="productoId" value={producto.id} />
-              <div className="form-grid">
-                <label className="campo">Código<input name="codigo" minLength={2} maxLength={40} required defaultValue={producto.codigo} /></label>
-                <label className="campo">Nombre<input name="nombre" maxLength={120} required defaultValue={producto.nombre} /></label>
-                <label className="campo">Familia<input name="familia" maxLength={70} required defaultValue={producto.familia} /></label>
-                <label className="campo">Presentación<input name="presentacion" maxLength={100} required defaultValue={producto.presentacion} /></label>
-                <label className="campo">Peso (gramos)<input name="pesoGramos" type="number" min={1} step={1} required defaultValue={producto.pesoGramos} /></label>
-                <label className="campo">Precio (Bs)<input name="precioBob" type="number" min={0} step="0.01" required defaultValue={producto.precioBob} /></label>
-              </div>
-              <div className="modal-acciones"><BotonEnviar pendiente="Guardando…" confirmacion={{ titulo: 'Guardar cambios del producto', mensaje: 'Se actualizarán los datos comerciales del producto. El historial de lotes no se modificará.', confirmar: 'Sí, guardar cambios' }}>Guardar cambios</BotonEnviar></div>
-            </form>
+          <Modal boton="Editar" titulo="Editar producto" descripcion="Actualiza los datos comerciales sin modificar el historial de lotes." variante="secundaria" icono={null} amplio>
+            <FormularioEditarProducto producto={producto} />
           </Modal>
           <form action={darBajaProducto}>
             <input type="hidden" name="productoId" value={producto.id} />

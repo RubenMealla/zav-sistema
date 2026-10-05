@@ -20,10 +20,12 @@ type LeafletMap = {
   remove(): void;
   invalidateSize(): void;
 };
+type LeafletControl = { addTo(map: LeafletMap): LeafletControl };
 type LeafletApi = {
   map(elemento: HTMLElement, opciones?: Record<string, unknown>): LeafletMap;
   marker(latlng: [number, number]): LeafletMarker;
   tileLayer(url: string, opciones: { maxZoom: number; attribution: string }): { addTo(map: LeafletMap): void };
+  control: { zoom(opciones: { position: 'bottomright' }): LeafletControl };
 };
 
 declare global {
@@ -94,7 +96,8 @@ export function MapaUbicacion({ latitud, longitud }: { latitud: number | null; l
       leafletRef.current = L;
       const tieneInicial = latitudInicial !== null && longitudInicial !== null;
       const centro = tieneInicial ? { latitud: latitudInicial, longitud: longitudInicial } : CENTRO_TARIJA;
-      const mapa = L.map(contenedorRef.current, { zoomControl: true, attributionControl: true }).setView([centro.latitud, centro.longitud], tieneInicial ? 17 : 15);
+      const mapa = L.map(contenedorRef.current, { zoomControl: false, attributionControl: true }).setView([centro.latitud, centro.longitud], tieneInicial ? 17 : 15);
+      L.control.zoom({ position: 'bottomright' }).addTo(mapa);
       L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>',

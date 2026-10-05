@@ -345,3 +345,267 @@ td small,.codigo,.badge,.saldos-inline b,.saldos-inline strong{font-size:13px}
 .boton-peligro{border-color:var(--rojo);background:var(--rojo);color:#fff}
 .boton-peligro:hover:not(:disabled){border-color:#7d281d;background:#7d281d}
 @media(max-width:520px){.confirmacion-caja{padding:18px}.confirmacion-acciones{flex-direction:column-reverse}.confirmacion-acciones .boton{width:100%}}
+
+
+/* Formularios administrativos v2 */
+.modal{
+  width:min(780px,calc(100% - 32px));
+  max-height:calc(100dvh - 32px);
+  border:1px solid #bdb7ac;
+  border-radius:12px;
+  overflow:auto;
+  box-shadow:0 30px 90px #11110f4d;
+}
+.modal-amplio{width:min(980px,calc(100% - 32px))}
+.modal::backdrop{background:#11110fcf;backdrop-filter:blur(1.5px)}
+.modal-caja{min-width:0}
+.modal-cabecera{
+  position:sticky;
+  top:0;
+  z-index:4;
+  min-height:96px;
+  padding:22px 24px 19px 28px;
+  border-top:0;
+  border-bottom:1px solid #d9d4ca;
+  background:#fff;
+  box-shadow:0 8px 22px #11110f0d;
+}
+.modal-cabecera::before{
+  content:'';
+  position:absolute;
+  left:0;
+  top:0;
+  bottom:0;
+  width:5px;
+  background:#e45a2e;
+}
+.modal-cabecera>div{min-width:0}
+.modal-cabecera h2{margin-top:6px;font-size:24px;line-height:1.18;letter-spacing:-.025em}
+.modal-cabecera p{max-width:680px;margin-top:7px;font-size:14px;line-height:1.55}
+.modal-contenido{padding:22px 24px 24px;background:#f5f2eb}
+.formulario-modal{gap:16px}
+
+.form-seccion{
+  min-width:0;
+  padding:18px;
+  border:1px solid #d8d2c7;
+  border-radius:8px;
+  background:#fff;
+  box-shadow:0 1px 0 #ffffff inset;
+}
+.form-seccion-cabecera{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:16px;
+  margin:-2px 0 16px;
+  padding-bottom:13px;
+  border-bottom:1px solid #ebe6dd;
+}
+.form-seccion-cabecera>div{min-width:0}
+.form-seccion-cabecera strong{
+  display:block;
+  color:#292721;
+  font-size:16px;
+  font-weight:760;
+  line-height:1.3;
+}
+.form-seccion-cabecera p{
+  max-width:650px;
+  margin:4px 0 0;
+  color:#716b61;
+  font-size:13px;
+  line-height:1.5;
+}
+.form-paso{
+  flex:none;
+  min-width:34px;
+  height:26px;
+  display:grid;
+  place-items:center;
+  border:1px solid #ded8ce;
+  border-radius:999px;
+  background:#f8f5ef;
+  color:#8b4a34;
+  font-size:12px;
+  font-weight:800;
+  letter-spacing:.05em;
+}
+.form-grid{gap:16px}
+.campo-ancho{grid-column:1/-1}
+.campo-etiqueta{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  min-height:21px;
+}
+.campo-etiqueta label{
+  color:#302e29;
+  font-size:14px;
+  font-weight:720;
+  line-height:1.3;
+}
+.campo-etiqueta>span{
+  color:#8a847a;
+  font-size:11px;
+  font-weight:650;
+  letter-spacing:.035em;
+  text-transform:uppercase;
+}
+.campo input,
+.campo select{
+  height:46px;
+  border-color:#bbb5aa;
+  border-radius:5px;
+  background:#fff;
+  font-size:15px;
+}
+.campo input::placeholder{color:#9b958b}
+.campo input:hover,.campo select:hover{border-color:#888176}
+.campo input:focus,.campo select:focus{
+  border-color:#c44a28;
+  outline:3px solid #e45a2e1f;
+  outline-offset:1px;
+}
+.campo input:user-invalid,
+.campo select:user-invalid{
+  border-color:#b44334;
+  background:#fffafa;
+}
+.campo-ayuda{
+  display:block;
+  margin-top:1px;
+  color:#746e64;
+  font-size:12px;
+  font-weight:450;
+  line-height:1.45;
+}
+.campo-control-compuesto{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:8px;
+  align-items:center;
+}
+.campo-control-compuesto .boton-sugerencia{
+  min-width:112px;
+  height:46px;
+  padding-inline:14px;
+  border-color:#bdb7ac;
+  background:#f7f4ee;
+}
+.form-nota{
+  display:grid;
+  gap:3px;
+  padding:13px 15px;
+  border:1px solid #d9d3c8;
+  border-left:4px solid #8d877e;
+  border-radius:6px;
+  background:#fbfaf7;
+}
+.form-nota strong{color:#312f2a;font-size:13px}
+.form-nota span{color:#6e685f;font-size:12px;line-height:1.5}
+.form-nota-importante{
+  border-left-color:#d65b32;
+  background:#fff9f5;
+}
+.modal-acciones{
+  position:sticky;
+  bottom:-24px;
+  z-index:3;
+  margin-inline:-24px;
+  margin-bottom:-24px;
+  padding:15px 24px 18px;
+  border-top:1px solid #d8d2c7;
+  background:#fff;
+  box-shadow:0 -8px 20px #11110f0a;
+}
+
+/* Confirmación global: se renderiza en body para no quedar atrapada por columnas sticky. */
+.confirmacion-capa{
+  position:fixed;
+  inset:0;
+  z-index:10000;
+  display:grid;
+  place-items:center;
+  padding:24px;
+  background:#11110fc7;
+  backdrop-filter:blur(2px);
+}
+.confirmacion-caja{
+  position:relative;
+  width:min(560px,100%);
+  max-height:calc(100dvh - 48px);
+  overflow:auto;
+  display:grid;
+  grid-template-columns:44px minmax(0,1fr);
+  gap:15px;
+  padding:24px;
+  border:1px solid #bdb7ac;
+  border-top:5px solid #e45a2e;
+  border-radius:12px;
+  background:#fff;
+  box-shadow:0 34px 100px #00000066;
+}
+.confirmacion-icono{
+  width:44px;
+  height:44px;
+  border-radius:50%;
+  background:#fff0e9;
+  color:#a73a1d;
+}
+.confirmacion-texto{min-width:0}
+.confirmacion-etiqueta{
+  display:block;
+  margin-bottom:5px;
+  color:#9b4a30;
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.08em;
+}
+.confirmacion-texto h2{
+  margin:0;
+  color:#25231f;
+  font-size:23px;
+  line-height:1.2;
+  letter-spacing:-.02em;
+}
+.confirmacion-texto p{
+  margin:9px 0 0;
+  color:#625d55;
+  font-size:14px;
+  line-height:1.6;
+  white-space:normal;
+  overflow-wrap:anywhere;
+}
+.confirmacion-acciones{
+  grid-column:1/-1;
+  display:flex;
+  justify-content:flex-end;
+  gap:9px;
+  padding-top:8px;
+  border-top:1px solid #eee9e1;
+}
+.confirmacion-peligro{border-top-color:var(--rojo)}
+.confirmacion-peligro .confirmacion-icono{background:var(--rojo-fondo);color:var(--rojo)}
+.confirmacion-peligro .confirmacion-etiqueta{color:var(--rojo)}
+
+@media(max-width:700px){
+  .modal{width:min(100% - 16px,780px);max-height:calc(100dvh - 16px)}
+  .modal-amplio{width:min(100% - 16px,980px)}
+  .modal-cabecera{min-height:0;padding:18px 18px 16px 22px}
+  .modal-cabecera h2{font-size:21px}
+  .modal-contenido{padding:14px}
+  .form-seccion{padding:14px}
+  .form-seccion-cabecera{gap:10px}
+  .campo-ancho{grid-column:auto}
+  .campo-control-compuesto{grid-template-columns:1fr}
+  .campo-control-compuesto .boton-sugerencia{width:100%}
+  .modal-acciones{bottom:-14px;margin-inline:-14px;margin-bottom:-14px;padding:13px 14px 15px}
+  .confirmacion-capa{padding:14px}
+  .confirmacion-caja{grid-template-columns:38px minmax(0,1fr);padding:18px}
+  .confirmacion-icono{width:38px;height:38px}
+  .confirmacion-texto h2{font-size:20px}
+  .confirmacion-acciones{flex-direction:column-reverse}
+  .confirmacion-acciones .boton{width:100%}
+}

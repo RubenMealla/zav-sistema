@@ -5,13 +5,15 @@ import { redirect } from 'next/navigation';
 import { randomUUID } from 'node:crypto';
 import { Icono } from '../componentes/icono';
 import { MapaUbicacion } from '../componentes/mapa-ubicacion';
-import { BotonEnviar, Modal, Notificacion } from '../componentes/interacciones';
+import { Modal, Notificacion } from '../componentes/interacciones';
 import {
-  cambiarCondicionLote,
+  FormularioCondicionLote,
+  FormularioNuevoLote,
+  FormularioNuevoProducto,
+  FormularioTraslado,
+} from '../componentes/formularios-inventario';
+import {
   configurarGeorreferenciaDespacho,
-  registrarLote,
-  registrarProducto,
-  registrarTraslado,
 } from './acciones';
 import { AccionesProducto } from './acciones-producto';
 import { Paginacion } from '../componentes/paginacion';
@@ -369,18 +371,8 @@ export default async function Panel({
                   <h2>Productos registrados</h2>
                   <p>Registros disponibles para consulta administrativa: {productos.datos?.total ?? '—'}.</p>
                 </div>
-                <Modal boton="Nuevo producto" titulo="Registrar producto" descripcion="Agrega una presentación comercial al catálogo interno.">
-                  <form action={registrarProducto} className="formulario formulario-modal">
-                    <div className="form-grid">
-                      <label className="campo">Código<input name="codigo" minLength={2} maxLength={40} required placeholder="SAL-500" /></label>
-                      <label className="campo">Nombre<input name="nombre" maxLength={120} required placeholder="Salchicha Viena" /></label>
-                      <label className="campo">Familia<input name="familia" maxLength={70} required placeholder="Salchichas" /></label>
-                      <label className="campo">Presentación<input name="presentacion" maxLength={100} required placeholder="Paquete de 500 gramos" /></label>
-                      <label className="campo">Peso (gramos)<input name="pesoGramos" type="number" min={1} step={1} required /></label>
-                      <label className="campo">Precio (Bs)<input name="precioBob" type="number" min={0} step="0.01" required /></label>
-                    </div>
-                    <div className="modal-acciones"><BotonEnviar confirmacion={{ titulo: 'Registrar producto', mensaje: 'Se agregará esta presentación al catálogo interno de ZAV.', confirmar: 'Sí, registrar producto' }}>Guardar producto</BotonEnviar></div>
-                  </form>
+                <Modal boton="Nuevo producto" titulo="Registrar producto" descripcion="Agrega una presentación comercial al catálogo interno con código sugerido y validaciones guiadas." amplio>
+                  <FormularioNuevoProducto />
                 </Modal>
               </div>
 
@@ -441,19 +433,8 @@ export default async function Panel({
                   <h2>Lotes y existencias</h2>
                   <p>Los lotes nuevos ingresan RETENIDOS y conservan existencias por ubicación.</p>
                 </div>
-                <Modal boton="Nuevo lote" titulo="Registrar lote e ingreso inicial" descripcion="El ingreso inicial se registra en Producción y Almacenamiento.">
-                  <form action={registrarLote} className="formulario formulario-modal">
-                    <input type="hidden" name="operacionClave" value={randomUUID()} />
-                    <div className="form-grid">
-                      <label className="campo">Producto<select name="productoId" required defaultValue=""><option value="" disabled>Selecciona un producto</option>{itemsProductos.filter((p) => p.activo).map((p) => <option key={p.id} value={p.id}>{p.codigo} · {p.nombre}</option>)}</select></label>
-                      <label className="campo">Código de lote<input name="codigo" minLength={2} maxLength={60} required placeholder="LT-2026-001" /></label>
-                      <label className="campo">Fecha de elaboración<input name="elaboradoEl" type="date" required /></label>
-                      <label className="campo">Fecha de vencimiento<input name="venceEl" type="date" required /></label>
-                      <label className="campo">Cantidad inicial<input name="cantidadInicial" type="number" min={1} step={1} required /></label>
-                      <label className="campo">Ubicación inicial<input value="Producción y Almacenamiento" readOnly aria-label="Ubicación inicial" /></label>
-                    </div>
-                    <div className="modal-acciones"><BotonEnviar disabled={itemsProductos.length === 0} confirmacion={{ titulo: 'Registrar lote e ingreso', mensaje: 'Se creará el lote con su existencia inicial en Producción y Almacenamiento. La operación quedará en la trazabilidad.', confirmar: 'Sí, registrar lote' }}>Guardar lote e ingreso</BotonEnviar></div>
-                  </form>
+                <Modal boton="Nuevo lote" titulo="Registrar lote e ingreso inicial" descripcion="Registra el lote físico con fechas validadas y un código sugerido editable." amplio>
+                  <FormularioNuevoLote productos={itemsProductos} operacionClave={randomUUID()} />
                 </Modal>
               </div>
 
@@ -529,15 +510,7 @@ export default async function Panel({
                 <div className="card-cabecera">
                   <div><span className="eyebrow">CONDICIÓN COMERCIAL</span><h2>Decisiones sobre lotes</h2><p>Liberar o bloquear no cambia la existencia física.</p></div>
                   <Modal boton="Gestionar condición" titulo="Cambiar condición del lote" descripcion="La decisión quedará registrada con usuario, fecha y motivo.">
-                    <form action={cambiarCondicionLote} className="formulario formulario-modal">
-                      <input type="hidden" name="operacionClave" value={randomUUID()} />
-                      <div className="form-grid form-grid-una">
-                        <label className="campo">Lote<select name="loteId" required defaultValue=""><option value="" disabled>Selecciona un lote</option>{itemsLotes.map((l) => <option key={l.id} value={l.id}>{l.codigo} · {l.condicion}</option>)}</select></label>
-                        <label className="campo">Acción<select name="accion" required defaultValue="liberar"><option value="liberar">Liberar para disponibilidad comercial</option><option value="bloquear">Bloquear lote</option></select></label>
-                        <label className="campo">Motivo<input name="motivo" maxLength={250} required placeholder="Motivo de la decisión" /></label>
-                      </div>
-                      <div className="modal-acciones"><BotonEnviar disabled={itemsLotes.length === 0} confirmacion={{ titulo: 'Confirmar cambio de condición', mensaje: 'Se registrará la liberación o bloqueo del lote con el motivo indicado y quedará asociado al usuario autenticado.', confirmar: 'Sí, guardar condición' }}>Guardar condición</BotonEnviar></div>
-                    </form>
+                    <FormularioCondicionLote lotes={itemsLotes} operacionClave={randomUUID()} />
                   </Modal>
                 </div>
 
@@ -722,19 +695,8 @@ export default async function Panel({
             <section className="card card-modulo">
               <div className="card-cabecera">
                 <div><span className="eyebrow">MOVIMIENTOS DE INVENTARIO</span><h2>Traslados e historial</h2><p>El traslado mueve existencia física sin modificar la condición del lote.</p></div>
-                <Modal boton="Nuevo traslado" titulo="Registrar traslado" descripcion="Mueve unidades entre ubicaciones físicas manteniendo trazabilidad.">
-                  <form action={registrarTraslado} className="formulario formulario-modal">
-                    <input type="hidden" name="operacionClave" value={randomUUID()} />
-                    <div className="form-grid">
-                      <label className="campo">Lote a trasladar<select name="loteId" required defaultValue=""><option value="" disabled>Selecciona un lote</option>{itemsLotes.map((l) => <option key={l.id} value={l.id}>{l.codigo} · {l.condicion}</option>)}</select></label>
-                      <label className="campo">Cantidad<input name="cantidad" type="number" min={1} step={1} required /></label>
-                      <label className="campo">Origen<select name="origenCodigo" required defaultValue="PRODUCCION_ALMACENAMIENTO"><option value="PRODUCCION_ALMACENAMIENTO">Producción y Almacenamiento</option><option value="VENTA_DESPACHO">Venta y Despacho</option></select></label>
-                      <label className="campo">Destino<select name="destinoCodigo" required defaultValue="VENTA_DESPACHO"><option value="VENTA_DESPACHO">Venta y Despacho</option><option value="PRODUCCION_ALMACENAMIENTO">Producción y Almacenamiento</option></select></label>
-                      <label className="campo">Referencia <span className="opcional">Opcional</span><input name="referencia" maxLength={80} placeholder="Ej. TR-001" /></label>
-                      <label className="campo">Motivo <span className="opcional">Opcional</span><input name="motivo" maxLength={250} placeholder="Motivo del movimiento" /></label>
-                    </div>
-                    <div className="modal-acciones"><BotonEnviar disabled={itemsLotes.length === 0} confirmacion={{ titulo: 'Registrar traslado', mensaje: 'Se moverá existencia física entre ubicaciones y el movimiento quedará registrado en el historial del lote.', confirmar: 'Sí, registrar traslado' }}>Guardar traslado</BotonEnviar></div>
-                  </form>
+                <Modal boton="Nuevo traslado" titulo="Registrar traslado" descripcion="Mueve unidades entre ubicaciones físicas manteniendo trazabilidad." amplio>
+                  <FormularioTraslado lotes={itemsLotes} operacionClave={randomUUID()} />
                 </Modal>
               </div>
 
