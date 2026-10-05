@@ -43,6 +43,8 @@ test('edita y desactiva un producto desde la web', async ({ page }) => {
   await expect(page.getByRole('status')).toContainText('Producto desactivado correctamente');
 
   fila = page.getByRole('row').filter({ has: page.getByRole('cell', { name: codigo }) });
-  await expect(fila.getByText('INACTIVO')).toBeVisible();
-  await expect(fila.getByText('Sin acciones')).toBeVisible();
+  await expect(fila.locator('td').nth(6).getByText('INACTIVO', { exact: true })).toBeVisible();
+  await expect(fila.getByRole('button', { name: 'Detalles' })).toBeVisible();
+  await expect(fila.getByRole('button', { name: 'Editar' })).toHaveCount(0);
+  await expect(fila.getByRole('button', { name: 'Desactivar' })).toHaveCount(0);
 });
