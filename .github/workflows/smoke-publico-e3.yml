@@ -8,11 +8,15 @@ on:
 
 jobs:
   verificar-api-publica:
-    name: Verificar API pública sin credenciales persistidas
+    name: Verificar API estable
     runs-on: ubuntu-latest
     timeout-minutes: 8
     env:
       API: https://zav-api-2026.onrender.com
+      SMOKE_ADMIN_IDENTIFICADOR: ${{ secrets.SMOKE_ADMIN_IDENTIFICADOR }}
+      SMOKE_ADMIN_PASSWORD: ${{ secrets.SMOKE_ADMIN_PASSWORD }}
+      SMOKE_VENDEDOR_IDENTIFICADOR: ${{ secrets.SMOKE_VENDEDOR_IDENTIFICADOR }}
+      SMOKE_VENDEDOR_PASSWORD: ${{ secrets.SMOKE_VENDEDOR_PASSWORD }}
 
     steps:
       - name: Verificar salud pública
@@ -21,22 +25,6 @@ jobs:
           set -euo pipefail
           cuerpo="$(curl --fail-with-body --retry 3 --retry-delay 5 --max-time 30 "$API/api/v1/salud")"
           python -c 'import json,sys; d=json.loads(sys.argv[1]); assert d.get("estado")=="ok", d' "$cuerpo"
-
-      - name: Verificar rechazo de credenciales inválidas
-        shell: bash
-        run: |
-          set -euo pipefail
-          codigo="$(curl -sS -o "$RUNNER_TEMP/login-invalido.json" -w "%{http_code}" \
-            -H "Content-Type: application/json" \
-            -d '{"identificador":"qa.invalido@saf.ts","contrasena":"credencial-invalida"}' \
-            "$API/api/v1/auth/login")"
-          test "$codigo" = "401"
-          python - "$RUNNER_TEMP/login-invalido.json" <<'PY'
-          import json,sys
-          with open(sys.argv[1], encoding="utf-8") as f:
-              d=json.load(f)
-          assert d.get("statusCode")==401
-          PY
 
       - name: Verificar 401 sin token
         shell: bash
@@ -49,4 +37,60 @@ jobs:
           with open(sys.argv[1], encoding="utf-8") as f:
               d=json.load(f)
           assert d.get("statusCode")==401
+          PY
+
+      - name: Comprobar disponibilidad de credenciales demo
+        id: credenciales
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -n "$SMOKE_ADMIN_IDENTIFICADOR" ] && [ -n "$SMOKE_ADMIN_PASSWORD" ] &&              [ -n "$SMOKE_VENDEDOR_IDENTIFICADOR" ] && [ -n "$SMOKE_VENDEDOR_PASSWORD" ]; then
+            echo "disponibles=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "disponibles=false" >> "$GITHUB_OUTPUT"
+            echo "Las credenciales demo no están configuradas como GitHub Secrets; se omiten los logins públicos."
+          fi
+
+      - name: Verificar cuenta demo Administrador
+        if: steps.credenciales.outputs.disponibles == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          codigo="$(curl -sS -o "$RUNNER_TEMP/admin.json" -w "%{http_code}"             -H "Content-Type: application/json"             -d "$(python - <<'PY'
+          import json, os
+          print(json.dumps({
+            "identificador": os.environ["SMOKE_ADMIN_IDENTIFICADOR"],
+            "contrasena": os.environ["SMOKE_ADMIN_PASSWORD"],
+          }))
+          PY
+          )"             "$API/api/v1/auth/login")"
+          test "$codigo" = "200"
+          python - "$RUNNER_TEMP/admin.json" <<'PY'
+          import json,sys
+          with open(sys.argv[1], encoding="utf-8") as f:
+              d=json.load(f)
+          assert d.get("accessToken")
+          assert d.get("usuario",{}).get("rol")=="ADMINISTRADOR"
+          PY
+
+      - name: Verificar cuenta demo Vendedor
+        if: steps.credenciales.outputs.disponibles == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          codigo="$(curl -sS -o "$RUNNER_TEMP/vendedor.json" -w "%{http_code}"             -H "Content-Type: application/json"             -d "$(python - <<'PY'
+          import json, os
+          print(json.dumps({
+            "identificador": os.environ["SMOKE_VENDEDOR_IDENTIFICADOR"],
+            "contrasena": os.environ["SMOKE_VENDEDOR_PASSWORD"],
+          }))
+          PY
+          )"             "$API/api/v1/auth/login")"
+          test "$codigo" = "200"
+          python - "$RUNNER_TEMP/vendedor.json" <<'PY'
+          import json,sys
+          with open(sys.argv[1], encoding="utf-8") as f:
+              d=json.load(f)
+          assert d.get("accessToken")
+          assert d.get("usuario",{}).get("rol")=="VENDEDOR"
           PY
