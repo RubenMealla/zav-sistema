@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import { iniciarSesion } from '../acciones';
 import { BotonEnviar, CampoContrasena } from '../componentes/interacciones';
@@ -22,7 +23,7 @@ export default async function Acceso({ searchParams }: { searchParams: Promise<{
           <span>GESTIÓN INTERNA</span>
         </div>
         <div className="acceso-identidad-centro">
-          <div className="acceso-producto-visual"><Marca grande /></div>
+          <div className="acceso-producto-visual"><Image src="/catalogo/chorizos-chorizo-coctelero.webp" alt="Producto ZAV" fill priority sizes="(max-width: 1060px) 38vw, 34vw" /></div>
           <div className="acceso-identidad-copy">
             <span>ADMINISTRACIÓN / ZAV</span>
             <h2>Acceso interno.</h2>
