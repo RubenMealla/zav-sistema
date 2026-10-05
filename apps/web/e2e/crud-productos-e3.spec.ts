@@ -26,6 +26,7 @@ test('edita y desactiva un producto desde la web', async ({ page }) => {
   await alta.getByLabel('Peso (gramos)').fill('300');
   await alta.getByLabel('Precio (Bs)').fill('21.50');
   await alta.getByRole('button', { name: 'Guardar producto' }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Sí, registrar producto' }).click();
 
   let fila = page.getByRole('row').filter({ has: page.getByRole('cell', { name: codigo }) });
   await fila.getByRole('button', { name: 'Editar' }).click();
@@ -34,12 +35,20 @@ test('edita y desactiva un producto desde la web', async ({ page }) => {
   await edicion.getByLabel('Nombre').fill('Producto CRUD E3 actualizado');
   await edicion.getByLabel('Precio (Bs)').fill('22.75');
   await edicion.getByRole('button', { name: 'Guardar cambios' }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Sí, guardar cambios' }).click();
 
   await expect(page.getByRole('status')).toContainText('Producto actualizado correctamente');
   fila = page.getByRole('row').filter({ has: page.getByRole('cell', { name: codigo }) });
   await expect(fila).toContainText('Producto CRUD E3 actualizado');
 
   await fila.getByRole('button', { name: 'Desactivar' }).click();
+  const confirmacionBaja = page.getByRole('alertdialog');
+  await expect(confirmacionBaja).toContainText('El registro permanecerá en el historial');
+  await confirmacionBaja.getByRole('button', { name: 'Cancelar' }).click();
+  await expect(fila.getByText('ACTIVO', { exact: true })).toBeVisible();
+
+  await fila.getByRole('button', { name: 'Desactivar' }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Sí, desactivar' }).click();
   await expect(page.getByRole('status')).toContainText('Producto desactivado correctamente');
 
   fila = page.getByRole('row').filter({ has: page.getByRole('cell', { name: codigo }) });

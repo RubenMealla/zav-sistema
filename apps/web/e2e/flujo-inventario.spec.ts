@@ -10,6 +10,12 @@ function requerida(nombre: string): string {
 
 const evidencias = path.join(process.cwd(), 'test-results', 'evidencias');
 
+async function confirmar(page: Page, boton: string) {
+  const dialogo = page.getByRole('alertdialog');
+  await expect(dialogo).toBeVisible();
+  await dialogo.getByRole('button', { name: boton, exact: true }).click();
+}
+
 async function captura(page: Page, nombre: string) {
   await mkdir(evidencias, { recursive: true });
   await expect.poll(() => page.locator('img:visible').evaluateAll((imgs) => imgs.every((img) => img instanceof HTMLImageElement && img.complete && img.naturalWidth > 0))).toBeTruthy();
@@ -24,7 +30,7 @@ test('muestra una portada profesional y protege el panel sin sesion', async ({ p
 
   await expect(page.getByRole('heading', { name: /Fiambres y embutidos ZAV/ })).toBeVisible();
   await expect(page.getByRole('link', { name: /Acceso interno/ }).first()).toBeVisible();
-  await expect(page.getByRole('heading', { name: /Fiambres y Embutidos ZAV, Tarija/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Siete familias de productos ZAV.' })).toBeVisible();
   await captura(page, '01-inicio-redisenado.png');
 
   await page.goto('/panel');
@@ -78,6 +84,7 @@ test('permite gestionar inventario desde módulos, modales y notificaciones', as
   await modalProducto.getByLabel('Peso (gramos)').fill('250');
   await modalProducto.getByLabel('Precio (Bs)').fill('18.50');
   await modalProducto.getByRole('button', { name: 'Guardar producto' }).click();
+  await confirmar(page, 'Sí, registrar producto');
 
   await expect(page).toHaveURL(/\/panel\?vista=productos&mensaje=producto$/);
   await expect(page.getByRole('status')).toContainText('Producto registrado correctamente');
@@ -95,6 +102,7 @@ test('permite gestionar inventario desde módulos, modales y notificaciones', as
   await modalLote.getByLabel('Fecha de vencimiento').fill(new Date(Date.now() + 90 * 86400000).toISOString().slice(0, 10));
   await modalLote.getByLabel('Cantidad inicial').fill('12');
   await modalLote.getByRole('button', { name: 'Guardar lote e ingreso' }).click();
+  await confirmar(page, 'Sí, registrar lote');
 
   await expect(page).toHaveURL(/\/panel\?vista=lotes&mensaje=lote$/);
   await expect(page.getByRole('status')).toContainText('Lote e ingreso inicial registrados correctamente');
@@ -112,6 +120,7 @@ test('permite gestionar inventario desde módulos, modales y notificaciones', as
   await modalTraslado.getByLabel('Destino').selectOption('VENTA_DESPACHO');
   await modalTraslado.getByLabel(/Referencia/).fill('QA-UI-TR-001');
   await modalTraslado.getByRole('button', { name: 'Guardar traslado' }).click();
+  await confirmar(page, 'Sí, registrar traslado');
 
   await expect(page).toHaveURL(/\/panel\?vista=movimientos&mensaje=traslado&historialLoteId=[0-9a-f-]+$/);
   await expect(page.getByRole('status')).toContainText('Traslado registrado correctamente');
@@ -137,6 +146,7 @@ test('permite gestionar inventario desde módulos, modales y notificaciones', as
   await modalCondicion.locator('select[name="accion"]').selectOption('liberar');
   await modalCondicion.locator('input[name="motivo"]').fill('QA UI: revisión completada');
   await modalCondicion.getByRole('button', { name: 'Guardar condición' }).click();
+  await confirmar(page, 'Sí, guardar condición');
 
   await expect(page).toHaveURL(/\/panel\?vista=condiciones&mensaje=condicion&historialCondicionLoteId=[0-9a-f-]+$/);
   await expect(page.getByRole('status')).toContainText('Condición del lote actualizada correctamente');
@@ -151,6 +161,7 @@ test('permite gestionar inventario desde módulos, modales y notificaciones', as
   await modalBloqueo.locator('select[name="accion"]').selectOption('bloquear');
   await modalBloqueo.locator('input[name="motivo"]').fill('QA UI: observación temporal');
   await modalBloqueo.getByRole('button', { name: 'Guardar condición' }).click();
+  await confirmar(page, 'Sí, guardar condición');
 
   await expect(page.getByRole('status')).toContainText('Condición del lote actualizada correctamente');
   await expect(page.locator('.condicion-fila').filter({ hasText: loteCodigo }).locator('.condicion-fila-acciones > span').getByText('BLOQUEADO', { exact: true })).toBeVisible();

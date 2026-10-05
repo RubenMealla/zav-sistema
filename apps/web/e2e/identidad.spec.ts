@@ -103,7 +103,9 @@ for (const ancho of [390, 768, 1440]) {
     await captura(page, `identidad-pedidos-${ancho}.png`);
 
     await page.getByRole('button', { name: /Cerrar sesión|Salir/, exact: true }).filter({ visible: true }).click();
-    await expect(page).toHaveURL(/\/acceso$/);
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Sí, cerrar sesión' }).click();
+    await expect(page).toHaveURL(/\/acceso\?mensaje=sesion-cerrada$/);
+    await expect(page.getByRole('status')).toContainText('Sesión cerrada correctamente');
     await page.goto('/panel');
     await expect(page).toHaveURL(/error=sesion/);
     expect(errores).toEqual([]);
