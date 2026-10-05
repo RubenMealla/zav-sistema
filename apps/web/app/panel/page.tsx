@@ -16,7 +16,7 @@ import {
 import { AccionesProducto } from './acciones-producto';
 import { Paginacion } from '../componentes/paginacion';
 
-const API = process.env.API_BASE_URL ?? 'http://localhost:3001';
+const API = process.env.API_BASE_URL ?? (process.env.NODE_ENV === 'production' ? 'https://zav-api-2026.onrender.com' : 'http://localhost:3001');
 const LIMITE_TABLA = 20;
 
 function paginaSegura(valor: string | undefined) {
