@@ -86,3 +86,10 @@ main:focus { outline: none; }
   html { scroll-behavior: auto; }
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+
+/* Escala tipográfica base: incremento moderado manteniendo jerarquías. */
+.eyebrow{font-size:11px}
+.boton{font-size:13px}
+.boton-grande{font-size:14px}
+.texto-secundario{font-size:13px}

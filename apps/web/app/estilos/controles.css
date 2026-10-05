@@ -306,3 +306,25 @@ td small,.codigo,.badge{font-size:12px}
 .ubicacion-sugerencias strong{font-size:14px}
 .ubicacion-sugerencias span{font-size:13px}
 @media(max-width:700px){.paginacion{align-items:stretch;flex-direction:column}.paginacion-info{justify-content:space-between}.paginacion-controles{justify-content:space-between}}
+
+
+/* Escala de lectura global para controles, tablas, filtros y salidas. */
+.campo,.filtro-campo{font-size:15px}
+.campo input,.campo select,.filtro-campo input,.filtro-campo select,.filtro-inline select{height:44px;font-size:16px}
+.campo-con-accion button{font-size:13px}
+.mensaje-inline{font-size:14px}
+th{font-size:13px}
+td{font-size:15px}
+td small,.codigo,.badge,.saldos-inline b,.saldos-inline strong{font-size:13px}
+.tabla-vacia{font-size:14px}
+.estado-vacio h3{font-size:16px}.estado-vacio p{font-size:14px}
+.modal-cabecera h2{font-size:23px}.modal-cabecera p{font-size:14px}
+.opcional{font-size:13px}
+.detalle-grid dt{font-size:13px}.detalle-grid dd{font-size:15px}
+.toast strong{font-size:14px}.toast p{font-size:13px}
+.paginacion-resumen,.paginacion-actual,.paginacion-numero{font-size:14px}
+.paginacion-tamano{font-size:14px}.paginacion-tamano select{font-size:15px}
+.ubicacion-buscador>label{font-size:14px}
+.ubicacion-buscador-campo input{font-size:16px}
+.ubicacion-buscando,.ubicacion-busqueda-error{font-size:13px}
+.ubicacion-sugerencias strong{font-size:15px}.ubicacion-sugerencias span{font-size:14px}

@@ -1,2 +1,32 @@
 .acceso-layout{min-height:100dvh;display:grid;grid-template-columns:minmax(440px,46%) minmax(0,1fr);background:#f4f1ea}.acceso-identidad{min-height:100dvh;padding:28px clamp(30px,3.5vw,58px);display:grid;grid-template-rows:auto 1fr auto;color:#fff;background:#151512;border-right:1px solid #34332e}.acceso-identidad-cabecera,.acceso-identidad-pie{display:flex;align-items:center;justify-content:space-between;gap:20px}.acceso-identidad-cabecera>span,.acceso-identidad-pie{color:#aaa69d;font-size:12px;letter-spacing:.12em;text-transform:uppercase}.acceso-identidad-centro{align-self:center;width:min(100%,700px);display:grid;gap:38px;padding-block:44px}.acceso-emblema{min-height:330px;display:flex;align-items:center;padding:42px;border:1px solid #34332e;background:#1d1d1a}.acceso-identidad-copy{max-width:560px}.acceso-identidad-copy>span{color:#ef7650;font-size:12px;font-weight:800;letter-spacing:.13em}.acceso-identidad-copy h2{margin:14px 0 16px;font-family:Georgia,'Times New Roman',serif;font-size:clamp(42px,4vw,64px);font-weight:400;line-height:.98;letter-spacing:-.045em}.acceso-identidad-copy p{margin:0;color:#c5c0b7;font-size:16px;line-height:1.7}.acceso-panel{min-width:0;min-height:100dvh;padding:28px clamp(34px,5vw,84px);display:grid;grid-template-rows:auto 1fr auto}.volver{min-height:44px;display:inline-flex;align-items:center;gap:9px;padding:0 13px;border:1px solid #d8b6a8;color:#a64224;background:#fff8f4;font-size:14px;font-weight:750}.volver:hover{border-color:#e45a2e;background:#e45a2e;color:#fff}.acceso-formulario-caja{align-self:center;width:min(100%,520px);margin-inline:auto;padding:38px 0}.acceso-marca-movil{display:none}.acceso-titulo{margin-bottom:32px}.acceso-titulo h1{margin:10px 0;font-size:44px;font-weight:680;letter-spacing:-.04em}.acceso-titulo>p{margin:0;color:#69645b;font-size:16px;line-height:1.6}.acceso-formulario{gap:20px}.acceso-formulario .boton-completo{min-height:50px;font-size:14px}.acceso-seguridad{display:flex;gap:11px;align-items:flex-start;margin-top:24px;padding-top:19px;border-top:1px solid #d6d1c7;color:#6b665d}.acceso-seguridad strong{display:block;color:#35332e;font-size:13px}.acceso-seguridad p{margin:3px 0 0;font-size:13px;line-height:1.55}.acceso-panel-pie{margin:0;align-self:end;padding-top:16px;border-top:1px solid #dcd7ce;color:#787269;font-size:11px;letter-spacing:.1em;text-transform:uppercase}@media(max-width:980px){.acceso-layout{grid-template-columns:1fr}.acceso-identidad{display:none}.acceso-panel{padding:20px 24px 24px}.acceso-marca-movil{display:inline-flex;align-items:center;width:fit-content;margin-bottom:30px}}
 @media(max-width:980px){.acceso-marca-movil{padding:10px 12px;background:#151512;border:1px solid #34332e}}
+
+
+/* Acceso de escritorio: composición completa dentro del viewport y marca centrada. */
+.acceso-identidad-marca [data-marca]{display:grid;justify-items:center;gap:2px;min-width:150px}
+.acceso-identidad-marca [data-simbolo]{width:58px}
+.acceso-identidad-marca [data-lettering]{width:118px}
+.acceso-seguridad strong{font-size:14px}.acceso-seguridad p{font-size:14px}
+.acceso-panel-pie{font-size:12px}
+.volver{font-size:15px}
+.acceso-titulo>p{font-size:17px}
+.acceso-formulario .boton-completo{font-size:15px}
+@media(min-width:981px){
+  .acceso-layout{height:100dvh;min-height:0;overflow:hidden}
+  .acceso-identidad,.acceso-panel{height:100dvh;min-height:0;overflow:hidden;padding-block:20px}
+  .acceso-identidad-centro{gap:22px;padding-block:10px}
+  .acceso-emblema{height:clamp(220px,31vh,290px);min-height:0;justify-content:center;padding:22px}
+  .acceso-emblema [data-marca]{width:100%;display:grid;justify-items:center}
+  .acceso-emblema [data-simbolo]{width:min(72%,330px)}
+  .acceso-identidad-copy h2{margin:10px 0 12px;font-size:clamp(40px,3.4vw,54px)}
+  .acceso-identidad-copy p{font-size:16px;line-height:1.55}
+  .acceso-formulario-caja{padding:12px 0}
+  .acceso-titulo{margin-bottom:24px}
+  .acceso-titulo h1{font-size:42px}
+  .acceso-formulario{gap:16px}
+  .acceso-seguridad{margin-top:18px;padding-top:16px}
+}
+@media(max-height:720px) and (min-width:981px){
+  .acceso-layout{height:auto;min-height:100dvh;overflow:visible}
+  .acceso-identidad,.acceso-panel{height:auto;min-height:100dvh;overflow:visible}
+}
