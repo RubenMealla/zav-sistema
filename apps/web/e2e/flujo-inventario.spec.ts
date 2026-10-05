@@ -141,7 +141,7 @@ test('permite gestionar inventario desde módulos, modales y notificaciones', as
   await expect(page).toHaveURL(/\/panel\?vista=condiciones&mensaje=condicion&historialCondicionLoteId=[0-9a-f-]+$/);
   await expect(page.getByRole('status')).toContainText('Condición del lote actualizada correctamente');
   const filaCondicion = page.locator('.condicion-fila').filter({ hasText: loteCodigo });
-  await expect(filaCondicion.locator(':scope > .condicion-fila-principal').getByText('LIBERADO', { exact: true })).toBeVisible();
+  await expect(filaCondicion.locator('.condicion-fila-acciones > span').getByText('LIBERADO', { exact: true })).toBeVisible();
   await expect(page.getByText('QA UI: revisión completada')).toBeVisible();
   await captura(page, '08-lote-liberado.png');
 
@@ -153,13 +153,13 @@ test('permite gestionar inventario desde módulos, modales y notificaciones', as
   await modalBloqueo.getByRole('button', { name: 'Guardar condición' }).click();
 
   await expect(page.getByRole('status')).toContainText('Condición del lote actualizada correctamente');
-  await expect(page.locator('.condicion-fila').filter({ hasText: loteCodigo }).locator(':scope > .condicion-fila-principal').getByText('BLOQUEADO', { exact: true })).toBeVisible();
+  await expect(page.locator('.condicion-fila').filter({ hasText: loteCodigo }).locator('.condicion-fila-acciones > span').getByText('BLOQUEADO', { exact: true })).toBeVisible();
   await expect(page.getByText('QA UI: observación temporal')).toBeVisible();
   await captura(page, '09-lote-bloqueado.png');
 
   await page.reload();
   await expect(page.getByRole('heading', { name: 'Condiciones' })).toBeVisible();
-  await expect(page.locator('.condicion-fila').filter({ hasText: loteCodigo }).locator(':scope > .condicion-fila-principal').getByText('BLOQUEADO', { exact: true })).toBeVisible();
+  await expect(page.locator('.condicion-fila').filter({ hasText: loteCodigo }).locator('.condicion-fila-acciones > span').getByText('BLOQUEADO', { exact: true })).toBeVisible();
   await expect(page.getByText('QA UI: observación temporal')).toBeVisible();
   await captura(page, '10-condicion-persistente.png');
 
