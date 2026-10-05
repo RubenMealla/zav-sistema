@@ -1,0 +1,90 @@
+name: Evidencias Android E3
+
+on:
+  push:
+    branches:
+      - pruebas/e3-capturas-android-v2
+  workflow_dispatch:
+
+concurrency:
+  group: evidencias-android-e3-v2-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  capturar:
+    name: Capturar interfaz ZAV Vendedor
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      CI: 1
+      EXPO_PUBLIC_API_BASE_URL: https://zav-api-2026.onrender.com
+      EXPO_PUBLIC_MAP_STYLE_URL: https://tiles.openfreemap.org/styles/liberty
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.4.2
+          run_install: false
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Configurar Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+
+      - name: Generar proyecto Android
+        run: pnpm --filter @zav/mobile exec expo prebuild --platform android --no-install --clean
+
+      - name: Compilar APK debug para evidencia
+        working-directory: apps/mobile/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Ejecutar app y capturar pantallas
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: |
+            set -eu
+            mkdir -p apps/mobile/test-results/evidencias-android
+            APK="apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk"
+            adb install -r "$APK"
+            adb shell pm clear bo.zav.gestion.vendedor
+            adb shell monkey -p bo.zav.gestion.vendedor -c android.intent.category.LAUNCHER 1 >/dev/null
+            sleep 10
+            adb exec-out screencap -p > apps/mobile/test-results/evidencias-android/01-login.png
+            adb shell input tap 540 970
+            adb shell input text 'usuario.invalido'
+            adb shell input tap 540 1170
+            adb shell input text 'clave.invalida'
+            adb shell input keyevent 66
+            sleep 8
+            adb exec-out screencap -p > apps/mobile/test-results/evidencias-android/02-login-error.png
+            ls -lh apps/mobile/test-results/evidencias-android
+
+      - name: Guardar evidencias Android
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidencias-android-e3-v2-${{ github.run_number }}
+          path: apps/mobile/test-results/evidencias-android/
+          if-no-files-found: error
+          retention-days: 30
