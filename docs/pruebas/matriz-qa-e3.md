@@ -34,4 +34,4 @@ La plenaria P3 muestra **422 Unprocessable Entity** como alternativa válida par
 
 - QA backend de cierre: run documentado del PR #35.
 - QA web Playwright #492: 9/9 pruebas, artifact `qa-web-playwright-492`.
-- Smoke público E3 #1: salud estable + login de ambos roles + 401 sin token, **SUCCESS**.
+- Smoke público E3: salud pública + rechazo de credenciales inválidas + 401 sin token, sin almacenar credenciales válidas en el repositorio. La autenticación y autorización de ambos roles se verifican en las suites aisladas de QA.
