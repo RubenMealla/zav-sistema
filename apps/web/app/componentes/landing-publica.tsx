@@ -19,7 +19,7 @@ const familias: Familia[] = [
   {
     id: 'mortadelas',
     nombre: 'Mortadelas',
-    descripcion: 'Productos identificados en el material entregado por ZAV.',
+    descripcion: 'Explora los productos de esta familia disponibles en el catálogo visual de ZAV.',
     imagen: '/catalogo/mortadelas-mortadela-primavera.webp',
     icono: <><path d="M5 8.5c2.6-2.7 11.4-2.7 14 0v7c-2.6 2.7-11.4 2.7-14 0Z"/><path d="M8 9.5v5M12 8.8v6.4M16 9.5v5"/></>,
     productos: [
@@ -31,7 +31,7 @@ const familias: Familia[] = [
   {
     id: 'chorizos',
     nombre: 'Chorizos',
-    descripcion: 'Productos identificados en el material entregado por ZAV.',
+    descripcion: 'Explora los productos de esta familia disponibles en el catálogo visual de ZAV.',
     imagen: '/catalogo/chorizos-chorizo-coctelero.webp',
     icono: <><path d="M7 5c2 2 2 12 0 14M17 5c-2 2-2 12 0 14"/><path d="M7 7c3-1.4 7-1.4 10 0M7 17c3 1.4 7 1.4 10 0"/></>,
     productos: [
@@ -44,7 +44,7 @@ const familias: Familia[] = [
   {
     id: 'salchichas',
     nombre: 'Salchichas',
-    descripcion: 'Productos identificados en el material entregado por ZAV.',
+    descripcion: 'Explora los productos de esta familia disponibles en el catálogo visual de ZAV.',
     icono: <><path d="M5 9c0-2 1.6-3.5 3.5-3.5h7C17.4 5.5 19 7 19 9s-1.6 3.5-3.5 3.5h-7C6.6 12.5 5 11 5 9Z"/><path d="M5 15h14M8 12.5V15M16 12.5V15"/></>,
     productos: [
       { nombre: 'Salchicha Tipo Súper Pancho' },
@@ -54,36 +54,36 @@ const familias: Familia[] = [
   {
     id: 'morcillas',
     nombre: 'Morcillas',
-    descripcion: 'Productos identificados en el material entregado por ZAV.',
+    descripcion: 'Explora los productos de esta familia disponibles en el catálogo visual de ZAV.',
     icono: <><path d="M7 6.5c3-2 7-2 10 0 2.7 1.8 2.7 9.2 0 11-3 2-7 2-10 0-2.7-1.8-2.7-9.2 0-11Z"/><path d="m8.5 7.5 7 9M15.5 7.5l-7 9"/></>,
     productos: [{ nombre: 'Morcilla Artesanal' }],
   },
   {
     id: 'jamones',
     nombre: 'Jamones',
-    descripcion: 'Productos identificados en el material entregado por ZAV.',
+    descripcion: 'Explora los productos de esta familia disponibles en el catálogo visual de ZAV.',
     icono: <><path d="M6 8c0-2 1.8-3 4-3h5.5A3.5 3.5 0 0 1 19 8.5v7A3.5 3.5 0 0 1 15.5 19H10c-2.2 0-4-1-4-3Z"/><path d="M9 9h7M9 12h7M9 15h5"/></>,
     productos: [{ nombre: 'Jamón Cocido Light' }],
   },
   {
     id: 'tocinos-ahumados',
     nombre: 'Tocinos y ahumados',
-    descripcion: 'Productos identificados en el material entregado por ZAV.',
+    descripcion: 'Explora los productos de esta familia disponibles en el catálogo visual de ZAV.',
     icono: <><path d="M5 8c3-2 5 2 8 0s4-1 6 0v8c-2-1-3-2-6 0s-5-2-8 0Z"/><path d="M6 11c2-1 4 1 6 0s4-1 6 0M6 14c2-1 4 1 6 0s4-1 6 0"/></>,
     productos: [{ nombre: 'Tocino Ahumado' }],
   },
   {
     id: 'fiambres-especiales',
     nombre: 'Fiambres especiales',
-    descripcion: 'Productos identificados en el material entregado por ZAV.',
+    descripcion: 'Explora los productos de esta familia disponibles en el catálogo visual de ZAV.',
     icono: <><path d="M12 4 19 8v8l-7 4-7-4V8Z"/><path d="m8 10 4-2 4 2v4l-4 2-4-2Z"/></>,
     productos: [{ nombre: 'Queso de Chancho' }],
   },
 ];
 
 const destacados = [
-  { etiqueta: 'PRODUCTO DESTACADO', titulo: 'Mortadela Primavera', texto: 'Imagen de producto incluida en el material real entregado por ZAV.', imagen: '/catalogo/mortadelas-mortadela-primavera.webp' },
-  { etiqueta: 'PRODUCTO DESTACADO', titulo: 'Chorizo Coctelero', texto: 'Imagen de producto incluida en el material real entregado por ZAV.', imagen: '/catalogo/chorizos-chorizo-coctelero.webp' },
+  { etiqueta: 'NOVEDADES ZAV', titulo: 'Mortadela Primavera', texto: 'Conoce esta presentación dentro de la familia de mortadelas ZAV.', imagen: '/catalogo/mortadelas-mortadela-primavera.webp' },
+  { etiqueta: 'NOVEDADES ZAV', titulo: 'Chorizo Coctelero', texto: 'Conoce esta presentación dentro de la familia de chorizos ZAV.', imagen: '/catalogo/chorizos-chorizo-coctelero.webp' },
 ];
 
 function Pictograma({ children }: { children: ReactNode }) {
@@ -147,7 +147,7 @@ export function LandingPublica() {
             <div className="publico-hero-copy">
               <span className="publico-kicker">TARIJA · BOLIVIA</span>
               <h1>Fiambres y embutidos <em>ZAV.</em></h1>
-              <p>Productos, novedades y la identidad de ZAV en un espacio público claro y directo.</p>
+              <p>Novedades y productos ZAV, desde Tarija para quienes quieren conocer nuestro catálogo.</p>
               <a className="publico-link-hero" href="#productos">Ver productos <Icono nombre="flecha" tamano={16} /></a>
             </div>
 
@@ -180,7 +180,7 @@ export function LandingPublica() {
             <header className="publico-seccion-intro publico-productos-intro">
               <span className="eyebrow">PRODUCTOS</span>
               <h2>Siete familias. Una identidad.</h2>
-              <p>Selecciona una familia para explorar el material fotográfico entregado por ZAV.</p>
+              <p>Selecciona una familia para explorar sus productos y presentaciones.</p>
             </header>
 
             <div className="familias-grid" role="group" aria-label="Familias de productos">
@@ -232,7 +232,7 @@ export function LandingPublica() {
               <span className="eyebrow">NOSOTROS</span>
               <h2>ZAV · Fiambres &amp; Embutidos.</h2>
               <p>Tarija, Bolivia.</p>
-              <p>La información institucional ampliada se incorporará únicamente con datos confirmados por la empresa.</p>
+              <p>Conoce el catálogo y las novedades de ZAV desde su sitio público.</p>
               <Link className="publico-link" href="/acceso">Acceso al sistema interno <Icono nombre="flecha" tamano={16} /></Link>
             </div>
           </div>
