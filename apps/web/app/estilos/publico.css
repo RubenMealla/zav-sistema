@@ -27,3 +27,7 @@
 .publico-zav-marca .marca{justify-items:center}
 .publico-zav-marca .simbolo{width:min(100%,360px)}
 .publico-footer-redes span{cursor:default}
+
+.foto-sprite{width:100%;height:100%;background-image:url('/catalogo/zav-catalogo.webp');background-repeat:no-repeat;background-size:400% 400%}
+.foto-sprite-destacada,.foto-sprite-producto{position:absolute;inset:0;background-color:#ece7dd}
+.producto-publico-imagen{position:relative;overflow:hidden}
