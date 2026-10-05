@@ -294,10 +294,6 @@ export function FormularioNuevoLote({ productos, operacionClave }: { productos: 
   );
 
   useEffect(() => {
-    if (venceEl && venceEl < minimoVencimiento) setVenceEl('');
-  }, [minimoVencimiento, venceEl]);
-
-  useEffect(() => {
     if (!codigoAutomatico || !productoId || !elaboradoEl) return;
     const controlador = new AbortController();
     const temporizador = window.setTimeout(async () => {
@@ -378,7 +374,21 @@ export function FormularioNuevoLote({ productos, operacionClave }: { productos: 
 
           <div className="campo">
             <div className="campo-etiqueta"><label htmlFor={`${baseId}-elaborado`}>Fecha de elaboración</label><span>Obligatorio</span></div>
-            <input id={`${baseId}-elaborado`} name="elaboradoEl" type="date" required value={elaboradoEl} max={hoy} onChange={(evento) => { setElaboradoEl(evento.target.value); setCodigoAutomatico(true); }} />
+            <input
+              id={`${baseId}-elaborado`}
+              name="elaboradoEl"
+              type="date"
+              required
+              value={elaboradoEl}
+              max={hoy}
+              onChange={(evento) => {
+                const siguiente = evento.target.value;
+                setElaboradoEl(siguiente);
+                setCodigoAutomatico(true);
+                const siguienteMinimo = mayorFecha(hoy, sumarDias(siguiente || hoy, 1));
+                if (venceEl && venceEl < siguienteMinimo) setVenceEl('');
+              }}
+            />
             <CampoAyuda id={`${baseId}-elaborado-ayuda`}>Hoy viene precargado. No se permiten fechas futuras; si el lote se elaboró antes, registra la fecha real.</CampoAyuda>
           </div>
 
