@@ -2,10 +2,17 @@ import { expect, test, type Page } from '@playwright/test';
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
 
+async function esperarImagenes(page: Page) {
+  await page.locator('img').evaluateAll((imgs) => imgs.forEach((img) => {
+    if (img instanceof HTMLImageElement) img.loading = 'eager';
+  }));
+  await expect.poll(() => page.locator('img').evaluateAll((imgs) => imgs.every((img) => img instanceof HTMLImageElement && img.complete && img.naturalWidth > 0))).toBeTruthy();
+}
+
 async function captura(page: Page, nombre: string) {
   const destino = path.join(process.cwd(), 'test-results', 'evidencias');
   await mkdir(destino, { recursive: true });
-  await expect.poll(() => page.locator('img:visible').evaluateAll((imgs) => imgs.every((img) => img instanceof HTMLImageElement && img.complete && img.naturalWidth > 0))).toBeTruthy();
+  await esperarImagenes(page);
   await page.screenshot({ path: path.join(destino, nombre), fullPage: true });
 }
 
@@ -32,7 +39,7 @@ for (const ancho of [390, 768, 1440]) {
     await page.goto('/');
     await expect(page.getByRole('heading', { level: 1 })).toContainText('Fiambres y embutidos');
     await expect(page.getByRole('img', { name: 'ZAV · Fiambres y embutidos' }).first()).toBeVisible();
-    await expect.poll(() => page.locator('img:visible').evaluateAll((imgs) => imgs.every((img) => img instanceof HTMLImageElement && img.complete && img.naturalWidth > 0))).toBeTruthy();
+    await esperarImagenes(page);
     await sinDesborde(page);
     await captura(page, `identidad-inicio-${ancho}.png`);
 
