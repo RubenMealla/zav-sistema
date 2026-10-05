@@ -118,21 +118,13 @@ export function Notificacion({
 
 export function CampoContrasena() {
   const [visible, setVisible] = useState(false);
-
   return (
     <div className="campo">
       <label htmlFor="contrasena">Contraseña</label>
-      <div className="campo-con-accion">
-        <input
-          id="contrasena"
-          type={visible ? 'text' : 'password'}
-          name="contrasena"
-          autoComplete="current-password"
-          required
-          placeholder="Ingresa tu contraseña"
-        />
-        <button type="button" aria-controls="contrasena" aria-pressed={visible} aria-label={visible ? 'Ocultar contraseña' : 'Mostrar contraseña'} onClick={() => setVisible((valor) => !valor)}>
-          {visible ? 'Ocultar' : 'Mostrar'}
+      <div className="campo-con-accion campo-con-icono">
+        <input id="contrasena" type={visible ? 'text' : 'password'} name="contrasena" autoComplete="current-password" required placeholder="Ingresa tu contraseña" />
+        <button type="button" aria-controls="contrasena" aria-pressed={visible} aria-label={visible ? 'Ocultar contraseña' : 'Mostrar contraseña'} title={visible ? 'Ocultar contraseña' : 'Mostrar contraseña'} onClick={() => setVisible((valor) => !valor)}>
+          <Icono nombre={visible ? 'ojoCerrado' : 'ojo'} tamano={19} />
         </button>
       </div>
     </div>
