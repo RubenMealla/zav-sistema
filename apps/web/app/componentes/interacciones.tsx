@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { useFormStatus } from 'react-dom';
-import { Icono } from './icono';
+import { Icono, type NombreIcono } from './icono';
 
 export function BotonEnviar({ children, pendiente = 'Guardando…', className = 'boton boton-primario', disabled = false }: { children: ReactNode; pendiente?: string; className?: string; disabled?: boolean }) {
   const { pending } = useFormStatus();
@@ -15,33 +15,48 @@ export function Modal({
   descripcion,
   children,
   variante = 'principal',
+  icono,
+  etiqueta = 'OPERACIÓN',
+  amplio = false,
 }: {
   boton: string;
   titulo: string;
   descripcion?: string;
   children: ReactNode;
-  variante?: 'principal' | 'secundaria';
+  variante?: 'principal' | 'secundaria' | 'terciaria';
+  icono?: NombreIcono | null;
+  etiqueta?: string;
+  amplio?: boolean;
 }) {
   const referencia = useRef<HTMLDialogElement>(null);
   const id = useId();
+  const disparador = useRef<HTMLButtonElement>(null);
+  const iconoVisible = icono === undefined ? (variante === 'principal' ? 'mas' : null) : icono;
+  const claseBoton = variante === 'principal'
+    ? 'boton boton-primario'
+    : variante === 'secundaria'
+      ? 'boton boton-secundario'
+      : 'boton boton-terciario boton-detalle';
 
   function cerrar() {
     referencia.current?.close();
+    disparador.current?.focus();
   }
 
   return (
     <>
       <button
+        ref={disparador}
         type="button"
-        className={variante === 'principal' ? 'boton boton-primario' : 'boton boton-secundario'}
+        className={claseBoton}
         onClick={() => referencia.current?.showModal()}
       >
-        <Icono nombre="mas" tamano={17} />
+        {iconoVisible && <Icono nombre={iconoVisible} tamano={16} />}
         {boton}
       </button>
       <dialog
         ref={referencia}
-        className="modal"
+        className={amplio ? 'modal modal-amplio' : 'modal'}
         aria-labelledby={`${id}-titulo`}
         aria-describedby={descripcion ? `${id}-descripcion` : undefined}
         onKeyDown={(evento) => {
@@ -59,6 +74,7 @@ export function Modal({
             primero?.focus();
           }
         }}
+        onClose={() => disparador.current?.focus()}
         onClick={(evento) => {
           if (evento.target === referencia.current) cerrar();
         }}
@@ -66,7 +82,7 @@ export function Modal({
         <div className="modal-caja">
           <header className="modal-cabecera">
             <div>
-              <span className="eyebrow">OPERACIÓN</span>
+              <span className="eyebrow">{etiqueta}</span>
               <h2 id={`${id}-titulo`}>{titulo}</h2>
               {descripcion && <p id={`${id}-descripcion`}>{descripcion}</p>}
             </div>

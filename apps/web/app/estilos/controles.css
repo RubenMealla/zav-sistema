@@ -216,3 +216,29 @@ body:has(dialog[open]) { overflow: hidden; }
   .ubicacion-editor-acciones { width: 100%; }
   .ubicacion-editor-acciones .boton { flex: 1; }
 }
+
+.modal-amplio{width:min(880px,calc(100% - 28px))}
+.detalle-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0;border-top:1px solid #e1dcd3;border-left:1px solid #e1dcd3}
+.detalle-grid>div{min-width:0;display:grid;gap:5px;padding:13px 14px;border-right:1px solid #e1dcd3;border-bottom:1px solid #e1dcd3;background:#fbfaf7}
+.detalle-grid .detalle-ancho{grid-column:1/-1}
+.detalle-grid dt{color:#777168;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
+.detalle-grid dd{margin:0;color:#292824;font-size:14px;line-height:1.45;overflow-wrap:anywhere}
+.boton-detalle{border-color:#c8c3b9;background:#faf8f4;color:#393731}
+.paginacion{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 16px;border-top:1px solid #ddd8ce;background:#fbfaf7}
+.paginacion-resumen,.paginacion-actual{color:#6d685f;font-size:12px}
+.paginacion-controles{display:flex;align-items:center;gap:9px}
+.paginacion .deshabilitado{opacity:.45;pointer-events:none}
+.ubicacion-buscador{position:relative;z-index:700;margin-bottom:12px}
+.ubicacion-buscador>label{display:block;margin-bottom:6px;color:#34322d;font-size:13px;font-weight:700}
+.ubicacion-buscador-campo{position:relative;display:flex;align-items:center;min-height:44px;border:1px solid #c8c3b9;background:#fff}
+.ubicacion-buscador-campo>.icono{margin-left:12px;color:#8e4a33}
+.ubicacion-buscador-campo input{width:100%;height:42px;border:0;outline:0;padding:0 90px 0 10px;background:transparent;color:#25241f;font-size:14px}
+.ubicacion-buscando{position:absolute;right:12px;color:#777168;font-size:11px}
+.ubicacion-sugerencias{position:absolute;top:100%;left:0;right:0;max-height:280px;overflow:auto;border:1px solid #c8c3b9;border-top:0;background:#fff;box-shadow:0 14px 34px #11110f1f}
+.ubicacion-sugerencias button{width:100%;display:grid;gap:3px;padding:11px 13px;border:0;border-bottom:1px solid #ebe7df;background:#fff;text-align:left}
+.ubicacion-sugerencias button:hover,.ubicacion-sugerencias button:focus{background:#f5f1ea;outline:0}
+.ubicacion-sugerencias strong{font-size:13px}.ubicacion-sugerencias span{color:#716c63;font-size:11px}
+.ubicacion-busqueda-error{margin:7px 0 0;color:var(--rojo);font-size:11px}
+.campo-con-icono input{padding-right:48px}
+.campo-con-icono button{width:42px;min-width:42px;color:#565149}
+@media(max-width:600px){.detalle-grid{grid-template-columns:1fr}.detalle-grid .detalle-ancho{grid-column:auto}.paginacion{align-items:stretch;flex-direction:column}.paginacion-controles{justify-content:space-between}.paginacion-actual{align-self:center}}

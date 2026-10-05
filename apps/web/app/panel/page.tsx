@@ -14,8 +14,15 @@ import {
   registrarTraslado,
 } from './acciones';
 import { AccionesProducto } from './acciones-producto';
+import { Paginacion } from '../componentes/paginacion';
 
 const API = process.env.API_BASE_URL ?? 'http://localhost:3001';
+const LIMITE_TABLA = 20;
+
+function paginaSegura(valor: string | undefined) {
+  const numero = Number.parseInt(valor ?? '1', 10);
+  return Number.isFinite(numero) && numero > 0 ? numero : 1;
+}
 
 type Producto = {
   id: string;
@@ -127,6 +134,12 @@ export default async function Panel({
     loteProductoId?: string;
     loteVigencia?: string;
     pedidoEstado?: string;
+    productoPagina?: string;
+    lotePagina?: string;
+    condicionPagina?: string;
+    historialCondicionPagina?: string;
+    pedidoPagina?: string;
+    movimientoPagina?: string;
   }>;
 }) {
   const token = (await cookies()).get('zav_acceso')?.value;
@@ -134,6 +147,12 @@ export default async function Panel({
 
   const parametros = await searchParams;
   const vista: Vista = parametros.vista && parametros.vista in vistas ? parametros.vista as Vista : 'resumen';
+  const productoPagina = paginaSegura(parametros.productoPagina);
+  const lotePagina = paginaSegura(parametros.lotePagina);
+  const condicionPagina = paginaSegura(parametros.condicionPagina);
+  const historialCondicionPagina = paginaSegura(parametros.historialCondicionPagina);
+  const pedidoPagina = paginaSegura(parametros.pedidoPagina);
+  const movimientoPagina = paginaSegura(parametros.movimientoPagina);
 
   const vacia = <T,>(): { estado: number; datos?: Pagina<T> } => ({
     estado: 200,
@@ -151,7 +170,8 @@ export default async function Panel({
     const necesitaProductos = vista === 'resumen' || vista === 'productos' || vista === 'lotes';
     const necesitaLotes = vista !== 'productos';
 
-    const productoParametros = new URLSearchParams({ limit: vista === 'productos' ? '50' : '100' });
+    const productoParametros = new URLSearchParams({ limit: vista === 'productos' ? String(LIMITE_TABLA) : '100' });
+    if (vista === 'productos') productoParametros.set('page', String(productoPagina));
     if (vista === 'productos' && parametros.productoQ?.trim()) {
       productoParametros.set('q', parametros.productoQ.trim());
     }
@@ -159,7 +179,11 @@ export default async function Panel({
       productoParametros.set('activo', parametros.productoActivo);
     }
 
-    const loteParametros = new URLSearchParams({ limit: '50' });
+    const loteParametros = new URLSearchParams({
+      limit: vista === 'lotes' || vista === 'condiciones' ? String(LIMITE_TABLA) : '50',
+    });
+    if (vista === 'lotes') loteParametros.set('page', String(lotePagina));
+    if (vista === 'condiciones') loteParametros.set('page', String(condicionPagina));
     if (vista === 'lotes' && parametros.loteProductoId) loteParametros.set('productoId', parametros.loteProductoId);
     if (vista === 'lotes' && parametros.loteVigencia && ['vigente', 'vencido'].includes(parametros.loteVigencia)) {
       loteParametros.set('vigencia', parametros.loteVigencia);
@@ -182,13 +206,13 @@ export default async function Panel({
           : Promise.resolve(vacia<Lote>()),
         vista === 'movimientos' && parametros.historialLoteId
           ? consultar<Pagina<Movimiento>>(
-              `/api/v1/movimientos?loteId=${encodeURIComponent(parametros.historialLoteId)}&limit=30`,
+              `/api/v1/movimientos?loteId=${encodeURIComponent(parametros.historialLoteId)}&page=${movimientoPagina}&limit=${LIMITE_TABLA}`,
               token,
             )
           : Promise.resolve(undefined),
         vista === 'condiciones' && parametros.historialCondicionLoteId
           ? consultar<Pagina<EventoCondicion>>(
-              `/api/v1/lotes/${encodeURIComponent(parametros.historialCondicionLoteId)}/condiciones?limit=30`,
+              `/api/v1/lotes/${encodeURIComponent(parametros.historialCondicionLoteId)}/condiciones?page=${historialCondicionPagina}&limit=${LIMITE_TABLA}`,
               token,
             )
           : Promise.resolve(undefined),
@@ -204,7 +228,7 @@ export default async function Panel({
     condiciones = respuestaCondiciones;
     ventaDespacho = respuestaVentaDespacho;
     if (vista === 'pedidos') {
-      const pedidoParametros = new URLSearchParams({ limit: '50' });
+      const pedidoParametros = new URLSearchParams({ page: String(pedidoPagina), limit: String(LIMITE_TABLA) });
       if (parametros.pedidoEstado && ['REGISTRADO', 'EN_DISTRIBUCION', 'ENTREGADO', 'CANCELADO'].includes(parametros.pedidoEstado)) {
         pedidoParametros.set('estado', parametros.pedidoEstado);
       }
@@ -390,6 +414,7 @@ export default async function Panel({
                   </table>
                 </div>
               )}
+              <Paginacion pagina={productoPagina} total={productos.datos?.total ?? 0} limite={LIMITE_TABLA} parametro="productoPagina" parametros={{ vista: 'productos', productoQ: parametros.productoQ, productoActivo: parametros.productoActivo }} />
             </section>
           )}
 
@@ -447,10 +472,10 @@ export default async function Panel({
               ) : (
                 <div className="tabla-contenedor" role="region" tabIndex={0} aria-label="Lotes y existencias; tabla desplazable">
                   <table><caption className="solo-lectores">Lotes y existencias</caption>
-                    <thead><tr><th scope="col">Lote</th><th scope="col">Condición</th><th scope="col">Vencimiento</th><th scope="col">Existencia por ubicación</th></tr></thead>
+                    <thead><tr><th scope="col">Lote</th><th scope="col">Condición</th><th scope="col">Vencimiento</th><th scope="col">Existencia por ubicación</th><th scope="col" className="acciones-columna">Acciones</th></tr></thead>
                     <tbody>
                       {itemsLotes.length === 0 ? (
-                        <tr><td colSpan={4}><div className="tabla-vacia"><strong>Todavía no hay lotes registrados.</strong><span>Registra un producto y luego su lote e ingreso inicial.</span></div></td></tr>
+                        <tr><td colSpan={5}><div className="tabla-vacia"><strong>Todavía no hay lotes registrados.</strong><span>Registra un producto y luego su lote e ingreso inicial.</span></div></td></tr>
                       ) : itemsLotes.map((lote) => (
                         <tr key={lote.id}>
                           <td><span className="codigo">{lote.codigo}</span></td>
@@ -463,12 +488,23 @@ export default async function Panel({
                               )) : <span>Sin existencias</span>}
                             </div>
                           </td>
+                          <td className="acciones-columna">
+                            <Modal boton="Detalles" titulo="Detalle del lote" etiqueta="LOTE" variante="terciaria" icono="historial">
+                              <dl className="detalle-grid">
+                                <div><dt>Código</dt><dd><span className="codigo">{lote.codigo}</span></dd></div>
+                                <div><dt>Condición</dt><dd><span className={condicionClase(lote.condicion)}>{lote.condicion}</span></dd></div>
+                                <div><dt>Vencimiento</dt><dd>{lote.venceEl}</dd></div>
+                                <div className="detalle-ancho"><dt>Existencias</dt><dd>{(lote.existencias ?? []).map((saldo) => `${saldo.codigo}: ${saldo.cantidad_fisica}`).join(' · ') || 'Sin existencias'}</dd></div>
+                              </dl>
+                            </Modal>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
               )}
+              <Paginacion pagina={lotePagina} total={lotes.datos?.total ?? 0} limite={LIMITE_TABLA} parametro="lotePagina" parametros={{ vista: 'lotes', loteProductoId: parametros.loteProductoId, loteVigencia: parametros.loteVigencia }} />
             </section>
           )}
 
@@ -498,6 +534,7 @@ export default async function Panel({
                     </div>
                   ))}
                 </div>
+                <Paginacion pagina={condicionPagina} total={lotes.datos?.total ?? 0} limite={LIMITE_TABLA} parametro="condicionPagina" parametros={{ vista: 'condiciones', historialCondicionLoteId: parametros.historialCondicionLoteId }} />
               </section>
 
               <section className="card card-modulo">
@@ -531,6 +568,7 @@ export default async function Panel({
                     ))}
                   </div>
                 )}
+                <Paginacion pagina={historialCondicionPagina} total={condiciones?.datos?.total ?? 0} limite={LIMITE_TABLA} parametro="historialCondicionPagina" parametros={{ vista: 'condiciones', historialCondicionLoteId: parametros.historialCondicionLoteId, condicionPagina: parametros.condicionPagina }} />
               </section>
             </div>
           )}
@@ -571,7 +609,7 @@ export default async function Panel({
               ) : (
                 <>
                   <p className="alcance-datos">
-                    Mostrando {itemsPedidos.length} de {pedidos.datos?.total ?? 0} pedido(s), máximo 50 por consulta.
+                    Mostrando {itemsPedidos.length} de {pedidos.datos?.total ?? 0} pedido(s) en esta página.
                   </p>
                   <div className="tabla-contenedor" role="region" tabIndex={0} aria-label="Pedidos registrados; tabla desplazable">
                     <table>
@@ -585,12 +623,13 @@ export default async function Panel({
                           <th scope="col" className="numero">Unidades</th>
                           <th scope="col" className="numero">Total</th>
                           <th scope="col">Destino</th>
+                          <th scope="col" className="acciones-columna">Acciones</th>
                         </tr>
                       </thead>
                       <tbody>
                         {itemsPedidos.length === 0 ? (
                           <tr>
-                            <td colSpan={7}>
+                            <td colSpan={8}>
                               <div className="tabla-vacia">Todavía no hay pedidos registrados.</div>
                             </td>
                           </tr>
@@ -621,11 +660,25 @@ export default async function Panel({
                             <td className="numero"><strong>{pedido.unidades}</strong></td>
                             <td className="numero"><strong>Bs {pedido.totalBob}</strong></td>
                             <td>{pedido.direccionEntrega}</td>
+                            <td className="acciones-columna">
+                              <Modal boton="Detalles" titulo="Detalle del pedido" etiqueta="PEDIDO" variante="terciaria" icono="historial" amplio>
+                                <dl className="detalle-grid">
+                                  <div><dt>Fecha</dt><dd>{fechaBolivia(pedido.creadoEn)}</dd></div>
+                                  <div><dt>Estado</dt><dd><span className="badge badge-neutro">{pedido.estado}</span></dd></div>
+                                  <div><dt>Cliente</dt><dd>{pedido.cliente.nombre}</dd></div>
+                                  <div><dt>Vendedor</dt><dd>{pedido.vendedor.nombre} · {pedido.vendedor.identificador}</dd></div>
+                                  <div><dt>Unidades</dt><dd>{pedido.unidades}</dd></div>
+                                  <div><dt>Total</dt><dd>Bs {pedido.totalBob}</dd></div>
+                                  <div className="detalle-ancho"><dt>Destino</dt><dd>{pedido.direccionEntrega}</dd></div>
+                                </dl>
+                              </Modal>
+                            </td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
+                  <Paginacion pagina={pedidoPagina} total={pedidos.datos?.total ?? 0} limite={LIMITE_TABLA} parametro="pedidoPagina" parametros={{ vista: 'pedidos', pedidoEstado: parametros.pedidoEstado }} />
                 </>
               )}
             </section>

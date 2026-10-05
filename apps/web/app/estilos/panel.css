@@ -333,3 +333,13 @@
   .dashboard-grid,
   .modulo-dos-columnas { grid-template-columns: 1fr; }
 }
+
+/* Legibilidad: conserva la densidad del panel sin recurrir a texto microscópico. */
+.sidebar-seccion{font-size:11px}.nav-item{font-size:13px}.sidebar-marca small{font-size:11px}
+.perfil-mini strong{font-size:13px}.perfil-mini span{font-size:11px}.boton-cerrar-sesion{font-size:12px}
+.breadcrumb{font-size:11px}.topbar p{font-size:13px}.topbar-perfil strong{font-size:12px}.topbar-perfil span{font-size:11px}
+.bienvenida p{font-size:13px}.bienvenida-sello{font-size:10px}.metrica-card span{font-size:11px}.metrica-card small{font-size:11px}
+.alcance-datos{font-size:11px}.card-cabecera h2{font-size:18px}.card-cabecera p{font-size:12px}
+.acceso-rapido strong{font-size:13px}.acceso-rapido p{font-size:11px}.estado-resumen>div{font-size:12px}.nota-card{font-size:11px}
+.condicion-fila strong,.timeline-superior strong{font-size:12px}.condicion-fila div span,.timeline-superior time,.timeline-item small{font-size:11px}
+.ubicacion-editor-pie strong{font-size:13px}.ubicacion-editor-pie span{font-size:12px}
