@@ -87,4 +87,5 @@ jobs:
           name: evidencias-android-e3-v2-${{ github.run_number }}
           path: apps/mobile/test-results/evidencias-android/
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 30          script: |
+            bash -lc 'set -eu; mkdir -p apps/mobile/test-results/evidencias-android; adb install -r apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk; adb shell pm clear bo.zav.gestion.vendedor; adb shell monkey -p bo.zav.gestion.vendedor -c android.intent.category.LAUNCHER 1 >/dev/null; sleep 10; adb exec-out screencap -p > apps/mobile/test-results/evidencias-android/01-login.png; adb shell input tap 540 970; adb shell input text usuario.invalido; adb shell input tap 540 1170; adb shell input text clave.invalida; adb shell input keyevent 66; sleep 8; adb exec-out screencap -p > apps/mobile/test-results/evidencias-android/02-login-error.png; ls -lh apps/mobile/test-results/evidencias-android'
