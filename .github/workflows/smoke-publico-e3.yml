@@ -8,7 +8,7 @@ on:
 
 jobs:
   verificar-api-publica:
-    name: Verificar API estable y cuentas demo
+    name: Verificar API pública sin credenciales persistidas
     runs-on: ubuntu-latest
     timeout-minutes: 8
     env:
@@ -22,38 +22,20 @@ jobs:
           cuerpo="$(curl --fail-with-body --retry 3 --retry-delay 5 --max-time 30 "$API/api/v1/salud")"
           python -c 'import json,sys; d=json.loads(sys.argv[1]); assert d.get("estado")=="ok", d' "$cuerpo"
 
-      - name: Verificar cuenta demo Administrador
+      - name: Verificar rechazo de credenciales inválidas
         shell: bash
         run: |
           set -euo pipefail
-          codigo="$(curl -sS -o "$RUNNER_TEMP/admin.json" -w "%{http_code}" \
+          codigo="$(curl -sS -o "$RUNNER_TEMP/login-invalido.json" -w "%{http_code}" \
             -H "Content-Type: application/json" \
-            -d '{"identificador":"admin@saf.ts","contrasena":"12345678"}' \
+            -d '{"identificador":"qa.invalido@saf.ts","contrasena":"credencial-invalida"}' \
             "$API/api/v1/auth/login")"
-          test "$codigo" = "200"
-          python - "$RUNNER_TEMP/admin.json" <<'PY'
+          test "$codigo" = "401"
+          python - "$RUNNER_TEMP/login-invalido.json" <<'PY'
           import json,sys
           with open(sys.argv[1], encoding="utf-8") as f:
               d=json.load(f)
-          assert d.get("accessToken")
-          assert d.get("usuario",{}).get("rol")=="ADMINISTRADOR"
-          PY
-
-      - name: Verificar cuenta demo Vendedor
-        shell: bash
-        run: |
-          set -euo pipefail
-          codigo="$(curl -sS -o "$RUNNER_TEMP/vendedor.json" -w "%{http_code}" \
-            -H "Content-Type: application/json" \
-            -d '{"identificador":"vendedor@saf.ts","contrasena":"12345678"}' \
-            "$API/api/v1/auth/login")"
-          test "$codigo" = "200"
-          python - "$RUNNER_TEMP/vendedor.json" <<'PY'
-          import json,sys
-          with open(sys.argv[1], encoding="utf-8") as f:
-              d=json.load(f)
-          assert d.get("accessToken")
-          assert d.get("usuario",{}).get("rol")=="VENDEDOR"
+          assert d.get("statusCode")==401
           PY
 
       - name: Verificar 401 sin token
