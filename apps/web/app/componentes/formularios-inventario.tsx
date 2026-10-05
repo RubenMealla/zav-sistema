@@ -114,9 +114,9 @@ export function FormularioNuevoProducto() {
 
   return (
     <form action={registrarProducto} className="formulario formulario-modal">
-      <section className="form-seccion" aria-labelledby={`${baseId}-identificacion`}>
+      <section className="form-seccion">
         <header className="form-seccion-cabecera">
-          <div><strong id={`${baseId}-identificacion`}>Identificación</strong><p>El código se propone automáticamente y sigue siendo editable.</p></div>
+          <div><strong>Identificación</strong><p>El código se propone automáticamente y sigue siendo editable.</p></div>
           <span className="form-paso">01</span>
         </header>
         <div className="form-grid">
@@ -139,7 +139,7 @@ export function FormularioNuevoProducto() {
           </div>
 
           <div className="campo">
-            <div className="campo-etiqueta"><label htmlFor={idCodigo}>Código interno</label><span>Obligatorio</span></div>
+            <div className="campo-etiqueta"><label htmlFor={idCodigo}>Código</label><span>Obligatorio</span></div>
             <div className="campo-control-compuesto">
               <input
                 id={idCodigo}
@@ -184,9 +184,9 @@ export function FormularioNuevoProducto() {
         </div>
       </section>
 
-      <section className="form-seccion" aria-labelledby={`${baseId}-comercial`}>
+      <section className="form-seccion">
         <header className="form-seccion-cabecera">
-          <div><strong id={`${baseId}-comercial`}>Presentación comercial</strong><p>Completa los datos que se usarán en catálogo, inventario y pedidos.</p></div>
+          <div><strong>Presentación comercial</strong><p>Completa los datos que se usarán en catálogo, inventario y pedidos.</p></div>
           <span className="form-paso">02</span>
         </header>
         <div className="form-grid">
