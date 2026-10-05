@@ -2,17 +2,9 @@
 
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
+import { claveErrorOperacion } from './errores-operacion';
 
 const API = process.env.API_BASE_URL ?? (process.env.NODE_ENV === 'production' ? 'https://zav-api-2026.onrender.com' : 'http://localhost:3001');
-
-export function claveErrorOperacion(estado: number | 'conexion', fallback: string, conflicto?: string): string {
-  if (estado === 'conexion') return 'conexion';
-  if (estado === 400 || estado === 422) return 'solicitud-invalida';
-  if (estado === 404) return 'registro-no-encontrado';
-  if (estado === 409 && conflicto) return conflicto;
-  if (estado >= 500) return 'servicio';
-  return fallback;
-}
 
 export async function enviar(ruta: string, datos: Record<string, unknown>, metodo: 'POST' | 'PATCH' = 'POST'): Promise<number | 'conexion'> {
   const token = (await cookies()).get('zav_acceso')?.value;

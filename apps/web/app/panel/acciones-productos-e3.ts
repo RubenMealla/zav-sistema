@@ -1,7 +1,8 @@
 'use server';
 
 import { redirect } from 'next/navigation';
-import { claveErrorOperacion, enviar } from './acciones';
+import { enviar } from './acciones';
+import { claveErrorOperacion } from './errores-operacion';
 
 export async function editarProducto(formulario: FormData) {
   const productoId = String(formulario.get('productoId') ?? '');
