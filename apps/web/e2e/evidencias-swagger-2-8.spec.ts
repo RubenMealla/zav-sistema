@@ -62,32 +62,21 @@ async function capturar(op: Locator, nombre: string) {
 }
 
 async function autorizar(page: Page, jwt: string) {
-  const abrirModal = page.locator('.scheme-container .btn.authorize').first();
-  await abrirModal.scrollIntoViewIfNeeded();
-  await abrirModal.click();
-  const modal = page.locator('.modal-ux');
-  await expect(modal).toBeVisible();
-  const entrada = modal.locator('input').first();
-  await entrada.fill(jwt);
-  const boton = modal.getByRole('button', { name: /^Authorize$/i }).last();
-  await boton.click();
-  const cerrar = modal.getByRole('button', { name: /Close/i });
-  if (await cerrar.count()) await cerrar.click();
-  else await modal.locator('button.modal-ux-close').click();
-  await expect(modal).toBeHidden();
+  await page.waitForFunction(() => {
+    const w = window as unknown as { ui?: { preauthorizeApiKey?: (name: string, value: string) => void } };
+    return typeof w.ui?.preauthorizeApiKey === 'function';
+  });
+  await page.evaluate((token) => {
+    const w = window as unknown as { ui: { preauthorizeApiKey: (name: string, value: string) => void } };
+    w.ui.preauthorizeApiKey('bearerAuth', token);
+  }, jwt);
 }
 
 async function desautorizar(page: Page) {
-  const abrirModal = page.locator('.scheme-container .btn.authorize').first();
-  await abrirModal.scrollIntoViewIfNeeded();
-  await abrirModal.click();
-  const modal = page.locator('.modal-ux');
-  await expect(modal).toBeVisible();
-  const logout = modal.getByRole('button', { name: /Logout/i });
-  if (await logout.count()) await logout.click();
-  const cerrar = modal.getByRole('button', { name: /Close/i });
-  if (await cerrar.count()) await cerrar.click();
-  else await modal.locator('button.modal-ux-close').click();
+  await page.evaluate(() => {
+    const w = window as unknown as { ui?: { authActions?: { logout?: (names: string[]) => void } } };
+    w.ui?.authActions?.logout?.(['bearerAuth']);
+  });
 }
 
 test.describe.serial('Evidencias reales Swagger del apartado 2.8', () => {
