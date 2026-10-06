@@ -104,6 +104,21 @@ jobs:
           set -o pipefail
           pnpm --filter @zav/api test:e2e 2>&1 | tee apps/api/test-results/e2e.log
 
+      - name: Registrar resumen reproducible
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "QA backend · ZAV"
+            echo "commit=$GITHUB_SHA"
+            echo "run_id=$GITHUB_RUN_ID"
+            echo "run_number=$GITHUB_RUN_NUMBER"
+            echo "node=$(node --version)"
+            echo "pnpm=$(pnpm --version)"
+            echo "postgres=18"
+            echo "fecha_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          } > apps/api/test-results/resumen-qa.txt
+
       - name: Guardar evidencias de QA
         if: always()
         uses: actions/upload-artifact@v4
