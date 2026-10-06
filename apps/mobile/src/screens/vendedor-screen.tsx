@@ -284,7 +284,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
           const detalle = errores
             .map(({ recurso, error }) => `${recurso}: ${mensajeError(error)}`)
             .join(' · ');
-          setError(`No se pudo actualizar ${detalle}`);
+          setError(`ERROR DE CARGA · No se pudo actualizar ${detalle}`);
         }
       } finally {
         setCargando(false);
@@ -335,7 +335,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
         const detalle = errores
           .map(({ recurso, error }) => `${recurso}: ${mensajeError(error)}`)
           .join(' · ');
-        setError(`No se pudo actualizar ${detalle}`);
+        setError(`ERROR DE CARGA · No se pudo actualizar ${detalle}`);
       }
 
       if (activa) setCargando(false);
@@ -1421,7 +1421,7 @@ function NotificacionEstado({
   onCerrar: () => void;
 }) {
   const esError = tipo === 'error';
-  const coincidenciaCodigo = esError ? mensaje.match(/^(HTTP \d{3}|SIN RESPUESTA HTTP|VALIDACIÓN|ERROR LOCAL|SIN RESULTADOS|ROL NO PERMITIDO) · (.+)$/s) : null;
+  const coincidenciaCodigo = esError ? mensaje.match(/^(HTTP \d{3}|SIN RESPUESTA HTTP|VALIDACIÓN|ERROR LOCAL|ERROR DE CARGA|SIN RESULTADOS|ROL NO PERMITIDO) · (.+)$/s) : null;
   const codigo = coincidenciaCodigo?.[1] ?? null;
   const mensajeVisible = coincidenciaCodigo?.[2] ?? mensaje;
   const [progreso] = useState(() => new Animated.Value(0));

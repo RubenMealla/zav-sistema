@@ -379,7 +379,7 @@ export function SelectorUbicacionMapa({
             onDidFailLoadingMap={() => {
               setMapaListo(false);
               setError(
-                'El mapa no pudo cargarse. Revisa la conexión y vuelve a intentar.',
+                'ERROR LOCAL · El mapa no pudo cargarse. Revisa la conexión y vuelve a intentar.',
               );
             }}
             onRegionDidChange={(evento) => {

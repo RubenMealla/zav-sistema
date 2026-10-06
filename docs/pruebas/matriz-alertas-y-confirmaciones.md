@@ -61,6 +61,7 @@ Ejemplos de etiquetas visibles:
 - `SIN RESPUESTA HTTP`: no hubo respuesta de la API/servicio.
 - `VALIDACIÓN`: dato rechazado antes de enviar la solicitud.
 - `ERROR LOCAL`: problema del dispositivo o de una operación local sin respuesta HTTP.
+- `ERROR DE CARGA`: una o más consultas de refresco fallaron; el detalle conserva el código de cada recurso.
 - `SIN RESULTADOS`: consulta válida que no devolvió coincidencias.
 - `ROL NO PERMITIDO`: la sesión es válida, pero corresponde a una aplicación/rol distinto.
 
