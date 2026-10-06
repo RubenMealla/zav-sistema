@@ -1,0 +1,616 @@
+openapi: 3.0.3
+info:
+  title: ZAV API E3
+  version: 1.0.0
+  description: >
+    Contrato interactivo de la API REST de ZAV para demostración y revisión.
+    Usa "Authorize" con un JWT obtenido desde POST /api/v1/auth/login.
+    El visor muestra respuestas reales de la API y los errores documentados.
+    Los conflictos de negocio se representan actualmente con HTTP 409 y no con 422.
+servers:
+  - url: /api/swagger/proxy
+    description: Proxy seguro del visor Swagger hacia la API ZAV
+tags:
+  - name: Salud
+  - name: Autenticación
+  - name: Productos
+  - name: Lotes
+  - name: Movimientos
+  - name: Clientes
+  - name: Pedidos
+  - name: Geografía
+  - name: Administración
+paths:
+  /api/v1/salud:
+    get:
+      tags: [Salud]
+      security: []
+      summary: Comprobar disponibilidad de la API
+      responses:
+        '200':
+          description: API disponible
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [estado]
+                properties:
+                  estado: { type: string, example: ok }
+        '500': { $ref: '#/components/responses/Error500' }
+
+  /api/v1/auth/login:
+    post:
+      tags: [Autenticación]
+      security: []
+      summary: Iniciar sesión
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [identificador, contrasena]
+              properties:
+                identificador: { type: string }
+                contrasena: { type: string, format: password }
+      responses:
+        '200':
+          description: Sesión iniciada
+        '400': { $ref: '#/components/responses/Error400' }
+        '401': { $ref: '#/components/responses/Error401' }
+        '500': { $ref: '#/components/responses/Error500' }
+
+  /api/v1/auth/me:
+    get:
+      tags: [Autenticación]
+      summary: Consultar usuario autenticado
+      responses:
+        '200': { description: Perfil actual }
+        '401': { $ref: '#/components/responses/Error401' }
+        '500': { $ref: '#/components/responses/Error500' }
+
+  /api/v1/productos:
+    get:
+      tags: [Productos]
+      summary: Listar productos
+      parameters:
+        - { in: query, name: q, schema: { type: string } }
+        - { in: query, name: activo, schema: { type: boolean } }
+        - { in: query, name: page, schema: { type: integer, minimum: 1 } }
+        - { in: query, name: limit, schema: { type: integer, minimum: 1 } }
+      responses:
+        '200': { description: Lista paginada }
+        '400': { $ref: '#/components/responses/Error400' }
+        '401': { $ref: '#/components/responses/Error401' }
+        '403': { $ref: '#/components/responses/Error403' }
+        '500': { $ref: '#/components/responses/Error500' }
+    post:
+      tags: [Productos]
+      summary: Registrar producto
+      description: Requiere rol ADMINISTRADOR.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProductoEntrada' }
+      responses:
+        '201': { description: Producto creado }
+        '400': { $ref: '#/components/responses/Error400' }
+        '401': { $ref: '#/components/responses/Error401' }
+        '403': { $ref: '#/components/responses/Error403' }
+        '409': { $ref: '#/components/responses/Error409' }
+        '500': { $ref: '#/components/responses/Error500' }
+
+  /api/v1/productos/{id}:
+    get:
+      tags: [Productos]
+      summary: Consultar producto
+      parameters: [ { $ref: '#/components/parameters/Id' } ]
+      responses:
+        '200': { description: Producto }
+        '401': { $ref: '#/components/responses/Error401' }
+        '403': { $ref: '#/components/responses/Error403' }
+        '404': { $ref: '#/components/responses/Error404' }
+        '500': { $ref: '#/components/responses/Error500' }
+    patch:
+      tags: [Productos]
+      summary: Editar producto
+      description: Requiere rol ADMINISTRADOR.
+      parameters: [ { $ref: '#/components/parameters/Id' } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProductoEntrada' }
+      responses:
+        '200': { description: Producto actualizado }
+        '400': { $ref: '#/components/responses/Error400' }
+        '401': { $ref: '#/components/responses/Error401' }
+        '403': { $ref: '#/components/responses/Error403' }
+        '404': { $ref: '#/components/responses/Error404' }
+        '409': { $ref: '#/components/responses/Error409' }
+        '500': { $ref: '#/components/responses/Error500' }
+
+  /api/v1/productos/{id}/baja:
+    patch:
+      tags: [Productos]
+      summary: Desactivar producto
+      description: Requiere rol ADMINISTRADOR.
+      parameters: [ { $ref: '#/components/parameters/Id' } ]
+      responses:
+        '200': { description: Producto desactivado }
+        '401': { $ref: '#/components/responses/Error401' }
+        '403': { $ref: '#/components/responses/Error403' }
+        '404': { $ref: '#/components/responses/Error404' }
+        '409': { $ref: '#/components/responses/Error409' }
+        '500': { $ref: '#/components/responses/Error500' }
+
+  /api/v1/lotes:
+    get:
+      tags: [Lotes]
+      summary: Listar lotes
+      description: Requiere rol ADMINISTRADOR.
+      responses:
+        '200': { description: Lista paginada }
+        '400': { $ref: '#/components/responses/Error400' }
+        '401': { $ref: '#/components/responses/Error401' }
+        '403': { $ref: '#/components/responses/Error403' }
+        '500': { $ref: '#/components/responses/Error500' }
+    post:
+      tags: [Lotes]
+      summary: Registrar lote e ingreso inicial
+      description: Requiere rol ADMINISTRADOR.
+      responses:
+        '201': { description: Lote creado }
+        '400': { $ref: '#/components/responses/Error400' }
+        '401': { $ref: '#/components/responses/Error401' }
+        '403': { $ref: '#/components/responses/Error403' }
+        '404': { $ref: '#/components/responses/Error404' }
+        '409': { $ref: '#/components/responses/Error409' }
+        '500': { $ref: '#/components/responses/Error500' }
+
+  /api/v1/lotes/{id}:
+    get:
+      tags: [Lotes]
+      summary: Consultar lote
+      description: Requiere rol ADMINISTRADOR.
+      parameters: [ { $ref: '#/components/parameters/Id' } ]
+      responses:
+        '200': { description: Lote }
+        '400': { $ref: '#/components/responses/Error400' }
+        '401': { $ref: '#/components/responses/Error401' }
+        '403': { $ref: '#/components/responses/Error403' }
+        '404': { $ref: '#/components/responses/Error404' }
+        '500': { $ref: '#/components/responses/Error500' }
+
+  /api/v1/lotes/{id}/liberar:
+    post:
+      tags: [Lotes]
+      summary: Liberar lote
+      description: Requiere rol ADMINISTRADOR.
+      parameters: [ { $ref: '#/components/parameters/Id' } ]
+      responses:
+        '201': { description: Condición actualizada }
+        '400': { $ref: '#/components/responses/Error400' }
+        '401': { $ref: '#/components/responses/Error401' }
+        '403': { $ref: '#/components/responses/Error403' }
+        '404': { $ref: '#/components/responses/Error404' }
+        '409': { $ref: '#/components/responses/Error409' }
+        '500': { $ref: '#/components/responses/Error500' }
+
+  /api/v1/lotes/{id}/bloquear:
+    post:
+      tags: [Lotes]
+      summary: Bloquear lote
+      description: Requiere rol ADMINISTRADOR.
+      parameters: [ { $ref: '#/components/parameters/Id' } ]
+      responses:
+        '201': { description: Condición actualizada }
+        '400': { $ref: '#/components/responses/Error400' }
+        '401': { $ref: '#/components/responses/Error401' }
+        '403': { $ref: '#/components/responses/Error403' }
+        '404': { $ref: '#/components/responses/Error404' }
+        '409': { $ref: '#/components/responses/Error409' }
+        '500': { $ref: '#/components/responses/Error500' }
+
+  /api/v1/lotes/{id}/condiciones:
+    get:
+      tags: [Lotes]
+      summary: Consultar historial de condición del lote
+      description: Requiere rol ADMINISTRADOR.
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+        - { in: query, name: page, schema: { type: integer, minimum: 1 } }
+        - { in: query, name: limit, schema: { type: integer, minimum: 1 } }
+      responses:
+        '200': { description: Historial paginado }
+        '400': { $ref: '#/components/responses/Error400' }
+        '401': { $ref: '#/components/responses/Error401' }
+        '403': { $ref: '#/components/responses/Error403' }
+        '404': { $ref: '#/components/responses/Error404' }
+        '500': { $ref: '#/components/responses/Error500' }
+
+  /api/v1/movimientos:
+    get:
+      tags: [Movimientos]
+      summary: Listar movimientos de un lote
+      description: Requiere rol ADMINISTRADOR.
+      parameters:
+        - { in: query, name: loteId, required: true, schema: { type: string, format: uuid } }
+        - { in: query, name: page, schema: { type: integer, minimum: 1 } }
+        - { in: query, name: limit, schema: { type: integer, minimum: 1 } }
+      responses:
+        '200': { description: Movimientos paginados }
+        '400': { $ref: '#/components/responses/Error400' }
+        '401': { $ref: '#/components/responses/Error401' }
+        '403': { $ref: '#/components/responses/Error403' }
+        '404': { $ref: '#/components/responses/Error404' }
+        '500': { $ref: '#/components/responses/Error500' }
+
+  /api/v1/movimientos/traslado:
+    post:
+      tags: [Movimientos]
+      summary: Registrar traslado de inventario
+      description: Requiere rol ADMINISTRADOR.
+      responses:
+        '201': { description: Traslado creado }
+        '400': { $ref: '#/components/responses/Error400' }
+        '401': { $ref: '#/components/responses/Error401' }
+        '403': { $ref: '#/components/responses/Error403' }
+        '404': { $ref: '#/components/responses/Error404' }
+        '409': { $ref: '#/components/responses/Error409' }
+        '500': { $ref: '#/components/responses/Error500' }
+
+  /api/v1/clientes:
+    get:
+      tags: [Clientes]
+      summary: Listar clientes
+      description: Requiere rol VENDEDOR.
+      responses:
+        '200': { description: Lista paginada }
+        '400': { $ref: '#/components/responses/Error400' }
+        '401': { $ref: '#/components/responses/Error401' }
+        '403': { $ref: '#/components/responses/Error403' }
+        '500': { $ref: '#/components/responses/Error500' }
+    post:
+      tags: [Clientes]
+      summary: Registrar cliente georreferenciado
+      description: Requiere rol VENDEDOR.
+      responses:
+        '201': { description: Cliente creado }
+        '400': { $ref: '#/components/responses/Error400' }
+        '401': { $ref: '#/components/responses/Error401' }
+        '403': { $ref: '#/components/responses/Error403' }
+        '500': { $ref: '#/components/responses/Error500' }
+
+  /api/v1/clientes/{id}:
+    get:
+      tags: [Clientes]
+      summary: Consultar cliente
+      description: Requiere rol VENDEDOR.
+      parameters: [ { $ref: '#/components/parameters/Id' } ]
+      responses:
+        '200': { description: Cliente }
+        '401': { $ref: '#/components/responses/Error401' }
+        '403': { $ref: '#/components/responses/Error403' }
+        '404': { $ref: '#/components/responses/Error404' }
+        '500': { $ref: '#/components/responses/Error500' }
+    patch:
+      tags: [Clientes]
+      summary: Editar cliente
+      description: Requiere rol VENDEDOR.
+      parameters: [ { $ref: '#/components/parameters/Id' } ]
+      responses:
+        '200': { description: Cliente actualizado }
+        '400': { $ref: '#/components/responses/Error400' }
+        '401': { $ref: '#/components/responses/Error401' }
+        '403': { $ref: '#/components/responses/Error403' }
+        '404': { $ref: '#/components/responses/Error404' }
+        '500': { $ref: '#/components/responses/Error500' }
+
+  /api/v1/clientes/{id}/ubicacion:
+    patch:
+      tags: [Clientes]
+      summary: Actualizar ubicación confirmada del cliente
+      description: Requiere rol VENDEDOR.
+      parameters: [ { $ref: '#/components/parameters/Id' } ]
+      responses:
+        '200': { description: Cliente actualizado }
+        '400': { $ref: '#/components/responses/Error400' }
+        '401': { $ref: '#/components/responses/Error401' }
+        '403': { $ref: '#/components/responses/Error403' }
+        '404': { $ref: '#/components/responses/Error404' }
+        '500': { $ref: '#/components/responses/Error500' }
+
+  /api/v1/clientes/{id}/estado:
+    patch:
+      tags: [Clientes]
+      summary: Activar o desactivar cliente
+      description: Requiere rol VENDEDOR.
+      parameters: [ { $ref: '#/components/parameters/Id' } ]
+      responses:
+        '200': { description: Estado actualizado }
+        '400': { $ref: '#/components/responses/Error400' }
+        '401': { $ref: '#/components/responses/Error401' }
+        '403': { $ref: '#/components/responses/Error403' }
+        '404': { $ref: '#/components/responses/Error404' }
+        '500': { $ref: '#/components/responses/Error500' }
+
+  /api/v1/pedidos:
+    get:
+      tags: [Pedidos]
+      summary: Listar pedidos propios
+      description: Requiere rol VENDEDOR.
+      parameters:
+        - { in: query, name: estado, schema: { type: string } }
+        - { in: query, name: page, schema: { type: integer, minimum: 1 } }
+        - { in: query, name: limit, schema: { type: integer, minimum: 1 } }
+      responses:
+        '200': { description: Lista paginada }
+        '400': { $ref: '#/components/responses/Error400' }
+        '401': { $ref: '#/components/responses/Error401' }
+        '403': { $ref: '#/components/responses/Error403' }
+        '500': { $ref: '#/components/responses/Error500' }
+    post:
+      tags: [Pedidos]
+      summary: Registrar pedido
+      description: Requiere rol VENDEDOR.
+      responses:
+        '201': { description: Pedido REGISTRADO }
+        '400': { $ref: '#/components/responses/Error400' }
+        '401': { $ref: '#/components/responses/Error401' }
+        '403': { $ref: '#/components/responses/Error403' }
+        '404': { $ref: '#/components/responses/Error404' }
+        '409': { $ref: '#/components/responses/Error409' }
+        '500': { $ref: '#/components/responses/Error500' }
+
+  /api/v1/pedidos/{id}:
+    get:
+      tags: [Pedidos]
+      summary: Consultar pedido propio
+      description: Requiere rol VENDEDOR.
+      parameters: [ { $ref: '#/components/parameters/Id' } ]
+      responses:
+        '200': { description: Pedido }
+        '401': { $ref: '#/components/responses/Error401' }
+        '403': { $ref: '#/components/responses/Error403' }
+        '404': { $ref: '#/components/responses/Error404' }
+        '500': { $ref: '#/components/responses/Error500' }
+    patch:
+      tags: [Pedidos]
+      summary: Editar pedido antes del retiro
+      description: Requiere rol VENDEDOR.
+      parameters: [ { $ref: '#/components/parameters/Id' } ]
+      responses:
+        '200': { description: Pedido actualizado }
+        '400': { $ref: '#/components/responses/Error400' }
+        '401': { $ref: '#/components/responses/Error401' }
+        '403': { $ref: '#/components/responses/Error403' }
+        '404': { $ref: '#/components/responses/Error404' }
+        '409': { $ref: '#/components/responses/Error409' }
+        '500': { $ref: '#/components/responses/Error500' }
+
+  /api/v1/pedidos/{id}/cancelacion:
+    post:
+      tags: [Pedidos]
+      summary: Anular pedido antes del retiro
+      description: Requiere rol VENDEDOR.
+      parameters: [ { $ref: '#/components/parameters/Id' } ]
+      responses:
+        '201': { description: Pedido CANCELADO }
+        '401': { $ref: '#/components/responses/Error401' }
+        '403': { $ref: '#/components/responses/Error403' }
+        '404': { $ref: '#/components/responses/Error404' }
+        '409': { $ref: '#/components/responses/Error409' }
+        '500': { $ref: '#/components/responses/Error500' }
+
+  /api/v1/pedidos/{id}/retiro:
+    post:
+      tags: [Pedidos]
+      summary: Retirar pedido para reparto
+      description: Requiere rol VENDEDOR.
+      parameters: [ { $ref: '#/components/parameters/Id' } ]
+      responses:
+        '201': { description: Pedido EN_DISTRIBUCION }
+        '400': { $ref: '#/components/responses/Error400' }
+        '401': { $ref: '#/components/responses/Error401' }
+        '403': { $ref: '#/components/responses/Error403' }
+        '404': { $ref: '#/components/responses/Error404' }
+        '409': { $ref: '#/components/responses/Error409' }
+        '500': { $ref: '#/components/responses/Error500' }
+
+  /api/v1/pedidos/retiros:
+    post:
+      tags: [Pedidos]
+      summary: Retirar varios pedidos
+      description: Requiere rol VENDEDOR.
+      responses:
+        '201': { description: Resultado completo, parcial o sin cambios }
+        '400': { $ref: '#/components/responses/Error400' }
+        '401': { $ref: '#/components/responses/Error401' }
+        '403': { $ref: '#/components/responses/Error403' }
+        '500': { $ref: '#/components/responses/Error500' }
+
+  /api/v1/pedidos/{id}/entrega:
+    post:
+      tags: [Pedidos]
+      summary: Confirmar entrega con GPS puntual
+      description: Requiere rol VENDEDOR.
+      parameters: [ { $ref: '#/components/parameters/Id' } ]
+      responses:
+        '201': { description: Pedido ENTREGADO }
+        '400': { $ref: '#/components/responses/Error400' }
+        '401': { $ref: '#/components/responses/Error401' }
+        '403': { $ref: '#/components/responses/Error403' }
+        '404': { $ref: '#/components/responses/Error404' }
+        '409': { $ref: '#/components/responses/Error409' }
+        '500': { $ref: '#/components/responses/Error500' }
+
+  /api/v1/pedidos/planificacion:
+    post:
+      tags: [Pedidos]
+      summary: Sugerir secuencia geográfica de reparto
+      description: Requiere rol VENDEDOR. No es optimización vial.
+      responses:
+        '201': { description: Secuencia sugerida }
+        '400': { $ref: '#/components/responses/Error400' }
+        '401': { $ref: '#/components/responses/Error401' }
+        '403': { $ref: '#/components/responses/Error403' }
+        '404': { $ref: '#/components/responses/Error404' }
+        '409': { $ref: '#/components/responses/Error409' }
+        '500': { $ref: '#/components/responses/Error500' }
+
+  /api/v1/pedidos/disponibilidad:
+    get:
+      tags: [Pedidos]
+      summary: Consultar disponibilidad comercial
+      description: Requiere rol VENDEDOR.
+      responses:
+        '200': { description: Productos y cantidades disponibles }
+        '401': { $ref: '#/components/responses/Error401' }
+        '403': { $ref: '#/components/responses/Error403' }
+        '500': { $ref: '#/components/responses/Error500' }
+
+  /api/v1/admin/pedidos:
+    get:
+      tags: [Administración]
+      summary: Auditar pedidos y vendedor responsable
+      description: Requiere rol ADMINISTRADOR.
+      responses:
+        '200': { description: Lista paginada }
+        '400': { $ref: '#/components/responses/Error400' }
+        '401': { $ref: '#/components/responses/Error401' }
+        '403': { $ref: '#/components/responses/Error403' }
+        '500': { $ref: '#/components/responses/Error500' }
+
+  /api/v1/geografia/geocodificar:
+    get:
+      tags: [Geografía]
+      summary: Buscar direcciones en Tarija mediante Geoapify
+      description: Requiere rol VENDEDOR. La clave del proveedor permanece en backend.
+      parameters:
+        - { in: query, name: q, required: true, schema: { type: string, minLength: 2, maxLength: 200 } }
+      responses:
+        '200': { description: Coincidencias }
+        '400': { $ref: '#/components/responses/Error400' }
+        '401': { $ref: '#/components/responses/Error401' }
+        '403': { $ref: '#/components/responses/Error403' }
+        '503': { $ref: '#/components/responses/Error503' }
+        '500': { $ref: '#/components/responses/Error500' }
+
+  /api/v1/geografia/autocompletar:
+    get:
+      tags: [Geografía]
+      summary: Autocompletar direcciones en Tarija
+      description: Requiere rol VENDEDOR.
+      parameters:
+        - { in: query, name: q, required: true, schema: { type: string, minLength: 2, maxLength: 200 } }
+      responses:
+        '200': { description: Coincidencias }
+        '400': { $ref: '#/components/responses/Error400' }
+        '401': { $ref: '#/components/responses/Error401' }
+        '403': { $ref: '#/components/responses/Error403' }
+        '503': { $ref: '#/components/responses/Error503' }
+        '500': { $ref: '#/components/responses/Error500' }
+
+  /api/v1/geografia/reversa:
+    get:
+      tags: [Geografía]
+      summary: Obtener dirección desde coordenadas
+      description: Requiere rol VENDEDOR.
+      parameters:
+        - { in: query, name: latitud, required: true, schema: { type: number } }
+        - { in: query, name: longitud, required: true, schema: { type: number } }
+      responses:
+        '200': { description: Dirección normalizada }
+        '400': { $ref: '#/components/responses/Error400' }
+        '401': { $ref: '#/components/responses/Error401' }
+        '403': { $ref: '#/components/responses/Error403' }
+        '503': { $ref: '#/components/responses/Error503' }
+        '500': { $ref: '#/components/responses/Error500' }
+
+  /api/v1/ubicaciones/venta-despacho:
+    get:
+      tags: [Geografía]
+      summary: Consultar punto de Venta y Despacho
+      responses:
+        '200': { description: Ubicación }
+        '401': { $ref: '#/components/responses/Error401' }
+        '403': { $ref: '#/components/responses/Error403' }
+        '404': { $ref: '#/components/responses/Error404' }
+        '500': { $ref: '#/components/responses/Error500' }
+
+  /api/v1/ubicaciones/{id}/georreferencia:
+    patch:
+      tags: [Geografía]
+      summary: Configurar georreferencia física de Venta y Despacho
+      description: Requiere rol ADMINISTRADOR.
+      parameters: [ { $ref: '#/components/parameters/Id' } ]
+      responses:
+        '200': { description: Ubicación actualizada }
+        '400': { $ref: '#/components/responses/Error400' }
+        '401': { $ref: '#/components/responses/Error401' }
+        '403': { $ref: '#/components/responses/Error403' }
+        '404': { $ref: '#/components/responses/Error404' }
+        '409': { $ref: '#/components/responses/Error409' }
+        '500': { $ref: '#/components/responses/Error500' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    Id:
+      in: path
+      name: id
+      required: true
+      schema: { type: string, format: uuid }
+  schemas:
+    ProductoEntrada:
+      type: object
+      properties:
+        codigo: { type: string }
+        nombre: { type: string }
+        familia: { type: string }
+        presentacion: { type: string }
+        pesoGramos: { type: integer, minimum: 1 }
+        precioBob: { type: number, minimum: 0 }
+    ApiError:
+      type: object
+      required: [statusCode, error, message, path, timestamp]
+      properties:
+        statusCode: { type: integer }
+        error: { type: string }
+        message:
+          oneOf:
+            - { type: string }
+            - { type: array, items: { type: string } }
+        path: { type: string }
+        timestamp: { type: string, format: date-time }
+  responses:
+    Error400:
+      description: Entrada inválida
+      content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+    Error401:
+      description: No autenticado
+      content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+    Error403:
+      description: Autenticado sin permiso
+      content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+    Error404:
+      description: Recurso inexistente
+      content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+    Error409:
+      description: Conflicto de negocio o estado
+      content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+    Error500:
+      description: Error interno genérico; no expone trazas ni SQL
+      content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+    Error503:
+      description: Servicio externo temporalmente no disponible
+      content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+
+security:
+  - bearerAuth: []

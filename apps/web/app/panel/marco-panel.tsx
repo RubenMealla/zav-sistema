@@ -53,6 +53,7 @@ export function MarcoPanel({ vista, perfil, children }: {
             <span className="avatar" aria-hidden="true">{inicial}</span>
             <div><strong>{perfil.nombre}</strong><span>{perfil.identificador}</span></div>
           </div>
+          <Link href="/swagger" className="boton-cerrar-sesion" target="_blank" rel="noreferrer">Swagger API <span aria-hidden="true">↗</span></Link>
           <form action={cerrarSesion}>
             <BotonEnviar className="boton-cerrar-sesion" pendiente="Saliendo…" confirmacion={{ titulo: 'Cerrar sesión', mensaje: 'Se cerrará tu sesión administrativa en este navegador.', confirmar: 'Sí, cerrar sesión' }}>Cerrar sesión <span aria-hidden="true">↗</span></BotonEnviar>
           </form>
