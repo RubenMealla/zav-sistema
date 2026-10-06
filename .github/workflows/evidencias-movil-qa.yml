@@ -152,17 +152,20 @@ jobs:
             latitud:-21.548,
             longitud:-64.720
           });
-          await post('/api/v1/pedidos',vendedor,{
+          const pedido1=await post('/api/v1/pedidos',vendedor,{
             clienteId:cliente1.id,
             observacion:'Pedido sintético para evidencia visual',
             detalles:[{productoId:producto.id,cantidad:2}]
           });
-          await post('/api/v1/pedidos',vendedor,{
+          const pedido2=await post('/api/v1/pedidos',vendedor,{
             clienteId:cliente2.id,
             observacion:'Segundo pedido sintético para evidencia visual',
             detalles:[{productoId:producto.id,cantidad:1}]
           });
-          console.log('Datos sintéticos móviles creados.');
+          await post('/api/v1/pedidos/'+pedido2.id+'/retiro',vendedor,{
+            operacionClave:crypto.randomUUID()
+          });
+          console.log('Datos sintéticos móviles creados:', pedido1.id, pedido2.id);
           NODE
 
       - name: Generar proyecto Android
