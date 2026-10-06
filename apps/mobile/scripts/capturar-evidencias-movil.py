@@ -58,7 +58,7 @@ def tap(value: str, contains: bool = False):
     run(["adb", "shell", "input", "tap", str(x), str(y)])
     time.sleep(0.8)
 
-def wait_for(value: str, seconds: int = 40):
+def wait_for(value: str, seconds: int = 90):
     deadline = time.time() + seconds
     while time.time() < deadline:
         try:
@@ -112,8 +112,10 @@ def relaunch():
         check=False,
         timeout=15,
     )
-    # El primer arranque release puede tardar bastante en el emulador CI.
-    time.sleep(45)
+    # El primer arranque release tarda más en el emulador que en un dispositivo
+    # físico. En los runs anteriores React Native terminó de montar la UI cerca
+    # de dos minutos después del start; se espera antes de interrogar UIAutomator.
+    time.sleep(130)
     shot("MOV-00-arranque-diagnostico.png")
 
 def login(identifier: str, password: str):
@@ -174,14 +176,57 @@ def main():
     wait_for("1 producto(s)")
     shot("MOV-09-pedido-preparado.png")
 
+    tap("Registrar pedido")
+    wait_for("Pedido registrado")
+    shot("MOV-10-pedido-registrado.png")
+
     tap("Clientes")
     wait_for("Clientes")
     wait_for("Cliente Centro QA")
-    shot("MOV-10-clientes.png")
+    shot("MOV-11-clientes.png")
 
     tap("Guardar cliente")
     wait_for("VALIDACIÓN")
-    shot("MOV-11-validacion-cliente.png")
+    shot("MOV-12-validacion-cliente.png")
+
+    tap("Definir ubicación")
+    wait_for("Confirmar punto en mapa")
+    shot("MOV-13-mapa-cliente.png")
+    tap("Cerrar")
+    wait_for("Nuevo cliente")
+
+    tap("Pedidos")
+    wait_for("Acciones")
+    shot("MOV-14-pedidos-acciones.png")
+
+    tap("Seleccionar todos")
+    wait_for("Desde ZAV")
+    shot("MOV-15-pedidos-seleccionados.png")
+
+    tap("Desde ZAV")
+    wait_for("Recorrido activo")
+    shot("MOV-16-recorrido-organizado.png")
+
+    tap("Retirar seleccionados", contains=True)
+    wait_for("Retirar seleccionados para reparto")
+    shot("MOV-17-confirmacion-retiro.png")
+    tap("Confirmar retiro")
+    wait_for("pasaron a reparto")
+    shot("MOV-18-retiro-completado.png")
+
+    # El emulador recibe una posición sintética solo para validar el flujo
+    # técnico de captura puntual; no representa una ubicación real de ZAV.
+    run(["adb", "emu", "geo", "fix", "-64.7300", "-21.5350"], check=False)
+    run(["adb", "shell", "pm", "grant", PKG, "android.permission.ACCESS_FINE_LOCATION"], check=False)
+    run(["adb", "shell", "pm", "grant", PKG, "android.permission.ACCESS_COARSE_LOCATION"], check=False)
+    time.sleep(2)
+
+    tap("Confirmar entrega")
+    wait_for("Comprobar entrega")
+    shot("MOV-19-comprobar-entrega-gps.png")
+    tap("Confirmar entrega")
+    wait_for("Entrega registrada")
+    shot("MOV-20-entrega-registrada.png")
 
     dump_ui("arbol-final")
     print("Capturas móviles reales generadas:")
