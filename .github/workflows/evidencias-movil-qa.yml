@@ -95,6 +95,77 @@ jobs:
           cat /tmp/zav-api-mobile.log
           exit 1
 
+      - name: Sembrar datos sintéticos visibles
+        shell: bash
+        run: |
+          node <<'NODE'
+          const API='http://127.0.0.1:3001';
+          const post=async(path,token,data)=>{
+            const r=await fetch(API+path,{method:'POST',headers:{'content-type':'application/json',...(token?{authorization:'Bearer '+token}:{})},body:JSON.stringify(data)});
+            const body=await r.json().catch(()=>({}));
+            if(!r.ok) throw new Error(path+' '+r.status+' '+JSON.stringify(body));
+            return body;
+          };
+          const login=async(id,pw)=>(await post('/api/v1/auth/login',null,{identificador:id,contrasena:pw})).accessToken;
+          const admin=await login(process.env.QA_ADMIN_IDENTIFICADOR,process.env.QA_ADMIN_PASSWORD);
+          const producto=await post('/api/v1/productos',admin,{
+            codigo:'QA-MOBILE-01',
+            nombre:'Jamón cocido QA',
+            familia:'Fiambres',
+            presentacion:'Unidad de 250 g',
+            pesoGramos:250,
+            precioBob:24.5
+          });
+          const lote=await post('/api/v1/lotes',admin,{
+            operacionClave:crypto.randomUUID(),
+            productoId:producto.id,
+            codigo:'LOTE-QA-MOBILE-01',
+            elaboradoEl:'2026-10-01',
+            venceEl:'2026-12-31',
+            cantidadInicial:12,
+            ubicacionCodigo:'PRODUCCION_ALMACENAMIENTO'
+          });
+          await post('/api/v1/lotes/'+lote.id+'/liberar',admin,{
+            operacionClave:crypto.randomUUID(),
+            motivo:'Datos sintéticos para evidencia visual'
+          });
+          await post('/api/v1/movimientos/traslado',admin,{
+            operacionClave:crypto.randomUUID(),
+            loteId:lote.id,
+            origenCodigo:'PRODUCCION_ALMACENAMIENTO',
+            destinoCodigo:'VENTA_DESPACHO',
+            cantidad:10,
+            referencia:'QA-MOBILE'
+          });
+
+          const vendedor=await login(process.env.QA_VENDEDOR_IDENTIFICADOR,process.env.QA_VENDEDOR_PASSWORD);
+          const cliente1=await post('/api/v1/clientes',vendedor,{
+            nombre:'Cliente Centro QA',
+            telefono:'70000001',
+            direccion:'Zona central, Tarija',
+            latitud:-21.535,
+            longitud:-64.730
+          });
+          const cliente2=await post('/api/v1/clientes',vendedor,{
+            nombre:'Cliente Sur QA',
+            telefono:'70000002',
+            direccion:'Zona sur, Tarija',
+            latitud:-21.548,
+            longitud:-64.720
+          });
+          await post('/api/v1/pedidos',vendedor,{
+            clienteId:cliente1.id,
+            observacion:'Pedido sintético para evidencia visual',
+            detalles:[{productoId:producto.id,cantidad:2}]
+          });
+          await post('/api/v1/pedidos',vendedor,{
+            clienteId:cliente2.id,
+            observacion:'Segundo pedido sintético para evidencia visual',
+            detalles:[{productoId:producto.id,cantidad:1}]
+          });
+          console.log('Datos sintéticos móviles creados.');
+          NODE
+
       - name: Generar proyecto Android
         run: pnpm --filter @zav/mobile exec expo prebuild --platform android --no-install --clean
 
