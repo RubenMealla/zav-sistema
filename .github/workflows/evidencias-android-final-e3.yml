@@ -1,0 +1,144 @@
+name: Evidencias Android QA final E3
+
+on:
+  push:
+    branches:
+      - pruebas/e3-qa-final-2-8
+    paths:
+      - "apps/mobile/**"
+      - "apps/api/**"
+      - ".github/workflows/evidencias-android-final-e3.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "apps/mobile/**"
+      - "apps/api/**"
+      - ".github/workflows/evidencias-android-final-e3.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: evidencias-android-final-e3-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  evidencias-android:
+    name: Capturar ZAV Vendedor en Android
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: zav_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d zav_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      CI: 1
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/zav_test
+      JWT_SECRET: zav-qa-jwt-secret-android-final-e3-0123456789abcdef
+      QA_ADMIN_IDENTIFICADOR: admin@zav.test
+      QA_ADMIN_PASSWORD: AdminQA2026
+      QA_VENDEDOR_IDENTIFICADOR: vendedor@zav.test
+      QA_VENDEDOR_PASSWORD: VendedorQA2026
+      EXPO_PUBLIC_API_BASE_URL: http://127.0.0.1:3001
+      EXPO_PUBLIC_MAP_STYLE_URL: https://tiles.openfreemap.org/styles/liberty
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.4.2
+          run_install: false
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Configurar Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+
+      - name: Preparar PostgreSQL aislado
+        run: NODE_ENV=test node -e "import('./apps/api/test/global-setup-e2e.mjs').then((m) => m.default())"
+
+      - name: Compilar API
+        run: pnpm --filter @zav/api build
+
+      - name: Iniciar API local para Android
+        shell: bash
+        run: |
+          mkdir -p apps/mobile/test-results
+          NODE_ENV=test PORT=3001 pnpm --filter @zav/api start:prod > apps/mobile/test-results/api-android.log 2>&1 &
+          echo $! > apps/mobile/test-results/api.pid
+          for intento in {1..60}; do
+            if curl --fail --silent http://127.0.0.1:3001/api/v1/salud > /dev/null; then
+              echo "API lista"
+              exit 0
+            fi
+            sleep 1
+          done
+          cat apps/mobile/test-results/api-android.log
+          exit 1
+
+      - name: Generar proyecto Android
+        run: pnpm --filter @zav/mobile exec expo prebuild --platform android --no-install --clean
+
+      - name: Compilar APK release autónomo de evidencia
+        working-directory: apps/mobile/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon
+
+      - name: Ejecutar aplicación y capturar pantallas
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: |
+            adb install -r apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+            python3 apps/mobile/scripts/capturar-evidencias-android.py
+
+      - name: Registrar resumen reproducible
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p apps/mobile/test-results/evidencias-android-final
+          echo "Evidencias Android QA final E3" > apps/mobile/test-results/evidencias-android-final/resumen.txt
+          echo "commit=$GITHUB_SHA" >> apps/mobile/test-results/evidencias-android-final/resumen.txt
+          echo "run_id=$GITHUB_RUN_ID" >> apps/mobile/test-results/evidencias-android-final/resumen.txt
+          echo "run_number=$GITHUB_RUN_NUMBER" >> apps/mobile/test-results/evidencias-android-final/resumen.txt
+          echo "api_local=http://127.0.0.1:3001" >> apps/mobile/test-results/evidencias-android-final/resumen.txt
+
+      - name: Guardar evidencias Android
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidencias-android-final-e3-${{ github.run_number }}
+          path: |
+            apps/mobile/test-results/evidencias-android-final/
+            apps/mobile/test-results/api-android.log
+          if-no-files-found: error
+          retention-days: 30
