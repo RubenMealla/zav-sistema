@@ -24,8 +24,20 @@ export async function iniciarSesion(formulario: FormData) {
   } catch {
     redirect('/acceso?error=conexion&codigo=RED');
   }
-  if (!respuesta.ok) redirect(`/acceso?error=credenciales&codigo=${respuesta.status}`);
-  const datos = (await respuesta.json()) as RespuestaLogin;
+  if (!respuesta.ok) {
+    const clave =
+      respuesta.status === 400 ? 'datos'
+      : respuesta.status === 401 ? 'credenciales'
+      : respuesta.status === 403 ? 'permisos'
+      : 'servicio';
+    redirect(`/acceso?error=${clave}&codigo=${respuesta.status}`);
+  }
+  let datos: RespuestaLogin;
+  try {
+    datos = (await respuesta.json()) as RespuestaLogin;
+  } catch {
+    redirect('/acceso?error=servicio&codigo=RESPUESTA_INVALIDA');
+  }
   if (!datos.accessToken || datos.usuario?.rol !== 'ADMINISTRADOR') {
     redirect('/acceso?error=permisos&codigo=403');
   }

@@ -11,6 +11,7 @@ function etiquetaCodigo(codigo?: string) {
  if (/^\d{3}$/.test(codigo)) return `HTTP ${codigo}`;
  if (codigo === 'VALIDACION') return 'VALIDACIÓN';
  if (codigo === 'RED') return 'SIN RESPUESTA HTTP';
+ if (codigo === 'RESPUESTA_INVALIDA') return 'RESPUESTA INVÁLIDA';
  return codigo;
 }
 
