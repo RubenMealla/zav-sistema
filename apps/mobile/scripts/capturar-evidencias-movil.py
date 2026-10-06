@@ -94,10 +94,15 @@ def dismiss_system_anr():
             time.sleep(2)
 
 def relaunch():
-    # El emulador de CI puede mostrar un diálogo transitorio de System UI.
-    # El toque corresponde al botón "Wait" del diálogo estándar Pixel; si no
-    # existe, se ejecuta antes de lanzar ZAV y no afecta la app.
-    run(["adb", "shell", "input", "tap", "540", "1330"], check=False)
+    # El runner Android puede mostrar un ANR transitorio del proceso system
+    # durante el arranque en frío. Se pulsa "Wait" en la posición estable
+    # del perfil Pixel y se ocultan diálogos de error del sistema antes de
+    # iniciar ZAV. Esto no interactúa con controles de la aplicación.
+    run(["adb", "shell", "settings", "put", "global", "hide_error_dialogs", "1"], check=False)
+    for _ in range(3):
+        run(["adb", "shell", "input", "tap", "300", "1240"], check=False)
+        time.sleep(3)
+    run(["adb", "shell", "input", "keyevent", "3"], check=False)
     time.sleep(2)
     run(["adb", "shell", "am", "force-stop", PKG], check=False)
     # Arranque determinista de la actividad principal. "monkey" puede dejar
