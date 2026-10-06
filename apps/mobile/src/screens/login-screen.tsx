@@ -17,6 +17,14 @@ type Props = {
   onSesion: (sesion: Sesion) => Promise<void>;
 };
 
+function separarError(mensaje: string) {
+  const coincidencia = mensaje.match(/^(HTTP \d{3}|SIN RESPUESTA HTTP|VALIDACIÓN|ERROR LOCAL|ROL NO PERMITIDO) · (.+)$/s);
+  return {
+    codigo: coincidencia?.[1] ?? null,
+    mensaje: coincidencia?.[2] ?? mensaje,
+  };
+}
+
 export function LoginScreen({ onSesion }: Props) {
   const [identificador, setIdentificador] = useState('');
   const [contrasena, setContrasena] = useState('');
@@ -26,7 +34,7 @@ export function LoginScreen({ onSesion }: Props) {
   async function ingresar() {
     const usuario = identificador.trim().toLowerCase();
     if (!usuario || !contrasena) {
-      setError('Ingresa tu identificador y contraseña.');
+      setError('VALIDACIÓN · Ingresa tu identificador y contraseña.');
       return;
     }
 
@@ -35,16 +43,23 @@ export function LoginScreen({ onSesion }: Props) {
     try {
       const sesion = await iniciarSesion(usuario, contrasena);
       if (sesion.usuario.rol !== 'VENDEDOR') {
-        setError('Esta aplicación es exclusiva para el rol Vendedor.');
+        setError('ROL NO PERMITIDO · Esta aplicación es exclusiva para el rol Vendedor.');
         return;
       }
       await onSesion(sesion);
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'No se pudo iniciar sesión.');
+      if (e instanceof ApiError) {
+        const codigo = e.status > 0 ? `HTTP ${e.status}` : 'SIN RESPUESTA HTTP';
+        setError(`${codigo} · ${e.message}`);
+      } else {
+        setError('ERROR LOCAL · No se pudo iniciar sesión.');
+      }
     } finally {
       setEnviando(false);
     }
   }
+
+  const errorVisible = separarError(error);
 
   return (
     <KeyboardAvoidingView
@@ -86,7 +101,12 @@ export function LoginScreen({ onSesion }: Props) {
           onSubmitEditing={ingresar}
         />
 
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+        {error ? (
+          <View style={styles.error}>
+            {errorVisible.codigo ? <Text style={styles.errorCodigo}>{errorVisible.codigo}</Text> : null}
+            <Text style={styles.errorMensaje}>{errorVisible.mensaje}</Text>
+          </View>
+        ) : null}
 
         <Pressable
           accessibilityRole="button"
@@ -165,10 +185,19 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   error: {
-    color: '#a1322c',
     backgroundColor: '#fcefeb',
     borderRadius: 6,
     padding: 10,
+    gap: 3,
+  },
+  errorCodigo: {
+    color: '#8b2f25',
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 0.4,
+  },
+  errorMensaje: {
+    color: '#a1322c',
     lineHeight: 19,
   },
   boton: {

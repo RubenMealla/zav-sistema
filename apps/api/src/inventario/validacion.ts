@@ -66,6 +66,17 @@ export function fechaIso(valor: unknown, campo: string): string {
   return valor;
 }
 
+export function fechaHoyBolivia(fecha = new Date()): string {
+  const partes = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/La_Paz',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(fecha);
+  const porTipo = new Map(partes.map((parte) => [parte.type, parte.value]));
+  return `${porTipo.get('year')}-${porTipo.get('month')}-${porTipo.get('day')}`;
+}
+
 export function paginacion(consulta: Record<string, unknown>, permitidos: readonly string[]) {
   if (Object.keys(consulta).some((clave) => !permitidos.includes(clave))) {
     throw new BadRequestException('Parametro de consulta no permitido.');

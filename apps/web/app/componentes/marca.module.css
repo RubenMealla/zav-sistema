@@ -1,22 +1,9 @@
-.marca {
-  display: block;
-  flex: none;
-  width: 144px;
-  height: 82px;
-  overflow: hidden;
-  background: #000;
-}
-
-.marca img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center;
-}
-
-.grande {
-  width: min(100%, 440px);
-  height: auto;
-  aspect-ratio: 1.25;
-}
+.marca{display:inline-flex;align-items:center;gap:12px;flex:none}
+.simbolo,.lettering{display:block;flex:none;line-height:0}
+.simbolo{width:64px}.lettering{width:122px}
+.simbolo svg,.lettering svg{display:block;width:100%;height:auto;overflow:visible}
+.compacta .simbolo{width:54px}.compacta .lettering{width:104px}
+.grande{display:grid;gap:18px;justify-items:start}
+.grande .simbolo{width:min(100%,360px)}.grande .lettering{width:min(100%,520px)}
+.soloSimbolo .lettering{display:none}.soloLettering .simbolo{display:none}
+@media(max-width:640px){.compacta .simbolo{width:46px}.compacta .lettering{width:90px}}

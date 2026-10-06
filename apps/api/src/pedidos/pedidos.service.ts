@@ -331,7 +331,7 @@ export class PedidosService {
   }
 
   async listarAdmin(consulta: Record<string, unknown>) {
-    const { page, limit } = paginacion(consulta, ['estado', 'vendedorId', 'page', 'limit']);
+    const { page, limit } = paginacion(consulta, ['estado', 'vendedorId', 'q', 'desde', 'hasta', 'page', 'limit']);
     const parametros: unknown[] = [];
     const filtros: string[] = [];
 
@@ -348,7 +348,29 @@ export class PedidosService {
 
     if (consulta.vendedorId !== undefined) {
       parametros.push(uuid(consulta.vendedorId, 'vendedorId'));
-      filtros.push(`pe.vendedor_id = $${parametros.length}::uuid`);
+      filtros.push(`pe.vendedor_id = ${parametros.length}::uuid`);
+    }
+
+    if (consulta.q !== undefined) {
+      const q = texto(consulta.q, 'q', 120);
+      parametros.push(`%${q}%`);
+      filtros.push(
+        `(c.nombre ILIKE ${parametros.length} OR u.nombre ILIKE ${parametros.length} OR u.identificador ILIKE ${parametros.length} OR pe.direccion_entrega ILIKE ${parametros.length})`,
+      );
+    }
+
+    if (consulta.desde !== undefined) {
+      const desde = texto(consulta.desde, 'desde', 10);
+      parametros.push(desde);
+      filtros.push(`pe.creado_en >= ${parametros.length}::date`);
+    }
+
+    if (consulta.hasta !== undefined) {
+      const hasta = texto(consulta.hasta, 'hasta', 10);
+      parametros.push(hasta);
+      filtros.push(
+        `pe.creado_en < (${parametros.length}::date + interval '1 day')`,
+      );
     }
 
     const where = filtros.length ? `WHERE ${filtros.join(' AND ')}` : '';
@@ -379,6 +401,8 @@ export class PedidosService {
     const total = await this.db.query(
       `SELECT count(*)::int AS total
        FROM pedido pe
+       JOIN cliente c ON c.id = pe.cliente_id
+       JOIN usuario u ON u.id = pe.vendedor_id
        ${where}`,
       totalParametros,
     ) as Array<{ total: number }>;

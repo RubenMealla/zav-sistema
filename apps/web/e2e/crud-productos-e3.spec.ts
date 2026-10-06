@@ -6,15 +6,16 @@ function requerida(nombre: string) {
   return valor;
 }
 
-test('edita y da de baja un producto desde la web', async ({ page }) => {
+test('edita y desactiva un producto desde la web', async ({ page }) => {
   const codigo = `QA-CRUD-${Date.now()}`;
 
   await page.goto('/acceso');
-  await page.getByLabel('Identificador de acceso').fill(requerida('QA_ADMIN_IDENTIFICADOR'));
+  await page.getByLabel('Identificador', { exact: true }).fill(requerida('QA_ADMIN_IDENTIFICADOR'));
   await page.getByLabel('Contraseña', { exact: true }).fill(requerida('QA_ADMIN_PASSWORD'));
-  await page.getByRole('button', { name: /Iniciar sesión/ }).click();
+  await page.getByRole('button', { name: /Ingresar al sistema/ }).click();
 
-  await page.getByRole('link', { name: 'Productos terminados', exact: true }).filter({ visible: true }).click();
+  const modulos = page.getByRole('navigation', { name: 'Módulos del sistema', exact: true });
+  await modulos.getByRole('link', { name: 'Productos', exact: true }).click();
   await page.getByRole('button', { name: 'Nuevo producto' }).click();
 
   const alta = page.getByRole('dialog', { name: 'Registrar producto' });
@@ -25,6 +26,7 @@ test('edita y da de baja un producto desde la web', async ({ page }) => {
   await alta.getByLabel('Peso (gramos)').fill('300');
   await alta.getByLabel('Precio (Bs)').fill('21.50');
   await alta.getByRole('button', { name: 'Guardar producto' }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Sí, registrar producto' }).click();
 
   let fila = page.getByRole('row').filter({ has: page.getByRole('cell', { name: codigo }) });
   await fila.getByRole('button', { name: 'Editar' }).click();
@@ -33,15 +35,34 @@ test('edita y da de baja un producto desde la web', async ({ page }) => {
   await edicion.getByLabel('Nombre').fill('Producto CRUD E3 actualizado');
   await edicion.getByLabel('Precio (Bs)').fill('22.75');
   await edicion.getByRole('button', { name: 'Guardar cambios' }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Sí, guardar cambios' }).click();
 
   await expect(page.getByRole('status')).toContainText('Producto actualizado correctamente');
   fila = page.getByRole('row').filter({ has: page.getByRole('cell', { name: codigo }) });
   await expect(fila).toContainText('Producto CRUD E3 actualizado');
 
-  await fila.getByRole('button', { name: 'Dar de baja' }).click();
-  await expect(page.getByRole('status')).toContainText('Producto dado de baja correctamente');
+  await fila.getByRole('button', { name: 'Desactivar' }).click();
+  const confirmacionBaja = page.getByRole('alertdialog');
+  await expect(page.locator('body > .confirmacion-dialogo[open]')).toBeVisible();
+  await expect(confirmacionBaja).toContainText('El registro permanecerá en el historial');
+  const cajaConfirmacion = await confirmacionBaja.boundingBox();
+  const viewport = page.viewportSize();
+  expect(cajaConfirmacion).not.toBeNull();
+  expect(viewport).not.toBeNull();
+  expect(cajaConfirmacion!.x).toBeGreaterThanOrEqual(0);
+  expect(cajaConfirmacion!.x + cajaConfirmacion!.width).toBeLessThanOrEqual(viewport!.width + 1);
+  expect(cajaConfirmacion!.y).toBeGreaterThanOrEqual(0);
+  expect(cajaConfirmacion!.y + cajaConfirmacion!.height).toBeLessThanOrEqual(viewport!.height + 1);
+  await confirmacionBaja.getByRole('button', { name: 'Cancelar' }).click();
+  await expect(fila.locator('td').nth(6).getByText('ACTIVO', { exact: true })).toBeVisible();
+
+  await fila.getByRole('button', { name: 'Desactivar' }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Sí, desactivar' }).click();
+  await expect(page.getByRole('status')).toContainText('Producto desactivado correctamente');
 
   fila = page.getByRole('row').filter({ has: page.getByRole('cell', { name: codigo }) });
-  await expect(fila.getByText('INACTIVO')).toBeVisible();
-  await expect(fila.getByText('Sin acciones')).toBeVisible();
+  await expect(fila.locator('td').nth(6).getByText('INACTIVO', { exact: true })).toBeVisible();
+  await expect(fila.getByRole('button', { name: 'Detalles' })).toBeVisible();
+  await expect(fila.getByRole('button', { name: 'Editar' })).toHaveCount(0);
+  await expect(fila.getByRole('button', { name: 'Desactivar' })).toHaveCount(0);
 });

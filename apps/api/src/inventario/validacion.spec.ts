@@ -2,6 +2,7 @@ import { BadRequestException } from '@nestjs/common';
 import {
   codigo,
   enteroPositivo,
+  fechaHoyBolivia,
   fechaIso,
   objeto,
   paginacion,
@@ -23,9 +24,10 @@ describe('Validacion del inventario', () => {
     }
   });
 
-  it('valida fecha comercial y precio sin aceptar fechas imposibles', () => {
+  it('valida fecha comercial y calcula la fecha civil de Bolivia', () => {
     expect(fechaIso('2026-09-24', 'elaboradoEl')).toBe('2026-09-24');
     expect(() => fechaIso('2026-02-30', 'elaboradoEl')).toThrow(BadRequestException);
+    expect(fechaHoyBolivia(new Date('2026-10-06T02:30:00.000Z'))).toBe('2026-10-05');
     expect(precio('12.50')).toBe('12.50');
     expect(() => precio('-1')).toThrow(BadRequestException);
     expect(() => precio('4.123')).toThrow(BadRequestException);

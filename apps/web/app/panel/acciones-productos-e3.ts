@@ -2,10 +2,11 @@
 
 import { redirect } from 'next/navigation';
 import { enviar } from './acciones';
+import { claveErrorOperacion, parametrosError } from './errores-operacion';
 
 export async function editarProducto(formulario: FormData) {
   const productoId = String(formulario.get('productoId') ?? '');
-  const estado = await enviar(
+  const resultado = await enviar(
     `/api/v1/productos/${encodeURIComponent(productoId)}`,
     {
       codigo: String(formulario.get('codigo') ?? ''),
@@ -18,25 +19,22 @@ export async function editarProducto(formulario: FormData) {
     'PATCH',
   );
 
-  if (estado === 401 || estado === 403) redirect('/acceso?error=sesion');
-  if (estado === 200) redirect('/panel?vista=productos&mensaje=producto-editado');
+  if (resultado.estado === 401 || resultado.estado === 403) redirect(`/acceso?error=sesion&codigo=${resultado.estado}`);
+  if (resultado.estado === 200) redirect('/panel?vista=productos&mensaje=producto-editado');
 
-  const error =
-    estado === 409 ? 'codigo' : estado === 'conexion' ? 'conexion' : 'producto-edicion';
-  redirect(`/panel?vista=productos&error=${error}`);
+  redirect(`/panel?vista=productos&${parametrosError(resultado.estado, claveErrorOperacion(resultado.estado, 'producto-edicion', 'codigo'), resultado.detalle)}`);
 }
 
 export async function darBajaProducto(formulario: FormData) {
   const productoId = String(formulario.get('productoId') ?? '');
-  const estado = await enviar(
+  const resultado = await enviar(
     `/api/v1/productos/${encodeURIComponent(productoId)}/baja`,
     {},
     'PATCH',
   );
 
-  if (estado === 401 || estado === 403) redirect('/acceso?error=sesion');
-  if (estado === 200) redirect('/panel?vista=productos&mensaje=producto-baja');
+  if (resultado.estado === 401 || resultado.estado === 403) redirect(`/acceso?error=sesion&codigo=${resultado.estado}`);
+  if (resultado.estado === 200) redirect('/panel?vista=productos&mensaje=producto-baja');
 
-  const error = estado === 'conexion' ? 'conexion' : 'producto-baja';
-  redirect(`/panel?vista=productos&error=${error}`);
+  redirect(`/panel?vista=productos&${parametrosError(resultado.estado, claveErrorOperacion(resultado.estado, 'producto-baja'), resultado.detalle)}`);
 }

@@ -39,7 +39,7 @@ export class GeografiaController {
   }
 
   @Get('geografia/autocompletar')
-  @Roles('VENDEDOR')
+  @Roles('VENDEDOR', 'ADMINISTRADOR')
   autocompletar(@Query('q') consulta: string | undefined) {
     return this.geografia.autocompletar(consulta);
   }

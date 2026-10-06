@@ -1,12 +1,116 @@
 'use client';
 
-import { useId, useRef, useState, type ReactNode } from 'react';
-import { useFormStatus } from 'react-dom';
-import { Icono } from './icono';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { createPortal, useFormStatus } from 'react-dom';
+import { Icono, type NombreIcono } from './icono';
 
-export function BotonEnviar({ children, pendiente = 'Guardando…', className = 'boton boton-primario', disabled = false }: { children: ReactNode; pendiente?: string; className?: string; disabled?: boolean }) {
+type ConfirmacionEnvio = {
+  titulo: string;
+  mensaje: string;
+  confirmar?: string;
+  variante?: 'normal' | 'peligro';
+};
+
+export function BotonEnviar({
+  children,
+  pendiente = 'Guardando…',
+  className = 'boton boton-primario',
+  disabled = false,
+  confirmacion,
+}: {
+  children: ReactNode;
+  pendiente?: string;
+  className?: string;
+  disabled?: boolean;
+  confirmacion?: ConfirmacionEnvio;
+}) {
   const { pending } = useFormStatus();
-  return <button type="submit" className={className} disabled={disabled || pending} aria-busy={pending}>{pending ? pendiente : children}</button>;
+  const [confirmando, setConfirmando] = useState(false);
+  const id = useId();
+  const formularioRef = useRef<HTMLFormElement | null>(null);
+  const disparadorRef = useRef<HTMLButtonElement | null>(null);
+  const dialogoRef = useRef<HTMLDialogElement | null>(null);
+
+  useEffect(() => {
+    const dialogo = dialogoRef.current;
+    if (!dialogo) return;
+    if (confirmando && !dialogo.open) dialogo.showModal();
+    if (!confirmando && dialogo.open) dialogo.close();
+  }, [confirmando]);
+
+  function cerrarConfirmacion() {
+    setConfirmando(false);
+    window.requestAnimationFrame(() => disparadorRef.current?.focus());
+  }
+
+  if (!confirmacion) {
+    return <button type="submit" className={className} disabled={disabled || pending} aria-busy={pending}>{pending ? pendiente : children}</button>;
+  }
+
+  const confirmacionDialogo = (
+    <dialog
+      ref={dialogoRef}
+      className="confirmacion-dialogo"
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby={`${id}-confirmacion-titulo`}
+      aria-describedby={`${id}-confirmacion-mensaje`}
+      onCancel={(evento) => {
+        evento.preventDefault();
+        if (!pending) cerrarConfirmacion();
+      }}
+      onClose={() => {
+        if (confirmando) setConfirmando(false);
+      }}
+      onClick={(evento) => {
+        if (evento.target === evento.currentTarget && !pending) cerrarConfirmacion();
+      }}
+    >
+      <section className={`confirmacion-caja ${confirmacion.variante === 'peligro' ? 'confirmacion-peligro' : ''}`} role="document">
+        <span className="confirmacion-icono" aria-hidden="true">
+          <Icono nombre={confirmacion.variante === 'peligro' ? 'alerta' : 'check'} tamano={22} />
+        </span>
+        <div className="confirmacion-texto">
+          <span className="confirmacion-etiqueta">{confirmacion.variante === 'peligro' ? 'ACCIÓN SENSIBLE' : 'CONFIRMAR OPERACIÓN'}</span>
+          <h2 id={`${id}-confirmacion-titulo`}>{confirmacion.titulo}</h2>
+          <p id={`${id}-confirmacion-mensaje`}>{confirmacion.mensaje}</p>
+        </div>
+        <div className="confirmacion-acciones">
+          <button type="button" className="boton boton-terciario" disabled={pending} autoFocus onClick={cerrarConfirmacion}>Cancelar</button>
+          <button
+            type="button"
+            className={confirmacion.variante === 'peligro' ? 'boton boton-primario boton-peligro' : 'boton boton-primario'}
+            disabled={pending}
+            aria-busy={pending}
+            onClick={() => formularioRef.current?.requestSubmit()}
+          >
+            {pending ? pendiente : (confirmacion.confirmar ?? 'Confirmar')}
+          </button>
+        </div>
+      </section>
+    </dialog>
+  );
+
+  return (
+    <>
+      <button
+        ref={disparadorRef}
+        type="button"
+        className={className}
+        disabled={disabled || pending}
+        aria-haspopup="dialog"
+        onClick={(evento) => {
+          const formulario = evento.currentTarget.form;
+          if (formulario && !formulario.reportValidity()) return;
+          formularioRef.current = formulario;
+          setConfirmando(true);
+        }}
+      >
+        {children}
+      </button>
+      {typeof document !== 'undefined' && createPortal(confirmacionDialogo, document.body)}
+    </>
+  );
 }
 
 export function Modal({
@@ -15,33 +119,48 @@ export function Modal({
   descripcion,
   children,
   variante = 'principal',
+  icono,
+  etiqueta = 'OPERACIÓN',
+  amplio = false,
 }: {
   boton: string;
   titulo: string;
   descripcion?: string;
   children: ReactNode;
-  variante?: 'principal' | 'secundaria';
+  variante?: 'principal' | 'secundaria' | 'terciaria';
+  icono?: NombreIcono | null;
+  etiqueta?: string;
+  amplio?: boolean;
 }) {
   const referencia = useRef<HTMLDialogElement>(null);
   const id = useId();
+  const disparador = useRef<HTMLButtonElement>(null);
+  const iconoVisible = icono === undefined ? (variante === 'principal' ? 'mas' : null) : icono;
+  const claseBoton = variante === 'principal'
+    ? 'boton boton-primario'
+    : variante === 'secundaria'
+      ? 'boton boton-secundario'
+      : 'boton boton-terciario boton-detalle';
 
   function cerrar() {
     referencia.current?.close();
+    disparador.current?.focus();
   }
 
   return (
     <>
       <button
+        ref={disparador}
         type="button"
-        className={variante === 'principal' ? 'boton boton-primario' : 'boton boton-secundario'}
+        className={claseBoton}
         onClick={() => referencia.current?.showModal()}
       >
-        <Icono nombre="mas" tamano={17} />
+        {iconoVisible && <Icono nombre={iconoVisible} tamano={16} />}
         {boton}
       </button>
       <dialog
         ref={referencia}
-        className="modal"
+        className={amplio ? 'modal modal-amplio' : 'modal'}
         aria-labelledby={`${id}-titulo`}
         aria-describedby={descripcion ? `${id}-descripcion` : undefined}
         onKeyDown={(evento) => {
@@ -59,6 +178,7 @@ export function Modal({
             primero?.focus();
           }
         }}
+        onClose={() => disparador.current?.focus()}
         onClick={(evento) => {
           if (evento.target === referencia.current) cerrar();
         }}
@@ -66,7 +186,7 @@ export function Modal({
         <div className="modal-caja">
           <header className="modal-cabecera">
             <div>
-              <span className="eyebrow">OPERACIÓN</span>
+              <span className="eyebrow">{etiqueta}</span>
               <h2 id={`${id}-titulo`}>{titulo}</h2>
               {descripcion && <p id={`${id}-descripcion`}>{descripcion}</p>}
             </div>
@@ -81,14 +201,36 @@ export function Modal({
   );
 }
 
+function etiquetaCodigoError(codigo?: string | number) {
+  if (codigo === undefined || codigo === null || codigo === '') return null;
+  const valor = String(codigo).toUpperCase();
+  if (/^\d{3}$/.test(valor)) return `HTTP ${valor}`;
+  if (valor === 'RED') return 'SIN RESPUESTA HTTP';
+  if (valor === 'VALIDACION') return 'VALIDACIÓN';
+  return valor;
+}
+
 export function Notificacion({
   tipo,
   mensaje,
+  codigo,
+  detalle,
 }: {
   tipo: 'exito' | 'error';
   mensaje: string;
+  codigo?: string | number;
+  detalle?: string;
 }) {
   const [visible, setVisible] = useState(true);
+  const etiquetaCodigo = tipo === 'error' ? etiquetaCodigoError(codigo) : null;
+
+  useEffect(() => {
+    const temporizador = window.setTimeout(
+      () => setVisible(false),
+      tipo === 'error' ? 7600 : 4200,
+    );
+    return () => window.clearTimeout(temporizador);
+  }, [tipo, mensaje, codigo, detalle]);
 
   if (!visible) return null;
 
@@ -97,9 +239,15 @@ export function Notificacion({
       <span className="toast-icono">
         <Icono nombre={tipo === 'error' ? 'alerta' : 'check'} tamano={18} />
       </span>
-      <div>
-        <strong>{tipo === 'error' ? 'No se pudo completar' : 'Operación completada'}</strong>
+      <div className="toast-contenido">
+        <div className="toast-cabecera">
+          <strong>{tipo === 'error' ? 'No se pudo completar' : 'Operación completada'}</strong>
+          {etiquetaCodigo && <span className="toast-codigo">{etiquetaCodigo}</span>}
+        </div>
         <p>{mensaje}</p>
+        {detalle && detalle.trim() && detalle.trim() !== mensaje.trim() && (
+          <small className="toast-detalle">{detalle}</small>
+        )}
       </div>
       <button type="button" className="boton-icono toast-cerrar" aria-label="Cerrar notificación" onClick={() => setVisible(false)}>
         <Icono nombre="cerrar" tamano={16} />
@@ -110,21 +258,13 @@ export function Notificacion({
 
 export function CampoContrasena() {
   const [visible, setVisible] = useState(false);
-
   return (
     <div className="campo">
       <label htmlFor="contrasena">Contraseña</label>
-      <div className="campo-con-accion">
-        <input
-          id="contrasena"
-          type={visible ? 'text' : 'password'}
-          name="contrasena"
-          autoComplete="current-password"
-          required
-          placeholder="Ingresa tu contraseña"
-        />
-        <button type="button" aria-controls="contrasena" aria-pressed={visible} aria-label={visible ? 'Ocultar contraseña' : 'Mostrar contraseña'} onClick={() => setVisible((valor) => !valor)}>
-          {visible ? 'Ocultar' : 'Mostrar'}
+      <div className="campo-con-accion campo-con-icono">
+        <input id="contrasena" type={visible ? 'text' : 'password'} name="contrasena" autoComplete="current-password" required placeholder="Ingresa tu contraseña" />
+        <button type="button" aria-controls="contrasena" aria-pressed={visible} aria-label={visible ? 'Ocultar contraseña' : 'Mostrar contraseña'} title={visible ? 'Ocultar contraseña' : 'Mostrar contraseña'} onClick={() => setVisible((valor) => !valor)}>
+          <Icono nombre={visible ? 'ojoCerrado' : 'ojo'} tamano={19} />
         </button>
       </div>
     </div>

@@ -6,9 +6,22 @@ on:
       - "desarrollo/**"
       - "correccion/**"
       - "pruebas/**"
+      - "mejora/**"
+    paths:
+      - "apps/mobile/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - ".github/workflows/qa-mobile.yml"
   pull_request:
     branches:
       - main
+    paths:
+      - "apps/mobile/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - ".github/workflows/qa-mobile.yml"
 
 concurrency:
   group: qa-mobile-${{ github.ref }}

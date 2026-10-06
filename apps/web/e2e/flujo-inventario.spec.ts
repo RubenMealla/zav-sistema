@@ -10,6 +10,24 @@ function requerida(nombre: string): string {
 
 const evidencias = path.join(process.cwd(), 'test-results', 'evidencias');
 
+function fechaBolivia(dias = 0) {
+  const ahora = new Date(Date.now() + dias * 86400000);
+  const partes = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/La_Paz',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(ahora);
+  const porTipo = Object.fromEntries(partes.map((parte) => [parte.type, parte.value]));
+  return `${porTipo.year}-${porTipo.month}-${porTipo.day}`;
+}
+
+async function confirmar(page: Page, boton: string) {
+  const dialogo = page.getByRole('alertdialog');
+  await expect(dialogo).toBeVisible();
+  await dialogo.getByRole('button', { name: boton, exact: true }).click();
+}
+
 async function captura(page: Page, nombre: string) {
   await mkdir(evidencias, { recursive: true });
   await expect.poll(() => page.locator('img:visible').evaluateAll((imgs) => imgs.every((img) => img instanceof HTMLImageElement && img.complete && img.naturalWidth > 0))).toBeTruthy();
@@ -22,14 +40,15 @@ async function captura(page: Page, nombre: string) {
 test('muestra una portada profesional y protege el panel sin sesion', async ({ page }) => {
   await page.goto('/');
 
-  await expect(page.getByRole('heading', { name: /Fiambres y embutidos.*Control en cada lote/ })).toBeVisible();
-  await expect(page.getByRole('link', { name: /Acceso privado/ })).toBeVisible();
-  await expect(page.getByText('Productos y lotes')).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Fiambres y embutidos ZAV/ })).toBeVisible();
+  await expect(page.getByRole('link', { name: /Acceso interno/ }).first()).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Siete familias de productos ZAV.' })).toBeVisible();
   await captura(page, '01-inicio-redisenado.png');
 
   await page.goto('/panel');
-  await expect(page).toHaveURL(/\/acceso\?error=sesion$/);
-  await expect(page.getByRole('heading', { name: 'Ingresa a tu espacio de trabajo' })).toBeVisible();
+  await expect(page).toHaveURL(/\/acceso\?error=sesion&codigo=401$/);
+  await expect(page.getByRole('heading', { name: 'Iniciar sesión' })).toBeVisible();
+  await expect(page.locator('.mensaje-error[role="alert"]')).toContainText('HTTP 401');
   await expect(page.locator('.mensaje-error[role="alert"]')).toContainText('La sesión terminó o ya no es válida');
   await captura(page, '02-acceso-protegido-redisenado.png');
 });
@@ -43,21 +62,22 @@ test('permite gestionar inventario desde módulos, modales y notificaciones', as
   const loteCodigo = `QA-LOTE-${ejecucion}`;
 
   await page.goto('/acceso');
-  await expect(page.getByRole('heading', { name: 'Ingresa a tu espacio de trabajo' })).toBeVisible();
-  await page.getByLabel('Identificador de acceso').fill(identificador);
+  await expect(page.getByRole('heading', { name: 'Iniciar sesión' })).toBeVisible();
+  await page.getByLabel('Identificador', { exact: true }).fill(identificador);
   await page.getByLabel('Contraseña', { exact: true }).fill(contrasena);
-  await page.getByRole('button', { name: /Iniciar sesión/ }).click();
+  await page.getByRole('button', { name: /Ingresar al sistema/ }).click();
 
-  await expect(page).toHaveURL(/\/panel$/);
-  await expect(page.getByRole('heading', { name: 'Resumen general' })).toBeVisible();
+  await expect(page).toHaveURL(/\/panel\?mensaje=sesion-iniciada$/);
+  const modulos = page.getByRole('navigation', { name: 'Módulos del sistema', exact: true });
+  await expect(page.getByRole('heading', { name: 'Resumen' })).toBeVisible();
   await expect(page.getByText('Trabaja por módulo')).toBeVisible();
   await expect(page.getByText('Condición actual')).toBeVisible();
   await captura(page, '03-dashboard-administrativo.png');
   await expect(page.getByText(/Lotes consultados:/)).toBeVisible();
 
-  await page.getByRole('link', { name: 'Productos terminados' }).click();
+  await modulos.getByRole('link', { name: 'Productos', exact: true }).click();
   await expect(page).toHaveURL(/\/panel\?vista=productos$/);
-  await expect(page.getByRole('heading', { name: 'Productos terminados' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Productos', exact: true })).toBeVisible();
   await expect(page.getByRole('table', { name: 'Productos registrados' })).toBeVisible();
   await captura(page, 'identidad-productos-listado.png');
 
@@ -70,13 +90,16 @@ test('permite gestionar inventario desde módulos, modales y notificaciones', as
   await page.getByRole('button', { name: 'Nuevo producto' }).click();
   await captura(page, '04-modal-producto.png');
 
-  await modalProducto.getByLabel('Código').fill(productoCodigo);
+  const codigoProductoCampo = modalProducto.getByLabel('Código');
+  await modalProducto.getByLabel('Familia').fill('Salchichas');
+  await expect(codigoProductoCampo).toHaveValue(/^SAL-\d{3,}$/);
+  await codigoProductoCampo.fill(productoCodigo);
   await modalProducto.getByLabel('Nombre').fill('Producto QA UI');
-  await modalProducto.getByLabel('Familia').fill('Pruebas');
   await modalProducto.getByLabel('Presentación').fill('Paquete de prueba');
   await modalProducto.getByLabel('Peso (gramos)').fill('250');
   await modalProducto.getByLabel('Precio (Bs)').fill('18.50');
   await modalProducto.getByRole('button', { name: 'Guardar producto' }).click();
+  await confirmar(page, 'Sí, registrar producto');
 
   await expect(page).toHaveURL(/\/panel\?vista=productos&mensaje=producto$/);
   await expect(page.getByRole('status')).toContainText('Producto registrado correctamente');
@@ -85,24 +108,39 @@ test('permite gestionar inventario desde módulos, modales y notificaciones', as
   await page.getByRole('button', { name: 'Cerrar notificación' }).click();
   await expect(page.getByRole('status')).toHaveCount(0);
 
-  await page.getByRole('link', { name: 'Lotes y existencias' }).click();
+  await modulos.getByRole('link', { name: 'Lotes', exact: true }).click();
   await page.getByRole('button', { name: 'Nuevo lote' }).click();
   const modalLote = page.getByRole('dialog');
+  const hoy = fechaBolivia();
+  const manana = fechaBolivia(1);
   await modalLote.getByLabel('Producto').selectOption({ label: `${productoCodigo} · Producto QA UI` });
-  await modalLote.getByLabel('Código de lote').fill(loteCodigo);
-  await modalLote.getByLabel('Fecha de elaboración').fill(new Date().toISOString().slice(0, 10));
-  await modalLote.getByLabel('Fecha de vencimiento').fill(new Date(Date.now() + 90 * 86400000).toISOString().slice(0, 10));
+  const codigoLoteCampo = modalLote.getByLabel('Código de lote');
+  await expect(codigoLoteCampo).toHaveValue(new RegExp(`^TJ-ZAV-${productoCodigo}-${hoy.replaceAll('-', '')}-\\d{2,}$`));
+  await codigoLoteCampo.fill(loteCodigo);
+  await expect(modalLote.getByLabel('Fecha de elaboración')).toHaveValue(hoy);
+  await expect(modalLote.getByLabel('Fecha de elaboración')).toHaveAttribute('max', hoy);
+  await expect(modalLote.getByLabel('Fecha de registro')).toHaveValue(hoy);
+  await expect(modalLote.getByLabel('Fecha de registro')).toHaveAttribute('readonly', '');
+  await expect(modalLote.getByLabel('Fecha de vencimiento')).toHaveAttribute('min', manana);
+  await modalLote.getByLabel('Fecha de elaboración').fill(fechaBolivia(1));
+  expect(await modalLote.getByLabel('Fecha de elaboración').evaluate((el) => (el as HTMLInputElement).validity.rangeOverflow)).toBeTruthy();
+  await modalLote.getByLabel('Fecha de elaboración').fill(hoy);
+  await modalLote.getByLabel('Fecha de vencimiento').fill(fechaBolivia(-1));
+  expect(await modalLote.getByLabel('Fecha de vencimiento').evaluate((el) => (el as HTMLInputElement).validity.rangeUnderflow)).toBeTruthy();
+  await modalLote.getByLabel('Fecha de elaboración').fill(hoy);
+  await modalLote.getByLabel('Fecha de vencimiento').fill(fechaBolivia(90));
   await modalLote.getByLabel('Cantidad inicial').fill('12');
   await modalLote.getByRole('button', { name: 'Guardar lote e ingreso' }).click();
+  await confirmar(page, 'Sí, registrar lote');
 
   await expect(page).toHaveURL(/\/panel\?vista=lotes&mensaje=lote$/);
   await expect(page.getByRole('status')).toContainText('Lote e ingreso inicial registrados correctamente');
   const filaLote = page.getByRole('row').filter({ has: page.getByRole('cell', { name: loteCodigo }) });
-  await expect(filaLote.getByText('RETENIDO')).toBeVisible();
-  await expect(filaLote.getByText('Producción y Almacenamiento')).toBeVisible();
+  await expect(filaLote.locator('td').nth(1).getByText('RETENIDO', { exact: true })).toBeVisible();
+  await expect(filaLote.locator('td').nth(3).getByText('Producción y Almacenamiento', { exact: true })).toBeVisible();
   await captura(page, '06-lote-registrado.png');
 
-  await page.getByRole('link', { name: 'Movimientos' }).click();
+  await modulos.getByRole('link', { name: 'Movimientos', exact: true }).click();
   await page.getByRole('button', { name: 'Nuevo traslado' }).click();
   const modalTraslado = page.getByRole('dialog');
   await modalTraslado.getByLabel('Lote a trasladar').selectOption({ label: `${loteCodigo} · RETENIDO` });
@@ -111,6 +149,7 @@ test('permite gestionar inventario desde módulos, modales y notificaciones', as
   await modalTraslado.getByLabel('Destino').selectOption('VENTA_DESPACHO');
   await modalTraslado.getByLabel(/Referencia/).fill('QA-UI-TR-001');
   await modalTraslado.getByRole('button', { name: 'Guardar traslado' }).click();
+  await confirmar(page, 'Sí, registrar traslado');
 
   await expect(page).toHaveURL(/\/panel\?vista=movimientos&mensaje=traslado&historialLoteId=[0-9a-f-]+$/);
   await expect(page.getByRole('status')).toContainText('Traslado registrado correctamente');
@@ -122,25 +161,26 @@ test('permite gestionar inventario desde módulos, modales y notificaciones', as
   await expect(filaTraslado.getByRole('cell', { name: 'Venta y Despacho' })).toBeVisible();
   await captura(page, '07-traslado-registrado.png');
 
-  await page.getByRole('link', { name: 'Lotes y existencias' }).click();
+  await modulos.getByRole('link', { name: 'Lotes', exact: true }).click();
   const filaLoteTrasladado = page.getByRole('row').filter({ has: page.getByRole('cell', { name: loteCodigo }) });
   await expect(filaLoteTrasladado.getByText('Producción y Almacenamiento')).toBeVisible();
   await expect(filaLoteTrasladado.getByText('7', { exact: true })).toBeVisible();
   await expect(filaLoteTrasladado.getByText('Venta y Despacho')).toBeVisible();
   await expect(filaLoteTrasladado.getByText('5', { exact: true })).toBeVisible();
 
-  await page.getByRole('link', { name: 'Condición de lotes' }).click();
+  await modulos.getByRole('link', { name: 'Condiciones', exact: true }).click();
   await page.getByRole('button', { name: 'Gestionar condición' }).click();
   const modalCondicion = page.getByRole('dialog');
   await modalCondicion.locator('select[name="loteId"]').selectOption({ label: `${loteCodigo} · RETENIDO` });
   await modalCondicion.locator('select[name="accion"]').selectOption('liberar');
   await modalCondicion.locator('input[name="motivo"]').fill('QA UI: revisión completada');
   await modalCondicion.getByRole('button', { name: 'Guardar condición' }).click();
+  await confirmar(page, 'Sí, guardar condición');
 
   await expect(page).toHaveURL(/\/panel\?vista=condiciones&mensaje=condicion&historialCondicionLoteId=[0-9a-f-]+$/);
   await expect(page.getByRole('status')).toContainText('Condición del lote actualizada correctamente');
   const filaCondicion = page.locator('.condicion-fila').filter({ hasText: loteCodigo });
-  await expect(filaCondicion.getByText('LIBERADO')).toBeVisible();
+  await expect(filaCondicion.locator('.condicion-fila-acciones > span').getByText('LIBERADO', { exact: true })).toBeVisible();
   await expect(page.getByText('QA UI: revisión completada')).toBeVisible();
   await captura(page, '08-lote-liberado.png');
 
@@ -150,20 +190,35 @@ test('permite gestionar inventario desde módulos, modales y notificaciones', as
   await modalBloqueo.locator('select[name="accion"]').selectOption('bloquear');
   await modalBloqueo.locator('input[name="motivo"]').fill('QA UI: observación temporal');
   await modalBloqueo.getByRole('button', { name: 'Guardar condición' }).click();
+  await confirmar(page, 'Sí, guardar condición');
 
   await expect(page.getByRole('status')).toContainText('Condición del lote actualizada correctamente');
-  await expect(page.locator('.condicion-fila').filter({ hasText: loteCodigo }).getByText('BLOQUEADO')).toBeVisible();
+  await expect(page.locator('.condicion-fila').filter({ hasText: loteCodigo }).locator('.condicion-fila-acciones > span').getByText('BLOQUEADO', { exact: true })).toBeVisible();
   await expect(page.getByText('QA UI: observación temporal')).toBeVisible();
   await captura(page, '09-lote-bloqueado.png');
 
   await page.reload();
-  await expect(page.getByRole('heading', { name: 'Condición de lotes' })).toBeVisible();
-  await expect(page.locator('.condicion-fila').filter({ hasText: loteCodigo }).getByText('BLOQUEADO')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Condiciones' })).toBeVisible();
+  await expect(page.locator('.condicion-fila').filter({ hasText: loteCodigo }).locator('.condicion-fila-acciones > span').getByText('BLOQUEADO', { exact: true })).toBeVisible();
   await expect(page.getByText('QA UI: observación temporal')).toBeVisible();
   await captura(page, '10-condicion-persistente.png');
 
-  await page.getByRole('link', { name: 'Resumen general' }).click();
-  await expect(page.getByRole('heading', { name: 'Resumen general' })).toBeVisible();
+  await modulos.getByRole('link', { name: 'Distribución', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Distribución', exact: true })).toBeVisible();
+  await expect(page.getByRole('application', { name: 'Mapa para seleccionar la ubicación de Venta y Despacho' })).toBeVisible();
+  const zoomMapa = page.locator('.leaflet-bottom.leaflet-right .leaflet-control-zoom');
+  await expect(zoomMapa).toBeVisible();
+  await expect(page.locator('.leaflet-top.leaflet-left .leaflet-control-zoom')).toHaveCount(0);
+  const cajaMapa = await page.getByRole('application', { name: 'Mapa para seleccionar la ubicación de Venta y Despacho' }).boundingBox();
+  const cajaZoom = await zoomMapa.boundingBox();
+  expect(cajaMapa).not.toBeNull();
+  expect(cajaZoom).not.toBeNull();
+  expect(cajaZoom!.x).toBeGreaterThan(cajaMapa!.x + cajaMapa!.width / 2);
+  expect(cajaZoom!.y).toBeGreaterThan(cajaMapa!.y + cajaMapa!.height / 2);
+  await captura(page, '11-distribucion-mapa.png');
+
+  await modulos.getByRole('link', { name: 'Resumen', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Resumen' })).toBeVisible();
   await expect(page.getByText('Trabaja por módulo')).toBeVisible();
-  await captura(page, '11-dashboard-final.png');
+  await captura(page, '12-dashboard-final.png');
 });

@@ -2,10 +2,17 @@ import { expect, test, type Page } from '@playwright/test';
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
 
+async function esperarImagenes(page: Page) {
+  await page.locator('img').evaluateAll((imgs) => imgs.forEach((img) => {
+    if (img instanceof HTMLImageElement) img.loading = 'eager';
+  }));
+  await expect.poll(() => page.locator('img').evaluateAll((imgs) => imgs.every((img) => img instanceof HTMLImageElement && img.complete && img.naturalWidth > 0))).toBeTruthy();
+}
+
 async function captura(page: Page, nombre: string) {
   const destino = path.join(process.cwd(), 'test-results', 'evidencias');
   await mkdir(destino, { recursive: true });
-  await expect.poll(() => page.locator('img:visible').evaluateAll((imgs) => imgs.every((img) => img instanceof HTMLImageElement && img.complete && img.naturalWidth > 0))).toBeTruthy();
+  await esperarImagenes(page);
   await page.screenshot({ path: path.join(destino, nombre), fullPage: true });
 }
 
@@ -14,10 +21,10 @@ async function ingresar(page: Page) {
   const clave = process.env.QA_ADMIN_PASSWORD;
   if (!usuario || !clave) throw new Error('Faltan las credenciales sintéticas de QA.');
   await page.goto('/acceso');
-  await page.getByLabel('Identificador de acceso').fill(usuario);
+  await page.getByLabel('Identificador', { exact: true }).fill(usuario);
   await page.getByLabel('Contraseña', { exact: true }).fill(clave);
-  await page.getByRole('button', { name: 'Iniciar sesión' }).click();
-  await expect(page.getByRole('heading', { name: 'Resumen general' })).toBeVisible();
+  await page.getByRole('button', { name: 'Ingresar al sistema' }).click();
+  await expect(page.getByRole('heading', { name: 'Resumen' })).toBeVisible();
 }
 
 async function sinDesborde(page: Page) {
@@ -32,14 +39,14 @@ for (const ancho of [390, 768, 1440]) {
     await page.goto('/');
     await expect(page.getByRole('heading', { level: 1 })).toContainText('Fiambres y embutidos');
     await expect(page.getByRole('img', { name: 'ZAV · Fiambres y embutidos' }).first()).toBeVisible();
-    await expect.poll(() => page.locator('img').evaluateAll((imgs) => imgs.every((img) => img instanceof HTMLImageElement && img.complete && img.naturalWidth > 0))).toBeTruthy();
+    await esperarImagenes(page);
     await sinDesborde(page);
     await captura(page, `identidad-inicio-${ancho}.png`);
 
-    await page.getByRole('link', { name: 'Acceso privado' }).click();
+    await page.getByRole('link', { name: 'Acceso interno' }).first().click();
     await expect(page).toHaveURL(/\/acceso$/);
-    await expect(page.getByRole('heading', { name: 'Ingresa a tu espacio de trabajo' })).toBeVisible();
-    await expect(page.getByRole('img', { name: 'ZAV · Fiambres y embutidos' }).filter({ visible: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Iniciar sesión' })).toBeVisible();
+    await expect(page.getByRole('img', { name: 'ZAV · Fiambres y embutidos' }).first()).toBeVisible();
     await page.getByLabel('Contraseña', { exact: true }).fill('Prueba-visual');
     await page.getByRole('button', { name: 'Mostrar contraseña' }).click();
     await expect(page.getByLabel('Contraseña', { exact: true })).toHaveAttribute('type', 'text');
@@ -53,9 +60,9 @@ for (const ancho of [390, 768, 1440]) {
     await captura(page, `identidad-resumen-${ancho}.png`);
     const navegacion = page.getByRole('navigation', { name: ancho <= 820 ? 'Módulos' : 'Módulos del sistema', exact: true });
     for (const [nombre, boton, dialogo, archivo] of [
-      ['Productos terminados', 'Nuevo producto', 'Registrar producto', 'productos'],
-      ['Lotes y existencias', 'Nuevo lote', 'Registrar lote e ingreso inicial', 'lotes'],
-      ['Condición de lotes', 'Gestionar condición', 'Cambiar condición del lote', 'condiciones'],
+      ['Productos', 'Nuevo producto', 'Registrar producto', 'productos'],
+      ['Lotes', 'Nuevo lote', 'Registrar lote e ingreso inicial', 'lotes'],
+      ['Condiciones', 'Gestionar condición', 'Cambiar condición del lote', 'condiciones'],
       ['Movimientos', 'Nuevo traslado', 'Registrar traslado', 'movimientos'],
     ]) {
       await navegacion.getByRole('link', { name: nombre, exact: true }).click();
@@ -81,6 +88,13 @@ for (const ancho of [390, 768, 1440]) {
       await expect(modal).not.toBeVisible();
       await expect(abrir).toBeFocused();
     }
+    await navegacion.getByRole('link', { name: 'Distribución', exact: true }).click();
+    await expect(navegacion.getByRole('link', { name: 'Distribución', exact: true })).toHaveAttribute('aria-current', 'page');
+    await expect(page.getByRole('heading', { name: 'Distribución', exact: true })).toBeVisible();
+    await expect(page.getByRole('application', { name: 'Mapa para seleccionar la ubicación de Venta y Despacho' })).toBeVisible();
+    await sinDesborde(page);
+    await captura(page, `identidad-distribucion-${ancho}.png`);
+
     await navegacion.getByRole('link', { name: 'Pedidos', exact: true }).click();
     await expect(navegacion.getByRole('link', { name: 'Pedidos', exact: true })).toHaveAttribute('aria-current', 'page');
     await expect(page.getByRole('heading', { name: 'Pedidos', exact: true })).toBeVisible();
@@ -88,13 +102,43 @@ for (const ancho of [390, 768, 1440]) {
     await sinDesborde(page);
     await captura(page, `identidad-pedidos-${ancho}.png`);
 
-    await page.getByRole('button', { name: 'Cerrar sesión', exact: true }).filter({ visible: true }).click();
-    await expect(page).toHaveURL(/\/acceso$/);
+    await page.getByRole('button', { name: /Cerrar sesión|Salir/, exact: true }).filter({ visible: true }).click();
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Sí, cerrar sesión' }).click();
+    await expect(page).toHaveURL(/\/acceso\?mensaje=sesion-cerrada$/);
+    await expect(page.getByRole('status')).toContainText('Sesión cerrada correctamente');
     await page.goto('/panel');
     await expect(page).toHaveURL(/error=sesion/);
     expect(errores).toEqual([]);
   });
 }
+
+
+test('landing pública conserva la nueva jerarquía editorial', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto('/');
+
+  const nav = page.getByRole('navigation', { name: 'Navegación principal' });
+  await expect(nav).toBeVisible();
+  await expect(nav.getByRole('link', { name: 'Noticias' })).toBeVisible();
+  await expect(nav.getByRole('link', { name: 'Productos' })).toBeVisible();
+  await expect(nav.getByRole('link', { name: 'Nosotros' })).toBeVisible();
+  await expect(nav.getByRole('link', { name: 'Promociones' })).toHaveCount(0);
+  await expect(page.locator('#novedades')).toBeVisible();
+  await expect(page.locator('#productos')).toBeVisible();
+  await expect(page.locator('#zav')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Siete familias de productos ZAV.' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Mortadelas' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Fiambres especiales' })).toBeVisible();
+  const mortadelaOriginal = page.locator('#productos').getByRole('img', { name: 'Mortadela Primavera' });
+  await expect(mortadelaOriginal).toBeVisible();
+  await expect(mortadelaOriginal).toHaveAttribute('src', '/catalogo-original/mortadela-primavera.png');
+  await expect(page.locator('.foto-sprite')).toHaveCount(0);
+
+  await nav.getByRole('link', { name: 'Productos' }).click();
+  await expect.poll(async () => nav.getByRole('link', { name: 'Productos' }).getAttribute('class')).toContain('activo');
+  await sinDesborde(page);
+  await captura(page, 'landing-editorial-1440.png');
+});
 
 test('teclado, contraste y movimiento reducido', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -104,12 +148,16 @@ test('teclado, contraste y movimiento reducido', async ({ page }) => {
   await page.keyboard.press('Enter');
   await expect(page.locator('#principal')).toBeFocused();
   await ingresar(page);
-  await page.getByRole('link', { name: 'Productos terminados', exact: true }).filter({ visible: true }).click();
+  await page.getByRole('link', { name: 'Productos', exact: true }).filter({ visible: true }).click();
   await page.getByRole('button', { name: 'Nuevo producto' }).click();
   const modalProducto = page.getByRole('dialog', { name: 'Registrar producto' });
   const codigoProducto = modalProducto.getByLabel('Código', { exact: true });
   await codigoProducto.focus();
-  expect(await codigoProducto.evaluate((el) => getComputedStyle(el).outlineStyle)).toBe('solid');
+  const focoVisible = await codigoProducto.evaluate((el) => {
+    const estilo = getComputedStyle(el);
+    return estilo.outlineStyle !== 'none' || estilo.boxShadow !== 'none';
+  });
+  expect(focoVisible).toBeTruthy();
   await page.keyboard.press('Escape');
   const contrastes = await page.locator('.boton-primario, .sidebar .nav-item, th, td, .codigo, .badge, .eyebrow').evaluateAll((elementos) => {
     const rgb = (valor: string) => valor.match(/[\d.]+/g)!.slice(0, 3).map(Number);
@@ -133,9 +181,10 @@ test('teclado, contraste y movimiento reducido', async ({ page }) => {
 
 test('credenciales inválidas muestran un error legible', async ({ page }) => {
   await page.goto('/acceso');
-  await page.getByLabel('Identificador de acceso').fill('no-existe.qa');
+  await page.getByLabel('Identificador', { exact: true }).fill('no-existe.qa');
   await page.getByLabel('Contraseña', { exact: true }).fill('No-es-una-cuenta-real');
-  await page.getByRole('button', { name: 'Iniciar sesión' }).click();
+  await page.getByRole('button', { name: 'Ingresar al sistema' }).click();
+  await expect(page.locator('.mensaje-error')).toContainText('HTTP 401');
   await expect(page.locator('.mensaje-error')).toContainText('Verifica los datos de acceso');
   await captura(page, 'identidad-acceso-error.png');
 });

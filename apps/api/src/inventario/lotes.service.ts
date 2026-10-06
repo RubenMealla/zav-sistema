@@ -12,6 +12,7 @@ import {
   codigo,
   codigoPostgres,
   enteroPositivo,
+  fechaHoyBolivia,
   fechaIso,
   objeto,
   paginacion,
@@ -112,6 +113,13 @@ export class LotesService {
     const loteCodigo = codigo(datos.codigo, 'codigo', 60);
     const elaboradoEl = fechaIso(datos.elaboradoEl, 'elaboradoEl');
     const venceEl = fechaIso(datos.venceEl, 'venceEl');
+    const hoyBolivia = fechaHoyBolivia();
+    if (elaboradoEl > hoyBolivia) {
+      throw new BadRequestException('elaboradoEl no puede ser posterior a la fecha actual.');
+    }
+    if (venceEl < hoyBolivia) {
+      throw new BadRequestException('venceEl no puede ser anterior a la fecha actual.');
+    }
     if (venceEl <= elaboradoEl) {
       throw new BadRequestException('venceEl debe ser posterior a elaboradoEl.');
     }

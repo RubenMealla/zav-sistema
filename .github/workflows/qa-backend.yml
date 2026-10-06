@@ -7,10 +7,23 @@ on:
       - "correccion/**"
       - "pruebas/**"
       - "configuracion/**"
+      - "mejora/**"
       - main
+    paths:
+      - "apps/api/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - ".github/workflows/qa-backend.yml"
   pull_request:
     branches:
       - main
+    paths:
+      - "apps/api/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - ".github/workflows/qa-backend.yml"
 
 concurrency:
   group: qa-backend-${{ github.ref }}

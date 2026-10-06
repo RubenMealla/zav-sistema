@@ -6,10 +6,25 @@ on:
       - "pruebas/**"
       - "desarrollo/**"
       - "correccion/**"
+      - "mejora/**"
       - main
+    paths:
+      - "apps/web/**"
+      - "apps/api/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - ".github/workflows/qa-web-playwright.yml"
   pull_request:
     branches:
       - main
+    paths:
+      - "apps/web/**"
+      - "apps/api/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - ".github/workflows/qa-web-playwright.yml"
 
 concurrency:
   group: qa-web-playwright-${{ github.ref }}
@@ -44,6 +59,7 @@ jobs:
       QA_VENDEDOR_IDENTIFICADOR: vendedor@zav.test
       QA_VENDEDOR_PASSWORD: Vendedor-QA-2026-Pruebas!
       API_BASE_URL: http://127.0.0.1:3001
+      ZAV_LANDING_EXTENDIDA: 'true'
 
     steps:
       - name: Descargar repositorio

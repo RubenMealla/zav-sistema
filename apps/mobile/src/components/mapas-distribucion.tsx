@@ -64,6 +64,14 @@ function esPlusCode(valor: string) {
   return /^[A-Z0-9]{4,8}\+[A-Z0-9]{2,4}$/i.test(valor.trim());
 }
 
+function separarError(mensaje: string) {
+  const coincidencia = mensaje.match(/^(HTTP \d{3}|SIN RESPUESTA HTTP|VALIDACIÓN|ERROR LOCAL|SIN RESULTADOS) · (.+)$/s);
+  return {
+    codigo: coincidencia?.[1] ?? null,
+    mensaje: coincidencia?.[2] ?? mensaje,
+  };
+}
+
 function limpiarDireccion(valor: string) {
   return valor
     .replace(/^[A-Z0-9]{4,8}\+[A-Z0-9]{2,4},?\s*/i, '')
@@ -107,6 +115,14 @@ export function SelectorUbicacionMapa({
   const [buscandoSugerencias, setBuscandoSugerencias] = useState(false);
   const [mapaListo, setMapaListo] = useState(false);
   const [error, setError] = useState('');
+
+  function mensajeApi(errorActual: unknown, respaldo: string) {
+    if (errorActual instanceof ApiError) {
+      const codigo = errorActual.status > 0 ? `HTTP ${errorActual.status}` : 'SIN RESPUESTA HTTP';
+      return `${codigo} · ${errorActual.message || respaldo}`;
+    }
+    return `ERROR LOCAL · ${respaldo}`;
+  }
 
   function permiteFallback(errorActual: unknown) {
     return (
@@ -184,7 +200,7 @@ export function SelectorUbicacionMapa({
   async function buscarDireccion() {
     const consulta = direccion.trim();
     if (!consulta) {
-      setError('Escribe una dirección, calle, barrio o referencia.');
+      setError('VALIDACIÓN · Escribe una dirección, calle, barrio o referencia.');
       return;
     }
 
@@ -199,14 +215,14 @@ export function SelectorUbicacionMapa({
       const remotos = await buscarDirecciones(token, consulta);
       if (!remotos.resultados.length) {
         setError(
-          'No se encontró esa referencia dentro del departamento de Tarija. Prueba con el barrio, calle, zona o una referencia más completa.',
+          'SIN RESULTADOS · No se encontró esa referencia dentro del departamento de Tarija. Prueba con el barrio, calle, zona o una referencia más completa.',
         );
         return;
       }
       elegirSugerencia(remotos.resultados[0]);
-    } catch {
+    } catch (e) {
       setError(
-        'No se pudo consultar direcciones en este momento. Puedes usar “Mi ubicación” y corregir el punto manualmente.',
+        mensajeApi(e, 'No se pudo consultar direcciones en este momento. Puedes usar “Mi ubicación” y corregir el punto manualmente.'),
       );
     } finally {
       setCargando(false);
@@ -219,7 +235,7 @@ export function SelectorUbicacionMapa({
     try {
       if (!(await permisoForeground())) {
         setError(
-          'No se autorizó la ubicación. Puedes buscar una dirección sin compartir tu posición.',
+          'ERROR LOCAL · No se autorizó la ubicación. Puedes buscar una dirección sin compartir tu posición.',
         );
         return;
       }
@@ -241,11 +257,7 @@ export function SelectorUbicacionMapa({
         setDireccionElegida(sugerida);
       }
     } catch (e) {
-      setError(
-        e instanceof ApiError
-          ? e.message
-          : 'No se pudo obtener la ubicación actual.',
-      );
+      setError(mensajeApi(e, 'No se pudo obtener la ubicación actual.'));
     } finally {
       setCargando(false);
     }
@@ -253,7 +265,7 @@ export function SelectorUbicacionMapa({
 
   async function confirmar() {
     if (!punto) {
-      setError('Primero selecciona un punto dentro del departamento de Tarija.');
+      setError('VALIDACIÓN · Primero selecciona un punto dentro del departamento de Tarija.');
       return;
     }
 
@@ -270,22 +282,20 @@ export function SelectorUbicacionMapa({
 
       if (!direccionFinal) {
         setError(
-          'Escribe una dirección o referencia comprensible antes de confirmar el punto.',
+          'VALIDACIÓN · Escribe una dirección o referencia comprensible antes de confirmar el punto.',
         );
         return;
       }
 
       onConfirmar({ ...punto, direccion: direccionFinal });
     } catch (e) {
-      setError(
-        e instanceof ApiError
-          ? e.message
-          : 'No se pudo validar el punto seleccionado.',
-      );
+      setError(mensajeApi(e, 'No se pudo validar el punto seleccionado.'));
     } finally {
       setCargando(false);
     }
   }
+
+  const errorVisible = separarError(error);
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onCancelar}>
@@ -357,7 +367,12 @@ export function SelectorUbicacionMapa({
           </View>
         </View>
 
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+        {error ? (
+          <View style={styles.error}>
+            {errorVisible.codigo ? <Text style={styles.errorCodigo}>{errorVisible.codigo}</Text> : null}
+            <Text style={styles.errorMensaje}>{errorVisible.mensaje}</Text>
+          </View>
+        ) : null}
         {cargando ? (
           <View style={styles.cargando}>
             <ActivityIndicator color="#b83b17" />
@@ -379,7 +394,7 @@ export function SelectorUbicacionMapa({
             onDidFailLoadingMap={() => {
               setMapaListo(false);
               setError(
-                'El mapa no pudo cargarse. Revisa la conexión y vuelve a intentar.',
+                'ERROR LOCAL · El mapa no pudo cargarse. Revisa la conexión y vuelve a intentar.',
               );
             }}
             onRegionDidChange={(evento) => {
@@ -796,10 +811,20 @@ const styles = StyleSheet.create({
   error: {
     marginHorizontal: 16,
     marginBottom: 8,
-    color: '#a1322c',
     backgroundColor: '#fcefeb',
     padding: 10,
     borderRadius: 6,
+    gap: 3,
+  },
+  errorCodigo: {
+    color: '#8b2f25',
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 0.4,
+  },
+  errorMensaje: {
+    color: '#a1322c',
+    lineHeight: 19,
   },
   cargando: {
     marginHorizontal: 16,

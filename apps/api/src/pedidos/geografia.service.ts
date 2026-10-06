@@ -60,8 +60,8 @@ function consultaDireccion(valor: unknown): string {
     throw new BadRequestException('q es obligatorio.');
   }
   const consulta = valor.trim();
-  if (consulta.length < 2 || consulta.length > 200) {
-    throw new BadRequestException('q debe contener entre 2 y 200 caracteres.');
+  if (consulta.length < 1 || consulta.length > 200) {
+    throw new BadRequestException('q debe contener entre 1 y 200 caracteres.');
   }
   return consulta;
 }
@@ -256,27 +256,130 @@ export class GeografiaService {
     }
   }
 
+  private async consultarPhoton(consulta: string) {
+    const url = new URL('https://photon.komoot.io/api/');
+    url.searchParams.set('q', consulta);
+    url.searchParams.set('lang', 'es');
+    url.searchParams.set('limit', '12');
+    url.searchParams.set('lat', '-21.535486');
+    url.searchParams.set('lon', '-64.729557');
+
+    try {
+      const respuesta = await fetch(url, {
+        headers: { Accept: 'application/json', 'User-Agent': 'ZAV-Sistema/2026' },
+        signal: AbortSignal.timeout(6000),
+      });
+      if (!respuesta.ok) return [];
+      const cuerpo = (await respuesta.json()) as {
+        features?: Array<{
+          geometry?: { coordinates?: unknown[] };
+          properties?: Record<string, unknown>;
+        }>;
+      };
+
+      return (cuerpo.features ?? [])
+        .map((feature) => {
+          const p = feature.properties ?? {};
+          const coordenadas = feature.geometry?.coordinates ?? [];
+          const longitud = Number(coordenadas[0]);
+          const latitud = Number(coordenadas[1]);
+          const estado = textoOpcional(p.state);
+          const ciudad = textoOpcional(p.city);
+          const county = textoOpcional(p.county);
+          const distrito = textoOpcional(p.district);
+          const paisCodigo = textoOpcional(p.countrycode).toLowerCase();
+          const contexto = [estado, ciudad, county, distrito]
+            .join(' ')
+            .toLocaleLowerCase('es-BO');
+
+          if (
+            paisCodigo !== 'bo' ||
+            !contexto.includes('tarija') ||
+            !Number.isFinite(latitud) ||
+            !Number.isFinite(longitud)
+          ) {
+            return null;
+          }
+
+          const principal =
+            textoOpcional(p.name) ||
+            textoOpcional(p.street) ||
+            textoOpcional(p.locality) ||
+            ciudad ||
+            distrito;
+          const secundaria = [
+            textoOpcional(p.street),
+            distrito,
+            ciudad,
+            county,
+            estado,
+          ]
+            .filter(Boolean)
+            .filter((valor, indice, todos) => todos.indexOf(valor) === indice)
+            .join(', ');
+
+          if (!principal) return null;
+          return {
+            direccion: [principal, secundaria].filter(Boolean).join(', '),
+            principal,
+            secundaria,
+            tipo: textoOpcional(p.type) || 'place',
+            departamento: estado || null,
+            ciudad: ciudad || null,
+            paisCodigo,
+            latitud,
+            longitud,
+          };
+        })
+        .filter((resultado): resultado is NonNullable<typeof resultado> => resultado !== null)
+        .slice(0, 8);
+    } catch {
+      return [];
+    }
+  }
+
   private async buscarEnTarija(
     ruta: 'search' | 'autocomplete',
     consulta: string,
   ) {
-    const comunes = {
-      filter: 'countrycode:bo',
-      limit: '8',
-    };
+    const buscarPhoton = () =>
+      this.consultarPhoton(`${consulta}, Tarija, Bolivia`);
 
-    const [tarija, bolivia] = await Promise.all([
-      this.consultarGeoapify(ruta, {
-        ...comunes,
-        text: `${consulta}, Tarija, Bolivia`,
-      }),
-      this.consultarGeoapify(ruta, {
-        ...comunes,
-        text: consulta,
-      }),
-    ]);
+    if (!process.env.GEOAPIFY_API_KEY?.trim()) {
+      const alternativos = await buscarPhoton();
+      if (alternativos.length) return alternativos;
+      throw new ServiceUnavailableException(
+        'El servicio de búsqueda de direcciones no está disponible.',
+      );
+    }
 
-    return combinarResultados(tarija.results ?? [], bolivia.results ?? []);
+    const comunes = { filter: 'countrycode:bo', limit: '8' };
+
+    try {
+      const [tarija, bolivia] = await Promise.all([
+        this.consultarGeoapify(ruta, {
+          ...comunes,
+          text: `${consulta}, Tarija, Bolivia`,
+        }),
+        this.consultarGeoapify(ruta, {
+          ...comunes,
+          text: consulta,
+        }),
+      ]);
+      const resultados = combinarResultados(
+        tarija.results ?? [],
+        bolivia.results ?? [],
+      );
+      if (resultados.length) return resultados;
+    } catch {
+      const alternativos = await buscarPhoton();
+      if (alternativos.length) return alternativos;
+      throw new ServiceUnavailableException(
+        'No se pudieron consultar direcciones en Tarija.',
+      );
+    }
+
+    return buscarPhoton();
   }
 
   async geocodificar(entrada: unknown) {

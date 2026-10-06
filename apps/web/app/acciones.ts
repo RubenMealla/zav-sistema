@@ -3,7 +3,7 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 
-const API = process.env.API_BASE_URL ?? 'http://localhost:3001';
+const API = process.env.API_BASE_URL ?? (process.env.NODE_ENV === 'production' ? 'https://zav-api-2026.onrender.com' : 'http://localhost:3001');
 const COOKIE = 'zav_acceso';
 
 type RespuestaLogin = { accessToken?: string; usuario?: { rol?: string } };
@@ -11,7 +11,7 @@ type RespuestaLogin = { accessToken?: string; usuario?: { rol?: string } };
 export async function iniciarSesion(formulario: FormData) {
   const identificador = String(formulario.get('identificador') ?? '').trim();
   const contrasena = String(formulario.get('contrasena') ?? '');
-  if (!identificador || !contrasena) redirect('/acceso?error=datos');
+  if (!identificador || !contrasena) redirect('/acceso?error=datos&codigo=VALIDACION');
 
   let respuesta: Response;
   try {
@@ -22,12 +22,24 @@ export async function iniciarSesion(formulario: FormData) {
       cache: 'no-store',
     });
   } catch {
-    redirect('/acceso?error=conexion');
+    redirect('/acceso?error=conexion&codigo=RED');
   }
-  if (!respuesta.ok) redirect('/acceso?error=credenciales');
-  const datos = (await respuesta.json()) as RespuestaLogin;
+  if (!respuesta.ok) {
+    const clave =
+      respuesta.status === 400 ? 'datos'
+      : respuesta.status === 401 ? 'credenciales'
+      : respuesta.status === 403 ? 'permisos'
+      : 'servicio';
+    redirect(`/acceso?error=${clave}&codigo=${respuesta.status}`);
+  }
+  let datos: RespuestaLogin;
+  try {
+    datos = (await respuesta.json()) as RespuestaLogin;
+  } catch {
+    redirect('/acceso?error=servicio&codigo=RESPUESTA_INVALIDA');
+  }
   if (!datos.accessToken || datos.usuario?.rol !== 'ADMINISTRADOR') {
-    redirect('/acceso?error=permisos');
+    redirect('/acceso?error=permisos&codigo=403');
   }
 
   (await cookies()).set(COOKIE, datos.accessToken, {
@@ -37,10 +49,10 @@ export async function iniciarSesion(formulario: FormData) {
     path: '/',
     maxAge: 15 * 60,
   });
-  redirect('/panel');
+  redirect('/panel?mensaje=sesion-iniciada');
 }
 
 export async function cerrarSesion() {
   (await cookies()).delete(COOKIE);
-  redirect('/acceso');
+  redirect('/acceso?mensaje=sesion-cerrada');
 }

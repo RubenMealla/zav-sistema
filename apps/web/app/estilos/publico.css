@@ -1,48 +1,92 @@
-.sitio-publico { min-height: 100vh; background: var(--gris-50); }
-.contenedor-publico { width: min(1200px, calc(100% - 80px)); margin-inline: auto; }
-.publico-header { min-height: 116px; display: flex; align-items: center; gap: 28px; border-bottom: 1px solid var(--gris-300); }
-.publico-header>a:first-of-type { background: #000; }
-.publico-descriptor { font-size: 13px; font-weight: 650; }
-.publico-descriptor span { display: block; margin-top: 4px; color: var(--gris-600); font-size: 11px; font-weight: 400; }
-.publico-header>.boton { margin-left: auto; }
-.publico-portada { display: grid; grid-template-columns: 1.15fr 1fr; padding-block: 58px; gap: 58px; align-items: stretch; }
-.publico-editorial { padding-block: 30px; }
-.publico-editorial h1 { margin: 24px 0; font-family: Georgia, 'Times New Roman', serif; font-size: clamp(36px, 4.1vw, 57px); font-weight: 400; line-height: 1.12; letter-spacing: -.045em; }
-.publico-editorial h1 em { font-style: normal; color: var(--marca-oscura); }
-.publico-editorial>p { max-width: 480px; margin: 0 0 30px; font-size: 16px; line-height: 1.7; color: var(--gris-700); }
-.publico-nota { display: flex; align-items: center; gap: 8px; margin-top: 18px; font-size: 11px; color: var(--gris-600); }
-.publico-etiqueta { margin: 0; background: #000; color: white; border-top: 4px solid var(--marca); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; }
-.etiqueta-sobretitulo { align-self: flex-start; color: #bab8ae; font-size: 10px; letter-spacing: .18em; }
-.publico-etiqueta>span:nth-child(2) { margin-block: auto; }
-.publico-etiqueta figcaption { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; width: 100%; border-top: 1px solid #41413c; padding-top: 16px; color: #cac8bf; font-size: 10px; letter-spacing: .06em; }
-.publico-operaciones { padding: 32px 0 52px; border-top: 1px solid var(--gris-300); }
-.publico-seccion-titulo { display: flex; align-items: baseline; gap: 28px; margin-bottom: 32px; }
-.publico-seccion-titulo h2 { font-size: 21px; font-weight: 550; letter-spacing: -.025em; margin: 0; }
-.publico-registros { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; }
-.publico-registros article { border-left: 1px solid var(--gris-300); padding-left: 20px; }
-.publico-numero { color: var(--marca-oscura); font-size: 12px; font-family: Consolas, monospace; }
-.publico-registros h3 { font-size: 15px; margin: 12px 0 8px; }
-.publico-registros p { font-size: 13px; color: var(--gris-600); line-height: 1.65; margin: 0; max-width: 320px; }
-.publico-footer { min-height: 72px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; padding-block: 20px; border-top: 1px solid var(--gris-300); font-size: 11px; color: var(--gris-600); }
-@media (max-width: 900px) {
-  .contenedor-publico { width: calc(100% - 48px); }
-  .publico-portada { gap: 28px; grid-template-columns: 1.1fr 1fr; }
-  .publico-etiqueta { padding: 18px; }
+.sitio-publico{min-height:100dvh;overflow-x:clip;color:#24231f;background:#f2eee6}.contenedor-publico{width:min(1420px,calc(100% - clamp(32px,6vw,96px)));margin-inline:auto}.publico-seccion-ancla{scroll-margin-top:78px}.publico-header{position:sticky;top:0;z-index:80;color:#fff;background:rgba(16,16,14,.97);border-bottom:1px solid #34332e;backdrop-filter:blur(14px)}.publico-header-interior{min-height:78px;display:grid;grid-template-columns:minmax(150px,auto) 1fr auto;align-items:center;gap:30px}.publico-marca{width:fit-content;display:inline-flex;align-items:center}.publico-nav{justify-self:center;display:flex;align-items:stretch;gap:clamp(18px,3vw,42px);align-self:stretch}.publico-nav a{position:relative;min-height:78px;display:inline-flex;align-items:center;color:#c9c5bc;font-size:13px;font-weight:650;letter-spacing:.015em}.publico-nav a::after{content:'';position:absolute;left:0;right:0;bottom:0;height:3px;background:#e45a2e;transform:scaleX(0);transform-origin:center;transition:transform .18s ease}.publico-nav a:hover,.publico-nav a.activo{color:#fff}.publico-nav a.activo{color:#f58a65}.publico-nav a.activo::after{transform:scaleX(1)}.publico-acceso{min-height:42px;display:inline-flex;align-items:center;gap:8px;padding-inline:15px;border:1px solid #5a5850;border-radius:3px;color:#fff;font-size:12px;font-weight:700;transition:background .16s ease,border-color .16s ease,color .16s ease}.publico-acceso:hover{color:#fff;border-color:#e45a2e;background:#e45a2e}.publico-hero{min-height:calc(100svh - 78px);color:#fff;background:linear-gradient(120deg,#151512 0%,#151512 46%,#1e1d19 100%)}.publico-hero-grid{min-height:calc(100svh - 78px);display:grid;grid-template-columns:minmax(0,.78fr) minmax(520px,1.22fr);gap:clamp(38px,5vw,78px);align-items:center;padding-block:clamp(46px,7vh,86px)}.publico-hero-copy{align-self:center;max-width:650px}.publico-kicker{color:#d8d3ca;font-size:11px;font-weight:750;letter-spacing:.18em}.publico-hero h1{margin:22px 0 24px;font-family:Georgia,'Times New Roman',serif;font-size:clamp(52px,5.8vw,92px);font-weight:400;line-height:.96;letter-spacing:-.052em}.publico-hero h1 em{color:#e96539;font-style:normal}.publico-hero-copy>p{max-width:560px;margin:0;color:#c6c1b7;font-size:15px;line-height:1.75}.publico-link-hero{width:fit-content;margin-top:30px;display:inline-flex;align-items:center;gap:9px;color:#fff;font-size:13px;font-weight:700}.publico-link-hero:hover{color:#f58a65}.publico-noticia{min-width:0;min-height:min(690px,calc(100svh - 150px));display:grid;grid-template-rows:minmax(360px,1fr) auto;overflow:hidden;background:#f4f0e8;color:#24231f;border:1px solid #34332e}.publico-noticia-imagen{position:relative;min-height:0;background:#292824;overflow:hidden}.publico-noticia-imagen img{object-fit:contain;padding:clamp(18px,3vw,38px)}.publico-noticia-contenido{min-height:170px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:28px;align-items:end;padding:clamp(20px,3vw,32px);border-top:1px solid #d2ccc1}.publico-noticia-contenido>div:first-child>span{color:#a73a1d;font-size:10px;font-weight:800;letter-spacing:.12em}.publico-noticia-contenido h2{margin:8px 0 6px;font-family:Georgia,'Times New Roman',serif;font-size:clamp(26px,2.6vw,40px);font-weight:400;letter-spacing:-.035em}.publico-noticia-contenido p{max-width:620px;margin:0;color:#68635a;font-size:12px;line-height:1.6}.publico-noticia-controles{display:flex;align-items:center;gap:10px}.publico-noticia-controles>button{width:38px;height:38px;border:1px solid #c7c1b6;background:transparent;color:#302e29;font-size:18px}.publico-noticia-controles>button:hover{border-color:#e45a2e;color:#a73a1d}.publico-noticia-puntos{display:flex;gap:6px}.publico-noticia-puntos button{width:7px;height:7px;padding:0;border:0;border-radius:50%;background:#b6b0a5}.publico-noticia-puntos button.activo{background:#e45a2e}.publico-productos{padding-block:clamp(82px,9vw,130px);background:#f3efe7}.publico-seccion-intro{max-width:700px}.publico-seccion-intro h2,.publico-zav-copy h2{margin:12px 0 17px;font-family:Georgia,'Times New Roman',serif;font-size:clamp(40px,4.7vw,68px);font-weight:400;line-height:.98;letter-spacing:-.045em}.publico-seccion-intro p,.publico-zav-copy p{margin:0;color:#676259;font-size:14px;line-height:1.75}.familias-grid{margin-top:46px;display:grid;grid-template-columns:repeat(7,minmax(110px,1fr));border-top:1px solid #c7c0b5;border-left:1px solid #c7c0b5}.familia-card{min-height:148px;display:grid;justify-items:start;align-content:space-between;gap:20px;padding:18px 16px;border:0;border-right:1px solid #c7c0b5;border-bottom:1px solid #c7c0b5;background:rgba(255,255,255,.35);color:#504c45;text-align:left;font-size:12px;font-weight:700}.familia-card:hover{background:#fff;color:#24231f}.familia-card.activa{color:#fff;background:#1a1a17}.familia-icono{width:46px;height:46px;display:grid;place-items:center;color:#a73a1d}.familia-card.activa .familia-icono{color:#f07a50}.familia-icono svg{width:42px;height:42px}.catalogo-familia{margin-top:44px}.catalogo-familia-cabecera{display:flex;align-items:end;justify-content:space-between;gap:30px;padding-bottom:22px;border-bottom:1px solid #bdb6aa}.catalogo-familia-cabecera h3{margin:7px 0 4px;font-family:Georgia,'Times New Roman',serif;font-size:clamp(30px,3vw,46px);font-weight:400}.catalogo-familia-cabecera p{margin:0;color:#6d685f;font-size:12px}.catalogo-conteo{color:#777168;font-size:11px;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap}.productos-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;padding-top:22px}.producto-publico{min-width:0;background:#fff;border:1px solid #d1cbc0}.producto-publico-imagen{position:relative;aspect-ratio:1;overflow:hidden;background:#eeebe4}.producto-publico-imagen img{object-fit:contain;padding:16px;transition:transform .2s ease}.producto-publico:hover img{transform:scale(1.025)}.producto-publico-pie{min-height:86px;padding:14px 16px 16px;border-top:1px solid #e1dcd3}.producto-publico-pie span{color:#8a5a46;font-size:9px;font-weight:800;letter-spacing:.1em;text-transform:uppercase}.producto-publico-pie h4{margin:6px 0 0;font-size:14px;font-weight:650;line-height:1.35}.publico-zav{padding-block:clamp(76px,9vw,126px);color:#fff;background:#11110f}.publico-zav-grid{display:grid;grid-template-columns:minmax(360px,.9fr) minmax(0,1.1fr);gap:clamp(50px,8vw,120px);align-items:center}.publico-zav-marca{min-height:420px;display:grid;place-items:center;background:#201f1b;padding:clamp(25px,4vw,56px)}.publico-zav-copy{max-width:720px}.publico-zav-copy .eyebrow{color:#f07851}.publico-zav-copy p{color:#bbb6ad}.publico-zav-copy p+p{margin-top:12px}.publico-link{display:inline-flex;align-items:center;gap:9px;margin-top:26px;color:#f07851;font-size:13px;font-weight:700}.publico-link:hover{color:#ff9b78}.publico-footer{color:#aaa69d;background:#090908;border-top:1px solid #292824}.publico-footer-grid{min-height:190px;display:grid;grid-template-columns:1.2fr .8fr 1fr;gap:44px;align-items:center;padding-block:34px}.publico-footer-identidad{display:grid;justify-items:start;gap:10px}.publico-footer-identidad p{margin:0;color:#8d8980;font-size:11px}.publico-footer nav{display:grid;gap:10px;font-size:12px}.publico-footer nav a:hover{color:#fff}.publico-footer-redes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 18px;font-size:11px}.publico-footer-redes span{color:#77736c}.publico-footer-legal{min-height:54px;display:flex;align-items:center;justify-content:space-between;gap:20px;border-top:1px solid #24231f;color:#6f6b64;font-size:10px;letter-spacing:.06em}@media(max-width:1120px){.publico-hero-grid{grid-template-columns:minmax(0,.72fr) minmax(430px,1.28fr)}.familias-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.productos-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:900px){.publico-header-interior{min-height:70px;grid-template-columns:1fr auto;gap:14px}.publico-nav{grid-column:1/-1;grid-row:2;justify-self:stretch;overflow-x:auto;border-top:1px solid #292824}.publico-nav a{min-height:42px;flex:1 0 auto;justify-content:center;padding-inline:12px}.publico-hero{min-height:0}.publico-hero-grid{min-height:0;grid-template-columns:1fr;padding-block:54px 68px}.publico-hero-copy{max-width:760px}.publico-noticia{min-height:620px}.publico-zav-grid{grid-template-columns:1fr}.publico-zav-marca{min-height:360px}.publico-footer-grid{grid-template-columns:1fr 1fr}.publico-footer-identidad{grid-column:1/-1}}@media(max-width:680px){.contenedor-publico{width:calc(100% - 28px)}.publico-header-interior{gap:10px}.publico-acceso{min-height:38px;padding-inline:10px;font-size:11px}.publico-hero-grid{padding-block:44px 54px;gap:34px}.publico-hero h1{font-size:clamp(46px,14vw,66px)}.publico-noticia{min-height:540px;grid-template-rows:minmax(310px,1fr) auto}.publico-noticia-contenido{grid-template-columns:1fr;gap:16px}.publico-noticia-controles{justify-content:space-between}.familias-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.familia-card{min-height:128px}.catalogo-familia-cabecera{align-items:flex-start;flex-direction:column;gap:12px}.productos-grid{grid-template-columns:1fr 1fr}.publico-zav-marca{min-height:300px}.publico-footer-grid{grid-template-columns:1fr;gap:26px}.publico-footer-identidad{grid-column:auto}.publico-footer-legal{align-items:flex-start;flex-direction:column;justify-content:center;gap:4px;padding-block:14px}}@media(max-width:430px){.productos-grid{grid-template-columns:1fr}}
+.catalogo-familia-contenido{display:grid;grid-template-columns:minmax(300px,.8fr) minmax(0,1.2fr);gap:18px;padding-top:22px}
+.catalogo-familia-imagen{position:relative;min-height:390px;background:#e8e3da;border:1px solid #d1cbc0;overflow:hidden}
+.catalogo-familia-imagen img{object-fit:contain;padding:24px}
+.productos-lista{display:grid;align-content:start;border-top:1px solid #c8c1b5}
+.productos-lista .producto-publico{display:grid;grid-template-columns:46px minmax(0,1fr);align-items:center;gap:18px;min-height:76px;padding:13px 16px;background:transparent;border:0;border-bottom:1px solid #c8c1b5}
+.productos-lista .producto-publico>span{color:#9a604b;font-size:10px;letter-spacing:.08em}
+.productos-lista .producto-publico h4{margin:0;font-size:15px;font-weight:650}
+@media(max-width:760px){.catalogo-familia-contenido{grid-template-columns:1fr}.catalogo-familia-imagen{min-height:330px}}
+
+.producto-publico-pendiente{
+  position:absolute;inset:0;display:grid;place-content:center;gap:.35rem;text-align:center;
+  background:#ece7dd;color:#272522
 }
-@media (max-width: 680px) {
-  .contenedor-publico { width: calc(100% - 32px); }
-  .publico-header { min-height: 106px; gap: 12px; }
-  .publico-descriptor { display: none; }
-  .publico-header>.boton { padding-inline: 12px; }
-  .publico-portada { grid-template-columns: 1fr; padding-block: 28px; }
-  .publico-editorial { padding-block: 12px; }
-  .publico-editorial h1 { font-size: clamp(34px, 8.5vw, 48px); }
-  .publico-etiqueta { padding: 20px; }
-  .publico-etiqueta>span:nth-child(2) { max-width: 280px; }
-  .publico-seccion-titulo { display: block; }
-  .publico-seccion-titulo h2 { margin-top: 12px; }
-  .publico-registros { grid-template-columns: 1fr; gap: 24px; }
-  .publico-registros article { display: grid; grid-template-columns: 28px 1fr; column-gap: 12px; }
-  .publico-numero { grid-row: span 2; padding-top: 2px; }
-  .publico-registros h3 { margin-top: 0; }
+.producto-publico-pendiente span{font-weight:800;letter-spacing:.16em;font-size:1.05rem}
+.producto-publico-pendiente small{font-size:.72rem;color:#777064}
+
+.publico-header{backdrop-filter:none}.publico-header-interior{grid-template-columns:auto 1fr auto}.publico-marca{min-width:158px}.publico-hero{background:#151512}.publico-hero-grid{grid-template-columns:minmax(0,.9fr) minmax(480px,1.1fr)}.publico-hero-copy>p{font-size:17px}.publico-noticia{min-height:620px}.publico-noticia-contenido p{font-size:14px}.publico-productos-intro{display:grid;grid-template-columns:minmax(0,1fr) minmax(260px,.55fr);gap:40px;max-width:none;align-items:end}.familias-grid{grid-template-columns:repeat(7,minmax(120px,1fr));margin-top:34px}.familia-card{min-height:112px;align-content:center;gap:12px;padding:16px 14px;font-size:13px}.familia-icono{width:38px;height:38px}.familia-icono svg{width:36px;height:36px}.producto-publico-pie span{font-size:10px}.producto-publico-pie h4{font-size:16px}.publico-zav-grid{grid-template-columns:minmax(300px,.72fr) minmax(0,1.28fr)}.publico-zav-marca{min-height:360px;align-content:center;justify-items:start;border:1px solid #34332e;background:#181815}.publico-zav-copy p{font-size:16px}.publico-zav-datos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;margin-top:28px;background:#3a3833;border:1px solid #3a3833}.publico-zav-dato{padding:18px;background:#151512}.publico-zav-dato span{display:block;color:#ef7650;font-size:11px;font-weight:800;letter-spacing:.1em}.publico-zav-dato strong{display:block;margin-top:7px;color:#fff;font-size:15px}.publico-footer{background:#0c0c0a}.publico-footer-grid{grid-template-columns:1.25fr repeat(3,minmax(150px,.65fr));align-items:start;padding-block:42px}.publico-footer h3{margin:0 0 13px;color:#fff;font-size:13px;letter-spacing:.08em;text-transform:uppercase}.publico-footer p,.publico-footer a,.publico-footer span{font-size:13px;line-height:1.7}.publico-footer nav,.publico-footer-col{display:grid;gap:7px}.publico-footer-redes{display:flex;flex-wrap:wrap;gap:8px}.publico-footer-redes a,.publico-footer-redes span{padding:7px 9px;border:1px solid #34332e;color:#c8c3b9}@media(max-width:900px){.publico-productos-intro{grid-template-columns:1fr}.familias-grid{grid-template-columns:repeat(4,1fr)}.publico-zav-grid{grid-template-columns:1fr}.publico-footer-grid{grid-template-columns:1fr 1fr}}@media(max-width:560px){.familias-grid{grid-template-columns:repeat(2,1fr)}.publico-zav-datos,.publico-footer-grid{grid-template-columns:1fr}}
+/* Cierre de revisión visual: pictogramas con silueta, sin blur ni resplandores. */
+.publico-header{backdrop-filter:none}
+.familia-icono{width:58px;height:48px;display:grid;place-items:center;border:0;background:#f5dfd6;color:#c94a25}
+.familia-icono svg{width:50px;height:38px;display:block;fill:currentColor;stroke:none}
+.familia-icono .familia-detalle{fill:#fff8f4}
+.familia-icono .familia-detalle-trazo{fill:none;stroke:#fff8f4;stroke-width:2.4;stroke-linecap:round}
+.familia-card{min-height:104px}
+.publico-zav-marca{min-height:330px}
+.publico-zav-marca .marca{justify-items:center}
+.publico-zav-marca .simbolo{width:min(100%,360px)}
+.publico-footer-redes span{cursor:default}
+
+.foto-sprite{width:100%;height:100%;background-image:url('/catalogo/zav-catalogo.webp');background-repeat:no-repeat;background-size:400% 400%}
+.foto-sprite-destacada,.foto-sprite-producto{position:absolute;inset:0;background-color:#ece7dd}
+.producto-publico-imagen{position:relative;overflow:hidden}
+
+/* Refinamiento final de identidad e información institucional. */
+.publico-header{background:#10100e;backdrop-filter:none}
+.publico-hero{background:#151512}
+.publico-zav-marca{position:relative;min-height:340px}
+.publico-zav-marca-leyenda{margin-top:22px;color:#aaa69d;font-size:12px;font-weight:750;letter-spacing:.16em}
+.publico-zav-enlaces{display:flex;align-items:center;gap:24px;flex-wrap:wrap}
+.publico-zav-enlaces .publico-link{margin-top:26px}
+.publico-footer-identidad .marca{margin-bottom:4px}
+.publico-footer-redes{align-items:flex-start}
+.publico-footer-redes a,.publico-footer-redes span{display:inline-flex;align-items:center;min-height:36px}
+@media(max-width:680px){.publico-zav-enlaces{align-items:flex-start;flex-direction:column;gap:0}.publico-zav-marca-leyenda{font-size:11px}}
+
+
+/* Revisión de landing: menos espacio muerto, hero completo y tipografía ligeramente mayor. */
+.publico-seccion-ancla{scroll-margin-top:76px}
+.publico-nav a{font-size:14px}
+.publico-acceso{font-size:13px}
+.publico-kicker{font-size:12px}
+.publico-hero-grid{min-height:calc(100svh - 78px);padding-block:28px}
+.publico-hero-copy>p{font-size:18px}
+.publico-link-hero{font-size:14px}
+.publico-noticia{min-height:min(560px,calc(100svh - 118px));grid-template-rows:minmax(300px,1fr) auto}
+.publico-noticia-imagen{background:#ece7dd}
+.publico-noticia-contenido{min-height:148px;padding:22px 26px}
+.publico-noticia-contenido>div:first-child>span{font-size:11px}
+.publico-noticia-contenido p{font-size:15px}
+.publico-productos{padding-block:clamp(48px,5vw,72px)}
+.publico-seccion-intro p,.publico-zav-copy p{font-size:16px}
+.familias-grid{margin-top:28px}
+.familia-card{font-size:14px}
+.catalogo-familia{margin-top:32px}
+.catalogo-familia-cabecera p{font-size:14px}
+.catalogo-conteo{font-size:12px}
+.producto-publico-pie span{font-size:11px}.producto-publico-pie h4{font-size:17px}
+.publico-zav{padding-block:clamp(48px,5vw,72px)}
+.publico-zav-marca-leyenda{font-size:13px}
+.publico-zav-dato span{font-size:12px}.publico-zav-dato strong{font-size:16px}
+.publico-link{font-size:14px}
+.publico-footer h3{font-size:14px}
+.publico-footer p,.publico-footer a,.publico-footer span{font-size:14px}
+.publico-footer-legal{font-size:11px}
+.foto-sprite{background-color:#ece7dd;background-position:center;background-repeat:no-repeat}
+@media(max-width:900px){
+  .publico-hero-grid{padding-block:34px 46px}
+  .publico-noticia{min-height:520px}
 }
+@media(max-width:680px){
+  .publico-hero-grid{padding-block:32px 40px}
+  .publico-noticia{min-height:500px}
+  .publico-productos,.publico-zav{padding-block:42px}
+}
+
+
+/* Fotografías originales ZAV: el archivo PNG se sirve sin conversión; el ajuste es únicamente visual. */
+.foto-original{position:absolute;inset:0;width:100%;height:100%;display:block;object-fit:contain;object-position:center;background:#ece7dd}
+.foto-original-destacada{padding:clamp(18px,3vw,38px)}
+.foto-original-producto{padding:16px;transition:transform .2s ease}
+.producto-publico:hover .foto-original-producto{transform:scale(1.025)}
