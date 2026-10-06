@@ -138,6 +138,15 @@ def main():
     wait_for("Clientes")
     screenshot("mobile-05-clientes.png")
 
+    for _ in range(3):
+        if node_for("Guardar cliente") is not None:
+            break
+        run(["adb", "shell", "input", "swipe", "540", "1650", "540", "750", "600"], check=False)
+        time.sleep(1)
+    tap("Guardar cliente")
+    wait_for("VALIDACIÓN")
+    screenshot("mobile-06-validacion-cliente.png")
+
     print("Capturas reales Android:")
     for img in sorted(OUT.glob("*.png")):
         print(f"- {img.name}: {img.stat().st_size} bytes")
