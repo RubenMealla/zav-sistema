@@ -103,11 +103,13 @@ def relaunch():
     # Arranque determinista de la actividad principal. "monkey" puede dejar
     # el proceso ADB abierto aun después de inyectar el evento en CI.
     run(
-        ["adb", "shell", "am", "start", "-W", "-n", f"{PKG}/.MainActivity"],
-        check=True,
-        timeout=35,
+        ["adb", "shell", "am", "start", "-n", f"{PKG}/.MainActivity"],
+        check=False,
+        timeout=15,
     )
-    time.sleep(6)
+    # El primer arranque release puede tardar bastante en el emulador CI.
+    time.sleep(45)
+    shot("MOV-00-arranque-diagnostico.png")
 
 def login(identifier: str, password: str):
     tap("Identificador")
@@ -182,4 +184,17 @@ def main():
         print(f"- {img.name}: {img.stat().st_size} bytes")
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception:
+        try:
+            shot("MOV-00-fallo-diagnostico.png")
+        except Exception:
+            pass
+        try:
+            resultado = run(["adb", "logcat", "-d", "-t", "3000"], check=False, capture=True, timeout=20)
+            if resultado is not None and resultado.stdout:
+                (OUT / "logcat-mobile.txt").write_text(resultado.stdout, encoding="utf-8", errors="replace")
+        except Exception:
+            pass
+        raise
