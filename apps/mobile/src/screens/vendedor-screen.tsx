@@ -370,11 +370,11 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
 
   async function guardarCliente() {
     if (!clienteNombre.trim()) {
-      setError('El nombre del cliente es obligatorio.');
+      setError('VALIDACIÓN · El nombre del cliente es obligatorio.');
       return;
     }
     if (!clienteUbicacion || !clienteDireccion.trim()) {
-      setError('Define y confirma la ubicación del cliente en el mapa.');
+      setError('VALIDACIÓN · Define y confirma la ubicación del cliente en el mapa.');
       return;
     }
 
@@ -445,11 +445,11 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
   async function guardarEdicionCliente() {
     if (!clienteEditando) return;
     if (!clienteEditNombre.trim()) {
-      setError('El nombre del cliente es obligatorio.');
+      setError('VALIDACIÓN · El nombre del cliente es obligatorio.');
       return;
     }
     if (!clienteEditUbicacion || !clienteEditDireccion.trim()) {
-      setError('El cliente debe tener una ubicación confirmada en Tarija.');
+      setError('VALIDACIÓN · El cliente debe tener una ubicación confirmada en Tarija.');
       return;
     }
 
@@ -543,13 +543,13 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
 
   async function guardarPedido() {
     if (!clienteSeleccionado) {
-      setError('Selecciona un cliente.');
+      setError('VALIDACIÓN · Selecciona un cliente.');
       return;
     }
 
     const clienteActual = clientes.find((cliente) => cliente.id === clienteSeleccionado);
     if (!clienteActual?.activo || !clienteActual.ubicacion) {
-      setError('El cliente seleccionado debe estar activo y tener ubicación confirmada.');
+      setError('VALIDACIÓN · El cliente seleccionado debe estar activo y tener ubicación confirmada.');
       return;
     }
 
@@ -570,7 +570,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
       .filter((detalle) => Number.isInteger(detalle.cantidad) && detalle.cantidad > 0);
 
     if (!detalles.length) {
-      setError('Indica al menos una cantidad de producto.');
+      setError('VALIDACIÓN · Indica al menos una cantidad de producto.');
       return;
     }
 
@@ -579,7 +579,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
       return !producto || detalle.cantidad > producto.cantidadDisponible;
     });
     if (invalido) {
-      setError('Una de las cantidades supera la disponibilidad permitida.');
+      setError('VALIDACIÓN · Una de las cantidades supera la disponibilidad permitida.');
       return;
     }
 
@@ -619,7 +619,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
 
   async function iniciarEdicionPedido(pedido: PedidoResumen) {
     if (pedido.estado !== 'REGISTRADO') {
-      setError('Solo se pueden corregir pedidos que todavía no fueron retirados.');
+      setError('VALIDACIÓN · Solo se pueden corregir pedidos que todavía no fueron retirados.');
       return;
     }
     setCargandoEdicionPedido(pedido.id);
@@ -772,7 +772,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
 
   function abrirMapaPedido(pedido: PedidoResumen) {
     if (!pedido.destinoGps) {
-      setError('Este pedido no tiene un destino georreferenciado.');
+      setError('VALIDACIÓN · Este pedido no tiene un destino georreferenciado.');
       return;
     }
 
@@ -822,13 +822,13 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
     try {
       const servicios = await Location.hasServicesEnabledAsync();
       if (!servicios) {
-        setError('Activa la ubicación del teléfono y vuelve a intentar la entrega.');
+        setError('ERROR LOCAL · Activa la ubicación del teléfono y vuelve a intentar la entrega.');
         return;
       }
 
       const permiso = await Location.requestForegroundPermissionsAsync();
       if (permiso.status !== 'granted') {
-        setError('La entrega no se registró porque no se autorizó la ubicación puntual.');
+        setError('ERROR LOCAL · La entrega no se registró porque no se autorizó la ubicación puntual.');
         return;
       }
 
@@ -953,7 +953,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
 
   async function planificarTodosDesdeUbicacionActual(ids: string[]) {
     if (ids.length < 2) {
-      setError('Se necesitan al menos dos pedidos pendientes con ubicación confirmada.');
+      setError('VALIDACIÓN · Se necesitan al menos dos pedidos pendientes con ubicación confirmada.');
       return;
     }
 
@@ -966,7 +966,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
     pedidoIds: string[] = pedidosSeleccionados,
   ) {
     if (pedidoIds.length < 2) {
-      setError('Selecciona al menos dos pedidos georreferenciados para planificar.');
+      setError('VALIDACIÓN · Selecciona al menos dos pedidos georreferenciados para planificar.');
       return;
     }
 
@@ -985,7 +985,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
 
       const permiso = await Location.requestForegroundPermissionsAsync();
       if (permiso.status !== 'granted') {
-        setError('Se necesita permiso de ubicación para usar tu posición como origen.');
+        setError('ERROR LOCAL · Se necesita permiso de ubicación para usar tu posición como origen.');
         return;
       }
       const posicion = await Location.getCurrentPositionAsync({
@@ -1014,7 +1014,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
     try {
       const permiso = await Location.requestForegroundPermissionsAsync();
       if (permiso.status !== 'granted') {
-        setError('Se necesita permiso de ubicación para actualizar el recorrido.');
+        setError('ERROR LOCAL · Se necesita permiso de ubicación para actualizar el recorrido.');
         return;
       }
       const posicion = await Location.getCurrentPositionAsync({
@@ -1078,7 +1078,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
     try {
       const permiso = await Location.requestForegroundPermissionsAsync();
       if (permiso.status !== 'granted') {
-        setError('Se necesita permiso de ubicación para recalcular el recorrido.');
+        setError('ERROR LOCAL · Se necesita permiso de ubicación para recalcular el recorrido.');
         return;
       }
 
@@ -1113,7 +1113,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
     );
 
     if (!registrados.length) {
-      setError('Los pedidos seleccionados ya están en distribución o fueron entregados.');
+      setError('VALIDACIÓN · Los pedidos seleccionados ya están en distribución o fueron entregados.');
       return;
     }
 
@@ -1154,7 +1154,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
     ).length;
 
     if (!cantidad) {
-      setError('Selecciona al menos un pedido registrado.');
+      setError('VALIDACIÓN · Selecciona al menos un pedido registrado.');
       return;
     }
 
@@ -1421,7 +1421,7 @@ function NotificacionEstado({
   onCerrar: () => void;
 }) {
   const esError = tipo === 'error';
-  const coincidenciaCodigo = esError ? mensaje.match(/^(HTTP \d{3}|SIN RESPUESTA HTTP|ERROR LOCAL) · (.+)$/s) : null;
+  const coincidenciaCodigo = esError ? mensaje.match(/^(HTTP \d{3}|SIN RESPUESTA HTTP|VALIDACIÓN|ERROR LOCAL|SIN RESULTADOS|ROL NO PERMITIDO) · (.+)$/s) : null;
   const codigo = coincidenciaCodigo?.[1] ?? null;
   const mensajeVisible = coincidenciaCodigo?.[2] ?? mensaje;
   const [progreso] = useState(() => new Animated.Value(0));

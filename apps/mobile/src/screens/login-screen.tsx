@@ -26,7 +26,7 @@ export function LoginScreen({ onSesion }: Props) {
   async function ingresar() {
     const usuario = identificador.trim().toLowerCase();
     if (!usuario || !contrasena) {
-      setError('Ingresa tu identificador y contraseña.');
+      setError('VALIDACIÓN · Ingresa tu identificador y contraseña.');
       return;
     }
 
@@ -35,7 +35,7 @@ export function LoginScreen({ onSesion }: Props) {
     try {
       const sesion = await iniciarSesion(usuario, contrasena);
       if (sesion.usuario.rol !== 'VENDEDOR') {
-        setError('Esta aplicación es exclusiva para el rol Vendedor.');
+        setError('ROL NO PERMITIDO · Esta aplicación es exclusiva para el rol Vendedor.');
         return;
       }
       await onSesion(sesion);

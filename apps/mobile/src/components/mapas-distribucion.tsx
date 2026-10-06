@@ -192,7 +192,7 @@ export function SelectorUbicacionMapa({
   async function buscarDireccion() {
     const consulta = direccion.trim();
     if (!consulta) {
-      setError('Escribe una dirección, calle, barrio o referencia.');
+      setError('VALIDACIÓN · Escribe una dirección, calle, barrio o referencia.');
       return;
     }
 
@@ -207,7 +207,7 @@ export function SelectorUbicacionMapa({
       const remotos = await buscarDirecciones(token, consulta);
       if (!remotos.resultados.length) {
         setError(
-          'No se encontró esa referencia dentro del departamento de Tarija. Prueba con el barrio, calle, zona o una referencia más completa.',
+          'SIN RESULTADOS · No se encontró esa referencia dentro del departamento de Tarija. Prueba con el barrio, calle, zona o una referencia más completa.',
         );
         return;
       }
@@ -227,7 +227,7 @@ export function SelectorUbicacionMapa({
     try {
       if (!(await permisoForeground())) {
         setError(
-          'No se autorizó la ubicación. Puedes buscar una dirección sin compartir tu posición.',
+          'ERROR LOCAL · No se autorizó la ubicación. Puedes buscar una dirección sin compartir tu posición.',
         );
         return;
       }
@@ -257,7 +257,7 @@ export function SelectorUbicacionMapa({
 
   async function confirmar() {
     if (!punto) {
-      setError('Primero selecciona un punto dentro del departamento de Tarija.');
+      setError('VALIDACIÓN · Primero selecciona un punto dentro del departamento de Tarija.');
       return;
     }
 
@@ -274,7 +274,7 @@ export function SelectorUbicacionMapa({
 
       if (!direccionFinal) {
         setError(
-          'Escribe una dirección o referencia comprensible antes de confirmar el punto.',
+          'VALIDACIÓN · Escribe una dirección o referencia comprensible antes de confirmar el punto.',
         );
         return;
       }

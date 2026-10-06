@@ -59,6 +59,9 @@ Ejemplos de etiquetas visibles:
 - `HTTP 409`: conflicto de negocio o duplicado.
 - `HTTP 500` / `HTTP 503`: error del servicio.
 - `SIN RESPUESTA HTTP`: no hubo respuesta de la API/servicio.
-- `VALIDACIÓN`: dato rechazado antes de enviar la solicitud web.
+- `VALIDACIÓN`: dato rechazado antes de enviar la solicitud.
+- `ERROR LOCAL`: problema del dispositivo o de una operación local sin respuesta HTTP.
+- `SIN RESULTADOS`: consulta válida que no devolvió coincidencias.
+- `ROL NO PERMITIDO`: la sesión es válida, pero corresponde a una aplicación/rol distinto.
 
 El código no reemplaza el mensaje legible: ambos se muestran juntos para facilitar soporte, demostración y defensa.
