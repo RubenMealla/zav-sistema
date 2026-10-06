@@ -1,79 +1,192 @@
-import { expect, test, type Locator, type Page } from '@playwright/test';
+import { expect, test, type APIRequestContext, type Locator, type Page } from '@playwright/test';
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
 
-const OUT = path.join(process.cwd(), 'test-results', 'evidencias-swagger');
+const API = process.env.API_BASE_URL ?? 'http://127.0.0.1:3001';
+const DIR = path.join(process.cwd(), 'test-results', 'evidencias-swagger');
 
-async function captura(page: Page, nombre: string) {
-  await mkdir(OUT, { recursive: true });
-  await page.screenshot({ path: path.join(OUT, nombre), fullPage: true });
+function requerida(nombre: string) {
+  const valor = process.env[nombre];
+  if (!valor) throw new Error(`Falta la variable ${nombre}`);
+  return valor;
 }
 
-function operacion(page: Page, ruta: string): Locator {
-  return page.locator('.opblock').filter({
-    has: page.locator('.opblock-summary-path', { hasText: ruta }),
-  }).first();
+async function token(request: APIRequestContext, rol: 'admin' | 'vendedor') {
+  const identificador = rol === 'admin'
+    ? requerida('QA_ADMIN_IDENTIFICADOR')
+    : requerida('QA_VENDEDOR_IDENTIFICADOR');
+  const contrasena = rol === 'admin'
+    ? requerida('QA_ADMIN_PASSWORD')
+    : requerida('QA_VENDEDOR_PASSWORD');
+
+  const respuesta = await request.post(`${API}/api/v1/auth/login`, {
+    data: { identificador, contrasena },
+  });
+  expect(respuesta.status()).toBe(200);
+  return (await respuesta.json()).accessToken as string;
 }
 
-async function abrirOperacion(page: Page, ruta: string) {
-  const bloque = operacion(page, ruta);
-  await expect(bloque).toBeVisible();
-  const body = bloque.locator('.opblock-body');
-  if (!(await body.isVisible().catch(() => false))) {
-    await bloque.locator('.opblock-summary').click();
+function operacion(page: Page, metodo: string, ruta: string): Locator {
+  return page.locator('.opblock').filter({ hasText: ruta }).filter({ hasText: metodo }).first();
+}
+
+async function abrir(page: Page, metodo: string, ruta: string) {
+  const op = operacion(page, metodo, ruta);
+  await expect(op).toBeVisible();
+  const cuerpo = op.locator('.opblock-body');
+  if (!(await cuerpo.isVisible().catch(() => false))) {
+    await op.locator('.opblock-summary').click();
   }
-  await expect(bloque.locator('.opblock-body')).toBeVisible();
-  return bloque;
+  await expect(op.locator('.opblock-body')).toBeVisible();
+  return op;
 }
 
-async function ejecutarConBody(page: Page, ruta: string, body: unknown) {
-  const bloque = await abrirOperacion(page, ruta);
-  const tryBtn = bloque.getByRole('button', { name: /Try it out/i });
-  if (await tryBtn.isVisible().catch(() => false)) await tryBtn.click();
-  const textarea = bloque.locator('textarea.body-param__text');
-  await expect(textarea).toBeVisible();
-  await textarea.fill(JSON.stringify(body, null, 2));
-  await bloque.getByRole('button', { name: /Execute/i }).click();
-  return bloque;
+async function probar(op: Locator) {
+  const boton = op.getByRole('button', { name: /Try it out/i });
+  if (await boton.count()) await boton.click();
 }
 
-test.describe.serial('Evidencias reales de Swagger UI', () => {
-  test('captura documentación y respuestas HTTP reales', async ({ page }) => {
+async function ejecutar(op: Locator) {
+  await op.getByRole('button', { name: /^Execute$/i }).click();
+}
+
+async function esperarCodigo(op: Locator, codigo: string) {
+  await expect(op.locator('.response-col_status').filter({ hasText: codigo }).first()).toBeVisible({
+    timeout: 15000,
+  });
+}
+
+async function capturar(op: Locator, nombre: string) {
+  await mkdir(DIR, { recursive: true });
+  await op.screenshot({ path: path.join(DIR, nombre) });
+}
+
+async function autorizar(page: Page, jwt: string) {
+  await page.waitForFunction(() => {
+    const w = window as unknown as { ui?: { preauthorizeApiKey?: (name: string, value: string) => void } };
+    return typeof w.ui?.preauthorizeApiKey === 'function';
+  });
+  await page.evaluate((jwtValue) => {
+    const w = window as unknown as { ui: { preauthorizeApiKey: (name: string, value: string) => void } };
+    w.ui.preauthorizeApiKey('bearerAuth', jwtValue);
+  }, jwt);
+}
+
+async function desautorizar(page: Page) {
+  await page.evaluate(() => {
+    const w = window as unknown as { ui?: { authActions?: { logout?: (names: string[]) => void } } };
+    w.ui?.authActions?.logout?.(['bearerAuth']);
+  });
+}
+
+test.describe.serial('Evidencias verificables de Swagger UI', () => {
+  test.beforeEach(async ({ page }) => {
     await page.goto('/swagger');
-    await expect(page.locator('#swagger-ui')).toBeVisible();
-    await expect(page.getByText('ZAV API', { exact: false }).first()).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText('ZAV · Swagger API')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'ZAV API' })).toBeVisible({ timeout: 15000 });
+  });
 
-    await captura(page, 'SW-01-swagger-api.png');
+  test('documentación y HTTP 200', async ({ page }) => {
+    await mkdir(DIR, { recursive: true });
+    await page.screenshot({ path: path.join(DIR, 'SW-01-swagger-api.png'), fullPage: false });
 
-    const salud = await abrirOperacion(page, '/api/v1/salud');
-    const trySalud = salud.getByRole('button', { name: /Try it out/i });
-    if (await trySalud.isVisible().catch(() => false)) await trySalud.click();
-    await salud.getByRole('button', { name: /Execute/i }).click();
-    await expect(salud.locator('.live-responses-table')).toContainText('200');
-    await salud.scrollIntoViewIfNeeded();
-    await salud.screenshot({ path: path.join(OUT, 'SW-02-salud-200.png') });
+    const op = await abrir(page, 'GET', '/api/v1/salud');
+    await probar(op);
+    await ejecutar(op);
+    await esperarCodigo(op, '200');
+    await capturar(op, 'SW-02-salud-200.png');
+  });
 
-    const login401 = await ejecutarConBody(page, '/api/v1/auth/login', {
-      identificador: 'invalido@zav.test',
+  test('HTTP 400 y 401 visibles en Swagger', async ({ page }) => {
+    const login400 = await abrir(page, 'POST', '/api/v1/auth/login');
+    await probar(login400);
+    const body400 = login400.locator('textarea').first();
+    await body400.fill(JSON.stringify({ identificador: '' }, null, 2));
+    await ejecutar(login400);
+    await esperarCodigo(login400, '400');
+    await capturar(login400, 'SW-03-login-400.png');
+
+    await page.reload();
+    await expect(page.getByRole('heading', { name: 'ZAV API' })).toBeVisible({ timeout: 15000 });
+    const login401 = await abrir(page, 'POST', '/api/v1/auth/login');
+    await probar(login401);
+    const body401 = login401.locator('textarea').first();
+    await body401.fill(JSON.stringify({
+      identificador: 'usuario.invalido@zav.test',
       contrasena: 'incorrecta',
-    });
-    await expect(login401.locator('.live-responses-table')).toContainText('401');
-    await login401.scrollIntoViewIfNeeded();
-    await login401.screenshot({ path: path.join(OUT, 'SW-03-login-401.png') });
+    }, null, 2));
+    await ejecutar(login401);
+    await esperarCodigo(login401, '401');
+    await capturar(login401, 'SW-04-login-401.png');
 
-    const login400 = await ejecutarConBody(page, '/api/v1/auth/login', {
-      identificador: 'vendedor@zav.test',
-    });
-    await expect(login400.locator('.live-responses-table')).toContainText('400');
-    await login400.scrollIntoViewIfNeeded();
-    await login400.screenshot({ path: path.join(OUT, 'SW-04-login-400.png') });
+    await page.reload();
+    await expect(page.getByRole('heading', { name: 'ZAV API' })).toBeVisible({ timeout: 15000 });
+    const productos401 = await abrir(page, 'GET', '/api/v1/productos');
+    await probar(productos401);
+    await ejecutar(productos401);
+    await esperarCodigo(productos401, '401');
+    await capturar(productos401, 'SW-05-productos-401.png');
+  });
 
-    const productos = await abrirOperacion(page, '/api/v1/productos');
-    const tryProductos = productos.getByRole('button', { name: /Try it out/i });
-    if (await tryProductos.isVisible().catch(() => false)) await tryProductos.click();
-    await productos.getByRole('button', { name: /Execute/i }).click();
-    await expect(productos.locator('.live-responses-table')).toContainText('401');
-    await productos.scrollIntoViewIfNeeded();
-    await productos.screenshot({ path: path.join(OUT, 'SW-05-productos-401.png') });
+  test('HTTP 403 y 409 visibles en Swagger', async ({ page, request }) => {
+    const admin = await token(request, 'admin');
+
+    const codigo = `SWAGGER-QA-${Date.now()}`;
+    const creado = await request.post(`${API}/api/v1/productos`, {
+      headers: { Authorization: `Bearer ${admin}` },
+      data: {
+        codigo,
+        nombre: 'Producto sintético Swagger',
+        familia: 'QA',
+        presentacion: 'Unidad',
+        pesoGramos: 250,
+        precioBob: 10,
+      },
+    });
+    expect(creado.status()).toBe(201);
+
+    await autorizar(page, admin);
+
+    const cliente403 = await abrir(page, 'POST', '/api/v1/clientes');
+    await probar(cliente403);
+    await ejecutar(cliente403);
+    await esperarCodigo(cliente403, '403');
+    await capturar(cliente403, 'SW-06-clientes-403.png');
+
+    const producto409 = await abrir(page, 'POST', '/api/v1/productos');
+    await probar(producto409);
+    const body409 = producto409.locator('textarea').first();
+    await body409.fill(JSON.stringify({
+      codigo,
+      nombre: 'Producto duplicado Swagger',
+      familia: 'QA',
+      presentacion: 'Unidad',
+      pesoGramos: 250,
+      precioBob: 10,
+    }, null, 2));
+    await ejecutar(producto409);
+    await esperarCodigo(producto409, '409');
+    await capturar(producto409, 'SW-07-producto-409.png');
+  });
+
+  test('HTTP 404 y 503 visibles en Swagger', async ({ page, request }) => {
+    const vendedor = await token(request, 'vendedor');
+    await autorizar(page, vendedor);
+
+    const cliente404 = await abrir(page, 'GET', '/api/v1/clientes/{id}');
+    await probar(cliente404);
+    await cliente404.locator('input').first().fill('00000000-0000-4000-8000-000000000404');
+    await ejecutar(cliente404);
+    await esperarCodigo(cliente404, '404');
+    await capturar(cliente404, 'SW-08-cliente-404.png');
+
+    const geo503 = await abrir(page, 'GET', '/api/v1/geografia/geocodificar');
+    await probar(geo503);
+    await geo503.locator('input').first().fill('Tarija');
+    await ejecutar(geo503);
+    await esperarCodigo(geo503, '503');
+    await capturar(geo503, 'SW-09-geografia-503.png');
+
+    await desautorizar(page);
   });
 });
