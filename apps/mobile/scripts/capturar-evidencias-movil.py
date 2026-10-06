@@ -115,7 +115,7 @@ def relaunch():
     # El primer arranque release tarda más en el emulador que en un dispositivo
     # físico. En los runs anteriores React Native terminó de montar la UI cerca
     # de dos minutos después del start; se espera antes de interrogar UIAutomator.
-    time.sleep(130)
+    time.sleep(150)
     shot("MOV-00-arranque-diagnostico.png")
 
 def login(identifier: str, password: str):
