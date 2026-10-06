@@ -25,7 +25,7 @@ jobs:
   capturas:
     name: Capturar ZAV Vendedor en Android
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 50
 
     services:
       postgres:
@@ -74,6 +74,9 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
+
+      - name: Restaurar caché Gradle
+        uses: gradle/actions/setup-gradle@v4
 
       - name: Instalar dependencias
         run: pnpm install --frozen-lockfile
@@ -173,7 +176,7 @@ jobs:
         working-directory: apps/mobile/android
         run: |
           chmod +x gradlew
-          ./gradlew assembleRelease -PreactNativeArchitectures=x86_64 --no-daemon -x lintVitalRelease -x lintVitalAnalyzeRelease
+          ./gradlew assembleRelease -PreactNativeArchitectures=x86_64 --no-daemon --build-cache -x lintVitalRelease -x lintVitalAnalyzeRelease
 
       - name: Ejecutar app y capturar pantallas
         uses: reactivecircus/android-emulator-runner@v2
