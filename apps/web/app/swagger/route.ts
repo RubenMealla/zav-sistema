@@ -27,8 +27,15 @@ const html = `<!doctype html>
   </div>
   <div class="zav-aviso">
     <b>Uso rápido</b>
-    1) Ejecuta <code>POST /api/v1/auth/login</code> usando uno de los ejemplos. 2) Copia el <code>accessToken</code>. 3) Pulsa <b>Authorize</b> y pega solo el token. 4) Abre un endpoint y pulsa <b>Try it out</b>: los cuerpos y parámetros ya incluyen valores de ejemplo editables. 5) Cuando una operación requiera un UUID, sustituye el valor de ejemplo por el ID retornado en el paso anterior y pulsa <b>Execute</b>.<br/>
-    Los casos 400, 401, 403, 404, 409 y 503 tienen ejemplos directos; el 500 transaccional se verifica mediante la suite E2E. No muestres contraseñas ni JWT en capturas de evidencia.
+    1) Ejecuta <code>POST /api/v1/auth/login</code> con el ejemplo del rol que quieras probar. 2) Copia el <code>accessToken</code>. 3) Pulsa <b>Authorize</b> y pega solo el token. 4) Abre un endpoint y pulsa <b>Try it out</b>: los cuerpos y parámetros ya quedan precargados con ejemplos editables. 5) Pulsa <b>Execute</b> y revisa <b>Server response</b>.<br/><br/>
+    <b>Casos rápidos preparados</b>
+    <code>400</code>: Login - ejemplo <i>credenciales/datos inválidos</i>. 
+    <code>401</code>: ejecuta Productos sin Authorize. 
+    <code>403</code>: autoriza como Administrador y ejecuta POST Clientes. 
+    <code>404</code>: GET Cliente con el UUID de ejemplo inexistente. 
+    <code>409</code>: crea una vez el Producto de ejemplo y repite exactamente el mismo POST. 
+    <code>503</code>: Geografía - geocodificar con <code>Tarija</code> en el entorno aislado sin proveedor. 
+    Los UUID de operaciones encadenadas se sustituyen por los IDs retornados en el paso anterior. El 500 transaccional se comprueba en la suite E2E para no provocar fallos artificiales desde la interfaz.
   </div>
   <div id="swagger-ui"></div>
   <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
