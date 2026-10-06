@@ -609,3 +609,59 @@ td small,.codigo,.badge,.saldos-inline b,.saldos-inline strong{font-size:13px}
   .confirmacion-acciones{flex-direction:column-reverse}
   .confirmacion-acciones .boton{width:100%}
 }
+
+
+/* Corrección visual: confirmaciones en el top-layer nativo del navegador. */
+.confirmacion-dialogo{
+  width:min(560px,calc(100% - 32px));
+  max-width:none;
+  margin:auto;
+  padding:0;
+  overflow:visible;
+  border:0;
+  background:transparent;
+  color:#25231f;
+}
+.confirmacion-dialogo::backdrop{
+  background:#11110fd1;
+  backdrop-filter:blur(2px);
+}
+.confirmacion-dialogo .confirmacion-caja{
+  width:100%;
+  max-height:calc(100dvh - 40px);
+  overflow:auto;
+}
+body:has(.confirmacion-dialogo[open]){overflow:hidden}
+
+/* Leaflet: los controles quedan separados del buscador y fuera de su lista desplegable. */
+.mapa-selector .leaflet-bottom.leaflet-right{
+  right:10px;
+  bottom:10px;
+}
+.mapa-selector .leaflet-control-zoom{
+  margin:0!important;
+  border:1px solid #bcb6ab!important;
+  border-radius:6px!important;
+  overflow:hidden;
+  box-shadow:0 5px 18px #11110f24!important;
+}
+.mapa-selector .leaflet-control-zoom a{
+  width:38px!important;
+  height:38px!important;
+  line-height:38px!important;
+  font-size:22px!important;
+  color:#35322c!important;
+  background:#fff!important;
+}
+.mapa-selector .leaflet-control-zoom a:hover,
+.mapa-selector .leaflet-control-zoom a:focus{
+  background:#f5f1ea!important;
+  color:#a73a1d!important;
+}
+.ubicacion-buscador{z-index:850}
+.ubicacion-sugerencias{z-index:900}
+.mapa-selector-wrap{position:relative;z-index:1}
+
+@media(max-width:520px){
+  .confirmacion-dialogo{width:min(100% - 20px,560px)}
+}
