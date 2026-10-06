@@ -51,6 +51,8 @@ export function BotonEnviar({
     <dialog
       ref={dialogoRef}
       className="confirmacion-dialogo"
+      role="alertdialog"
+      aria-modal="true"
       aria-labelledby={`${id}-confirmacion-titulo`}
       aria-describedby={`${id}-confirmacion-mensaje`}
       onCancel={(evento) => {
