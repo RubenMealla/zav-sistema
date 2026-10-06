@@ -81,13 +81,13 @@ function mensajeValidacion(control: ControlValidable) {
   if (validez.tooShort && control instanceof HTMLInputElement) return `Ingresa al menos ${control.minLength} caracteres.`;
   if (validez.tooLong && control instanceof HTMLInputElement) return `Usa como máximo ${control.maxLength} caracteres.`;
   if (validez.patternMismatch) return 'Usa únicamente letras, números, punto, guion o guion bajo.';
-  if (validez.rangeUnderflow) {
-    return control instanceof HTMLInputElement && control.type === 'date'
+  if (validez.rangeUnderflow && control instanceof HTMLInputElement) {
+    return control.type === 'date'
       ? `Selecciona una fecha igual o posterior a ${control.min}.`
       : `El valor mínimo permitido es ${control.min}.`;
   }
-  if (validez.rangeOverflow) {
-    return control instanceof HTMLInputElement && control.type === 'date'
+  if (validez.rangeOverflow && control instanceof HTMLInputElement) {
+    return control.type === 'date'
       ? `Selecciona una fecha igual o anterior a ${control.max}.`
       : `El valor máximo permitido es ${control.max}.`;
   }
