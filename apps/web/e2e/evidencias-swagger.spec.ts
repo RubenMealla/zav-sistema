@@ -49,7 +49,7 @@ test.describe.serial('Evidencias reales de Swagger UI', () => {
     const trySalud = salud.getByRole('button', { name: /Try it out/i });
     if (await trySalud.isVisible().catch(() => false)) await trySalud.click();
     await salud.getByRole('button', { name: /Execute/i }).click();
-    await expect(salud.locator('.responses-table')).toContainText('200');
+    await expect(salud.locator('.live-responses-table')).toContainText('200');
     await salud.scrollIntoViewIfNeeded();
     await salud.screenshot({ path: path.join(OUT, 'SW-02-salud-200.png') });
 
@@ -57,14 +57,14 @@ test.describe.serial('Evidencias reales de Swagger UI', () => {
       identificador: 'invalido@zav.test',
       contrasena: 'incorrecta',
     });
-    await expect(login401.locator('.responses-table')).toContainText('401');
+    await expect(login401.locator('.live-responses-table')).toContainText('401');
     await login401.scrollIntoViewIfNeeded();
     await login401.screenshot({ path: path.join(OUT, 'SW-03-login-401.png') });
 
     const login400 = await ejecutarConBody(page, '/api/v1/auth/login', {
       identificador: 'vendedor@zav.test',
     });
-    await expect(login400.locator('.responses-table')).toContainText('400');
+    await expect(login400.locator('.live-responses-table')).toContainText('400');
     await login400.scrollIntoViewIfNeeded();
     await login400.screenshot({ path: path.join(OUT, 'SW-04-login-400.png') });
 
@@ -72,7 +72,7 @@ test.describe.serial('Evidencias reales de Swagger UI', () => {
     const tryProductos = productos.getByRole('button', { name: /Try it out/i });
     if (await tryProductos.isVisible().catch(() => false)) await tryProductos.click();
     await productos.getByRole('button', { name: /Execute/i }).click();
-    await expect(productos.locator('.responses-table')).toContainText('401');
+    await expect(productos.locator('.live-responses-table')).toContainText('401');
     await productos.scrollIntoViewIfNeeded();
     await productos.screenshot({ path: path.join(OUT, 'SW-05-productos-401.png') });
   });
