@@ -8,6 +8,9 @@ on:
       - "apps/mobile/**"
       - "apps/api/**"
       - ".github/workflows/evidencias-movil-qa.yml"
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 concurrency:
