@@ -201,22 +201,36 @@ export function Modal({
   );
 }
 
+function etiquetaCodigoError(codigo?: string | number) {
+  if (codigo === undefined || codigo === null || codigo === '') return null;
+  const valor = String(codigo).toUpperCase();
+  if (/^\d{3}$/.test(valor)) return `HTTP ${valor}`;
+  if (valor === 'RED') return 'SIN RESPUESTA HTTP';
+  if (valor === 'VALIDACION') return 'VALIDACIÓN';
+  return valor;
+}
+
 export function Notificacion({
   tipo,
   mensaje,
+  codigo,
+  detalle,
 }: {
   tipo: 'exito' | 'error';
   mensaje: string;
+  codigo?: string | number;
+  detalle?: string;
 }) {
   const [visible, setVisible] = useState(true);
+  const etiquetaCodigo = tipo === 'error' ? etiquetaCodigoError(codigo) : null;
 
   useEffect(() => {
     const temporizador = window.setTimeout(
       () => setVisible(false),
-      tipo === 'error' ? 6000 : 4200,
+      tipo === 'error' ? 7600 : 4200,
     );
     return () => window.clearTimeout(temporizador);
-  }, [tipo, mensaje]);
+  }, [tipo, mensaje, codigo, detalle]);
 
   if (!visible) return null;
 
@@ -225,9 +239,15 @@ export function Notificacion({
       <span className="toast-icono">
         <Icono nombre={tipo === 'error' ? 'alerta' : 'check'} tamano={18} />
       </span>
-      <div>
-        <strong>{tipo === 'error' ? 'No se pudo completar' : 'Operación completada'}</strong>
+      <div className="toast-contenido">
+        <div className="toast-cabecera">
+          <strong>{tipo === 'error' ? 'No se pudo completar' : 'Operación completada'}</strong>
+          {etiquetaCodigo && <span className="toast-codigo">{etiquetaCodigo}</span>}
+        </div>
         <p>{mensaje}</p>
+        {detalle && detalle.trim() && detalle.trim() !== mensaje.trim() && (
+          <small className="toast-detalle">{detalle}</small>
+        )}
       </div>
       <button type="button" className="boton-icono toast-cerrar" aria-label="Cerrar notificación" onClick={() => setVisible(false)}>
         <Icono nombre="cerrar" tamano={16} />

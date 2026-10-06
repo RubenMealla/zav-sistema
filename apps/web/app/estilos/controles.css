@@ -686,3 +686,12 @@ body:has(.confirmacion-dialogo[open]){overflow:hidden}
   color:#5f5a52;
   cursor:default;
 }
+
+
+/* Código y detalle de errores operativos. */
+.toast-contenido{min-width:0}
+.toast-cabecera{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.toast-codigo{display:inline-flex;align-items:center;min-height:22px;padding:2px 7px;border:1px solid #e1b7b0;border-radius:999px;background:#fff4f1;color:#8f2d23;font:700 11px/1.2 ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:.02em}
+.toast-detalle{display:block;margin-top:6px;padding-top:6px;border-top:1px solid #ebe6dc;color:#766f66;font-size:11px;line-height:1.45;overflow-wrap:anywhere}
+.mensaje-codigo{display:inline-flex;flex:none;margin-top:1px;padding:2px 6px;border:1px solid #e1b7b0;border-radius:999px;background:#fff4f1;color:#8f2d23;font:700 11px/1.2 ui-monospace,SFMono-Regular,Consolas,monospace}
+@media(min-width:900px){.toast-detalle{font-size:12px}.toast-codigo,.mensaje-codigo{font-size:12px}}

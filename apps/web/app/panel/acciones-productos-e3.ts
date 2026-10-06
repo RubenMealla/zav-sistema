@@ -1,12 +1,12 @@
 'use server';
 
 import { redirect } from 'next/navigation';
-import { enviar } from './acciones';
+import { enviar, parametrosError } from './acciones';
 import { claveErrorOperacion } from './errores-operacion';
 
 export async function editarProducto(formulario: FormData) {
   const productoId = String(formulario.get('productoId') ?? '');
-  const estado = await enviar(
+  const resultado = await enviar(
     `/api/v1/productos/${encodeURIComponent(productoId)}`,
     {
       codigo: String(formulario.get('codigo') ?? ''),
@@ -19,22 +19,22 @@ export async function editarProducto(formulario: FormData) {
     'PATCH',
   );
 
-  if (estado === 401 || estado === 403) redirect('/acceso?error=sesion');
-  if (estado === 200) redirect('/panel?vista=productos&mensaje=producto-editado');
+  if (resultado.estado === 401 || resultado.estado === 403) redirect(`/acceso?error=sesion&codigo=${resultado.estado}`);
+  if (resultado.estado === 200) redirect('/panel?vista=productos&mensaje=producto-editado');
 
-  redirect(`/panel?vista=productos&error=${claveErrorOperacion(estado, 'producto-edicion', 'codigo')}`);
+  redirect(`/panel?vista=productos&${parametrosError(resultado.estado, claveErrorOperacion(resultado.estado, 'producto-edicion', 'codigo'), resultado.detalle)}`);
 }
 
 export async function darBajaProducto(formulario: FormData) {
   const productoId = String(formulario.get('productoId') ?? '');
-  const estado = await enviar(
+  const resultado = await enviar(
     `/api/v1/productos/${encodeURIComponent(productoId)}/baja`,
     {},
     'PATCH',
   );
 
-  if (estado === 401 || estado === 403) redirect('/acceso?error=sesion');
-  if (estado === 200) redirect('/panel?vista=productos&mensaje=producto-baja');
+  if (resultado.estado === 401 || resultado.estado === 403) redirect(`/acceso?error=sesion&codigo=${resultado.estado}`);
+  if (resultado.estado === 200) redirect('/panel?vista=productos&mensaje=producto-baja');
 
-  redirect(`/panel?vista=productos&error=${claveErrorOperacion(estado, 'producto-baja')}`);
+  redirect(`/panel?vista=productos&${parametrosError(resultado.estado, claveErrorOperacion(resultado.estado, 'producto-baja'), resultado.detalle)}`);
 }

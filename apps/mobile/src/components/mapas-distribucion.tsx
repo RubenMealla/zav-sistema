@@ -108,6 +108,14 @@ export function SelectorUbicacionMapa({
   const [mapaListo, setMapaListo] = useState(false);
   const [error, setError] = useState('');
 
+  function mensajeApi(errorActual: unknown, respaldo: string) {
+    if (errorActual instanceof ApiError) {
+      const codigo = errorActual.status > 0 ? `HTTP ${errorActual.status}` : 'SIN RESPUESTA HTTP';
+      return `${codigo} · ${errorActual.message || respaldo}`;
+    }
+    return `ERROR LOCAL · ${respaldo}`;
+  }
+
   function permiteFallback(errorActual: unknown) {
     return (
       errorActual instanceof ApiError &&
@@ -204,9 +212,9 @@ export function SelectorUbicacionMapa({
         return;
       }
       elegirSugerencia(remotos.resultados[0]);
-    } catch {
+    } catch (e) {
       setError(
-        'No se pudo consultar direcciones en este momento. Puedes usar “Mi ubicación” y corregir el punto manualmente.',
+        mensajeApi(e, 'No se pudo consultar direcciones en este momento. Puedes usar “Mi ubicación” y corregir el punto manualmente.'),
       );
     } finally {
       setCargando(false);
@@ -241,11 +249,7 @@ export function SelectorUbicacionMapa({
         setDireccionElegida(sugerida);
       }
     } catch (e) {
-      setError(
-        e instanceof ApiError
-          ? e.message
-          : 'No se pudo obtener la ubicación actual.',
-      );
+      setError(mensajeApi(e, 'No se pudo obtener la ubicación actual.'));
     } finally {
       setCargando(false);
     }
@@ -277,11 +281,7 @@ export function SelectorUbicacionMapa({
 
       onConfirmar({ ...punto, direccion: direccionFinal });
     } catch (e) {
-      setError(
-        e instanceof ApiError
-          ? e.message
-          : 'No se pudo validar el punto seleccionado.',
-      );
+      setError(mensajeApi(e, 'No se pudo validar el punto seleccionado.'));
     } finally {
       setCargando(false);
     }

@@ -11,7 +11,7 @@ type RespuestaLogin = { accessToken?: string; usuario?: { rol?: string } };
 export async function iniciarSesion(formulario: FormData) {
   const identificador = String(formulario.get('identificador') ?? '').trim();
   const contrasena = String(formulario.get('contrasena') ?? '');
-  if (!identificador || !contrasena) redirect('/acceso?error=datos');
+  if (!identificador || !contrasena) redirect('/acceso?error=datos&codigo=VALIDACION');
 
   let respuesta: Response;
   try {
@@ -22,12 +22,12 @@ export async function iniciarSesion(formulario: FormData) {
       cache: 'no-store',
     });
   } catch {
-    redirect('/acceso?error=conexion');
+    redirect('/acceso?error=conexion&codigo=RED');
   }
-  if (!respuesta.ok) redirect('/acceso?error=credenciales');
+  if (!respuesta.ok) redirect(`/acceso?error=credenciales&codigo=${respuesta.status}`);
   const datos = (await respuesta.json()) as RespuestaLogin;
   if (!datos.accessToken || datos.usuario?.rol !== 'ADMINISTRADOR') {
-    redirect('/acceso?error=permisos');
+    redirect('/acceso?error=permisos&codigo=403');
   }
 
   (await cookies()).set(COOKIE, datos.accessToken, {
@@ -37,7 +37,7 @@ export async function iniciarSesion(formulario: FormData) {
     path: '/',
     maxAge: 15 * 60,
   });
-  redirect('/panel');
+  redirect('/panel?mensaje=sesion-iniciada');
 }
 
 export async function cerrarSesion() {

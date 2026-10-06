@@ -40,7 +40,12 @@ export function LoginScreen({ onSesion }: Props) {
       }
       await onSesion(sesion);
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'No se pudo iniciar sesión.');
+      if (e instanceof ApiError) {
+        const codigo = e.status > 0 ? `HTTP ${e.status}` : 'SIN RESPUESTA HTTP';
+        setError(`${codigo} · ${e.message}`);
+      } else {
+        setError('ERROR LOCAL · No se pudo iniciar sesión.');
+      }
     } finally {
       setEnviando(false);
     }

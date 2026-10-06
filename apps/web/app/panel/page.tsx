@@ -108,6 +108,7 @@ const mensajesOk: Record<string, string> = {
   traslado: 'Traslado registrado correctamente.',
   condicion: 'Condición del lote actualizada correctamente.',
   'despacho-geo': 'Ubicación geográfica de Venta y Despacho actualizada.',
+  'sesion-iniciada': 'Sesión iniciada correctamente.',
 };
 
 async function consultar<T>(ruta: string, token: string): Promise<{ estado: number; datos?: T }> {
@@ -136,6 +137,8 @@ export default async function Panel({
     vista?: string;
     error?: string;
     mensaje?: string;
+    codigo?: string;
+    detalle?: string;
     historialLoteId?: string;
     historialCondicionLoteId?: string;
     productoQ?: string;
@@ -156,7 +159,7 @@ export default async function Panel({
   }>;
 }) {
   const token = (await cookies()).get('zav_acceso')?.value;
-  if (!token) redirect('/acceso?error=sesion');
+  if (!token) redirect('/acceso?error=sesion&codigo=401');
 
   const parametros = await searchParams;
   const vista: Vista = parametros.vista && parametros.vista in vistas ? parametros.vista as Vista : 'resumen';
@@ -256,14 +259,24 @@ export default async function Panel({
       <main className="error-pagina">
         <span className="error-icono"><Icono nombre="alerta" tamano={26} /></span>
         <h1>No se pudo cargar el panel</h1>
-        <p>Comprueba la conexión con la API de ZAV e intenta nuevamente.</p>
+        <p><strong>Sin respuesta HTTP.</strong> Comprueba la conexión con la API de ZAV e intenta nuevamente.</p>
         <Link className="boton boton-primario" href="/acceso">Volver al acceso</Link>
       </main>
     );
   }
 
-  if (perfil.estado === 401 || perfil.estado === 403) redirect('/acceso?error=sesion');
-  if (perfil.datos?.rol !== 'ADMINISTRADOR') redirect('/acceso?error=permisos');
+  if (perfil.estado === 401 || perfil.estado === 403) redirect(`/acceso?error=sesion&codigo=${perfil.estado}`);
+  if (perfil.estado !== 200 || !perfil.datos) {
+    return (
+      <main className="error-pagina">
+        <span className="error-icono"><Icono nombre="alerta" tamano={26} /></span>
+        <h1>No se pudo cargar el perfil</h1>
+        <p><strong>HTTP {perfil.estado}.</strong> La API no devolvió un perfil válido para continuar.</p>
+        <Link className="boton boton-primario" href="/acceso">Volver al acceso</Link>
+      </main>
+    );
+  }
+  if (perfil.datos.rol !== 'ADMINISTRADOR') redirect('/acceso?error=permisos&codigo=403');
 
   const itemsProductos = productos.datos?.items ?? [];
   const itemsLotes = lotes.datos?.items ?? [];
@@ -280,10 +293,21 @@ export default async function Panel({
     0,
   );
 
+  const fallosCarga = [
+    productos.estado !== 200 ? { recurso: 'productos', estado: productos.estado } : null,
+    lotes.estado !== 200 ? { recurso: 'lotes', estado: lotes.estado } : null,
+    movimientos && movimientos.estado !== 200 ? { recurso: 'movimientos', estado: movimientos.estado } : null,
+    condiciones && condiciones.estado !== 200 ? { recurso: 'condiciones', estado: condiciones.estado } : null,
+    ventaDespacho && ventaDespacho.estado !== 200 ? { recurso: 'distribución', estado: ventaDespacho.estado } : null,
+    pedidos.estado !== 200 ? { recurso: 'pedidos', estado: pedidos.estado } : null,
+  ].filter((item): item is { recurso: string; estado: number } => Boolean(item));
+  const falloCarga = fallosCarga[0];
+
   return (
     <MarcoPanel vista={vista} perfil={perfil.datos}>
         {parametros.mensaje && <Notificacion key={`${parametros.mensaje ?? parametros.error}-${randomUUID()}`} tipo="exito" mensaje={mensajesOk[parametros.mensaje] ?? 'Operación registrada correctamente.'} />}
-        {parametros.error && <Notificacion key={`${parametros.mensaje ?? parametros.error}-${randomUUID()}`} tipo="error" mensaje={mensajes[parametros.error] ?? 'No se pudo completar la operación.'} />}
+        {parametros.error && <Notificacion key={`${parametros.mensaje ?? parametros.error}-${randomUUID()}`} tipo="error" codigo={parametros.codigo} mensaje={mensajes[parametros.error] ?? 'No se pudo completar la operación.'} detalle={parametros.detalle} />}
+        {falloCarga && !parametros.error && <Notificacion key={`carga-${falloCarga.recurso}-${falloCarga.estado}`} tipo="error" codigo={falloCarga.estado} mensaje={`No se pudo cargar ${falloCarga.recurso}. La pantalla puede mostrar información incompleta.`} detalle={fallosCarga.length > 1 ? `También fallaron: ${fallosCarga.slice(1).map((item) => `${item.recurso} (HTTP ${item.estado})`).join(', ')}.` : undefined} />}
 
         <div className={`vista-contenido vista-${vista}`}>
           {vista === 'resumen' && (

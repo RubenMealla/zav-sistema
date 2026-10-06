@@ -116,23 +116,31 @@ export function FormularioNuevoProducto() {
   const [codigoAutomatico, setCodigoAutomatico] = useState(true);
   const [revisionCodigo, setRevisionCodigo] = useState(0);
   const [estadoCodigo, setEstadoCodigo] = useState<'listo' | 'cargando' | 'error'>('listo');
+  const [codigoErrorSugerencia, setCodigoErrorSugerencia] = useState<string | null>(null);
 
   useEffect(() => {
     if (!codigoAutomatico || familia.trim().length < 2) return;
     const controlador = new AbortController();
     const temporizador = window.setTimeout(async () => {
       setEstadoCodigo('cargando');
+      setCodigoErrorSugerencia(null);
       try {
         const respuesta = await fetch(`/api/codigos/producto?familia=${encodeURIComponent(familia.trim())}`, {
           cache: 'no-store',
           signal: controlador.signal,
         });
-        if (!respuesta.ok) throw new Error(`HTTP ${respuesta.status}`);
+        if (!respuesta.ok) {
+          setCodigoErrorSugerencia(`HTTP ${respuesta.status}`);
+          throw new Error(`HTTP ${respuesta.status}`);
+        }
         const datos = await respuesta.json() as { codigo?: string };
         if (datos.codigo) setCodigo(datos.codigo);
         setEstadoCodigo('listo');
       } catch (error) {
-        if ((error as Error).name !== 'AbortError') setEstadoCodigo('error');
+        if ((error as Error).name !== 'AbortError') {
+          setEstadoCodigo('error');
+          setCodigoErrorSugerencia((actual) => actual ?? 'SIN RESPUESTA HTTP');
+        }
       }
     }, 320);
     return () => {
@@ -208,7 +216,7 @@ export function FormularioNuevoProducto() {
             </div>
             <CampoAyuda id={`${idCodigo}-ayuda`}>
               {estadoCodigo === 'error'
-                ? 'No se pudo calcular la sugerencia. Puedes escribir el código manualmente.'
+                ? `${codigoErrorSugerencia ?? 'ERROR'} · No se pudo calcular la sugerencia. Puedes escribir el código manualmente.`
                 : codigoAutomatico
                   ? 'Generado automáticamente con la sigla de la familia y el siguiente correlativo disponible. Puedes editarlo.'
                   : 'Código editado manualmente. Usa “Sugerir” para volver a la propuesta automática.'}
@@ -326,6 +334,7 @@ export function FormularioNuevoLote({ productos, operacionClave }: { productos: 
   const [codigoAutomatico, setCodigoAutomatico] = useState(true);
   const [revisionCodigo, setRevisionCodigo] = useState(0);
   const [estadoCodigo, setEstadoCodigo] = useState<'listo' | 'cargando' | 'error'>('listo');
+  const [codigoErrorSugerencia, setCodigoErrorSugerencia] = useState<string | null>(null);
 
   const minimoVencimiento = useMemo(
     () => mayorFecha(hoy, sumarDias(elaboradoEl || hoy, 1)),
@@ -338,17 +347,24 @@ export function FormularioNuevoLote({ productos, operacionClave }: { productos: 
     const controlador = new AbortController();
     const temporizador = window.setTimeout(async () => {
       setEstadoCodigo('cargando');
+      setCodigoErrorSugerencia(null);
       try {
         const respuesta = await fetch(`/api/codigos/lote?productoId=${encodeURIComponent(productoId)}&elaboradoEl=${encodeURIComponent(elaboradoEl)}`, {
           cache: 'no-store',
           signal: controlador.signal,
         });
-        if (!respuesta.ok) throw new Error(`HTTP ${respuesta.status}`);
+        if (!respuesta.ok) {
+          setCodigoErrorSugerencia(`HTTP ${respuesta.status}`);
+          throw new Error(`HTTP ${respuesta.status}`);
+        }
         const datos = await respuesta.json() as { codigo?: string };
         if (datos.codigo) setCodigo(datos.codigo);
         setEstadoCodigo('listo');
       } catch (error) {
-        if ((error as Error).name !== 'AbortError') setEstadoCodigo('error');
+        if ((error as Error).name !== 'AbortError') {
+          setEstadoCodigo('error');
+          setCodigoErrorSugerencia((actual) => actual ?? 'SIN RESPUESTA HTTP');
+        }
       }
     }, 250);
     return () => {
@@ -407,7 +423,7 @@ export function FormularioNuevoLote({ productos, operacionClave }: { productos: 
             </div>
             <CampoAyuda id={`${baseId}-codigo-ayuda`}>
               {estadoCodigo === 'error'
-                ? 'No se pudo calcular la sugerencia. Escribe el código del lote manualmente.'
+                ? `${codigoErrorSugerencia ?? 'ERROR'} · No se pudo calcular la sugerencia. Escribe el código del lote manualmente.`
                 : codigoAutomatico
                   ? 'Generado automáticamente como TJ-ZAV-CÓDIGO_PRODUCTO-AAAAMMDD-##. Puedes editarlo, pero debe coincidir con el lote físico/etiquetado.'
                   : 'Código de lote editado manualmente. Usa “Regenerar” para recuperar la propuesta automática.'}

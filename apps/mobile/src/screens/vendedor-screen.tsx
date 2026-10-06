@@ -64,20 +64,21 @@ type MapaOperativoVista = {
 
 function mensajeError(error: unknown) {
   if (error instanceof ApiError) {
+    const codigo = error.status > 0 ? `HTTP ${error.status}` : 'SIN RESPUESTA HTTP';
     const mensaje = error.message.toLocaleLowerCase('es-BO');
     if (
       error.status === 400 &&
       (mensaje.includes('estado de pedido no valido') ||
         mensaje.includes('campos no permitidos'))
     ) {
-      return 'La API de desarrollo no está alineada con esta versión de la aplicación. Actualiza los datos e inténtalo nuevamente.';
+      return `${codigo} · La API de desarrollo no está alineada con esta versión de la aplicación. Actualiza los datos e inténtalo nuevamente.`;
     }
     if (error.status === 404 && error.body?.path?.includes('/estado')) {
-      return 'La gestión de estado de clientes todavía no está disponible en la API conectada.';
+      return `${codigo} · La gestión de estado de clientes todavía no está disponible en la API conectada.`;
     }
-    return error.message;
+    return `${codigo} · ${error.message}`;
   }
-  return 'Ocurrió un error inesperado.';
+  return 'ERROR LOCAL · Ocurrió un error inesperado.';
 }
 
 function estadoLegible(estado: PedidoResumen['estado']) {
@@ -210,7 +211,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
   const manejarError = useCallback(
     async (e: unknown) => {
       if (e instanceof ApiError && (e.status === 401 || e.status === 403)) {
-        Alert.alert('Sesión no válida', 'Vuelve a iniciar sesión para continuar.');
+        Alert.alert('Sesión no válida', `HTTP ${e.status} · Vuelve a iniciar sesión para continuar.`);
         await onCerrarSesion();
         return;
       }
@@ -218,6 +219,17 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
     },
     [onCerrarSesion],
   );
+
+  const confirmarCerrarSesion = useCallback(() => {
+    Alert.alert(
+      'Cerrar sesión',
+      '¿Confirmas que deseas cerrar tu sesión de Vendedor en este dispositivo?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Cerrar sesión', style: 'destructive', onPress: () => void onCerrarSesion() },
+      ],
+    );
+  }, [onCerrarSesion]);
 
   const consultarDatos = useCallback(
     async () =>
@@ -962,12 +974,12 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
     setError('');
     try {
       if (origen === 'DESPACHO') {
-        setPlanificacion(
-          await planificarReparto(token, {
-            pedidoIds,
-            origenTipo: 'DESPACHO',
-          }),
-        );
+        const nueva = await planificarReparto(token, {
+          pedidoIds,
+          origenTipo: 'DESPACHO',
+        });
+        setPlanificacion(nueva);
+        setAviso(`Recorrido organizado desde Venta y Despacho con ${nueva.paradas.length} parada(s).`);
         return;
       }
 
@@ -979,14 +991,14 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
       const posicion = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.High,
       });
-      setPlanificacion(
-        await planificarReparto(token, {
-          pedidoIds,
-          origenTipo: 'ACTUAL',
-          origenLatitud: posicion.coords.latitude,
-          origenLongitud: posicion.coords.longitude,
-        }),
-      );
+      const nueva = await planificarReparto(token, {
+        pedidoIds,
+        origenTipo: 'ACTUAL',
+        origenLatitud: posicion.coords.latitude,
+        origenLongitud: posicion.coords.longitude,
+      });
+      setPlanificacion(nueva);
+      setAviso(`Recorrido organizado desde tu ubicación actual con ${nueva.paradas.length} parada(s).`);
     } catch (e) {
       await manejarError(e);
     } finally {
@@ -1026,6 +1038,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
               }
             : actual,
         );
+        setAviso('Recorrido actualizado desde tu ubicación actual.');
         return;
       }
 
@@ -1036,6 +1049,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
         origenLongitud: origen.longitud,
       });
       setPlanificacion(actualizada);
+      setAviso('Recorrido recalculado correctamente desde tu ubicación actual.');
     } catch (e) {
       await manejarError(e);
     } finally {
@@ -1203,7 +1217,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
           <Text style={styles.eyebrow}>ZAV · VENDEDOR</Text>
           <Text style={styles.nombre}>{sesion.usuario.nombre}</Text>
         </View>
-        <Pressable onPress={() => void onCerrarSesion()} style={styles.botonSecundarioCompacto}>
+        <Pressable onPress={confirmarCerrarSesion} style={styles.botonSecundarioCompacto}>
           <Text style={styles.botonSecundarioTexto}>Salir</Text>
         </Pressable>
       </View>
@@ -1407,6 +1421,9 @@ function NotificacionEstado({
   onCerrar: () => void;
 }) {
   const esError = tipo === 'error';
+  const coincidenciaCodigo = esError ? mensaje.match(/^(HTTP \d{3}|SIN RESPUESTA HTTP|ERROR LOCAL) · (.+)$/s) : null;
+  const codigo = coincidenciaCodigo?.[1] ?? null;
+  const mensajeVisible = coincidenciaCodigo?.[2] ?? mensaje;
   const [progreso] = useState(() => new Animated.Value(0));
   const cerrandoRef = useRef(false);
 
@@ -1472,7 +1489,8 @@ function NotificacionEstado({
           >
             {esError ? 'No se pudo completar' : 'Operación completada'}
           </Text>
-          <Text style={styles.notificacionMensaje}>{mensaje}</Text>
+          {codigo ? <Text style={styles.notificacionCodigo}>{codigo}</Text> : null}
+          <Text style={styles.notificacionMensaje}>{mensajeVisible}</Text>
         </View>
         <Pressable
           accessibilityRole="button"
@@ -3176,6 +3194,20 @@ const styles = StyleSheet.create({
   notificacionTitulo: { fontSize: 11, fontWeight: '900', letterSpacing: 0.2 },
   notificacionTituloError: { color: '#89361f' },
   notificacionTituloExito: { color: '#286344' },
+  notificacionCodigo: {
+    alignSelf: 'flex-start',
+    marginTop: 3,
+    marginBottom: 2,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 999,
+    overflow: 'hidden',
+    backgroundColor: '#f7e8e3',
+    color: '#8f2d23',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.4,
+  },
   notificacionMensaje: {
     color: '#50504a',
     fontSize: 12,

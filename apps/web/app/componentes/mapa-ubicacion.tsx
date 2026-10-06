@@ -77,6 +77,7 @@ export function MapaUbicacion({ latitud, longitud }: { latitud: number | null; l
   const [resultados, setResultados] = useState<ResultadoDireccion[]>([]);
   const [buscando, setBuscando] = useState(false);
   const [errorBusqueda, setErrorBusqueda] = useState('');
+  const [codigoErrorBusqueda, setCodigoErrorBusqueda] = useState<string | null>(null);
   const [sinResultados, setSinResultados] = useState('');
 
   function colocarMarcador(siguiente: Punto, texto: string, zoom = 17) {
@@ -116,10 +117,13 @@ export function MapaUbicacion({ latitud, longitud }: { latitud: number | null; l
     if (q.length < 1) return;
     const controlador = new AbortController();
     const temporizador = window.setTimeout(async () => {
-      setBuscando(true); setErrorBusqueda(''); setSinResultados('');
+      setBuscando(true); setErrorBusqueda(''); setCodigoErrorBusqueda(null); setSinResultados('');
       try {
         const respuesta = await fetch(`/api/geografia/autocompletar?q=${encodeURIComponent(q)}`, { cache: 'no-store', signal: controlador.signal });
-        if (!respuesta.ok) throw new Error(`HTTP ${respuesta.status}`);
+        if (!respuesta.ok) {
+          setCodigoErrorBusqueda(`HTTP ${respuesta.status}`);
+          throw new Error(`HTTP ${respuesta.status}`);
+        }
         const cuerpo = await respuesta.json() as RespuestaDirecciones;
         const lista = Array.isArray(cuerpo.resultados) ? cuerpo.resultados : [];
         setResultados(lista);
@@ -128,6 +132,7 @@ export function MapaUbicacion({ latitud, longitud }: { latitud: number | null; l
         if ((error as Error).name !== 'AbortError') {
           setResultados([]);
           setSinResultados('');
+          setCodigoErrorBusqueda((actual) => actual ?? 'SIN RESPUESTA HTTP');
           setErrorBusqueda('No se pudo consultar el servicio de direcciones. Puedes seleccionar el punto directamente en el mapa.');
         }
       } finally {
@@ -138,7 +143,7 @@ export function MapaUbicacion({ latitud, longitud }: { latitud: number | null; l
   }, [consulta]);
 
   function seleccionarResultado(resultado: ResultadoDireccion) {
-    setConsulta(resultado.direccion); setResultados([]); setErrorBusqueda(''); setSinResultados('');
+    setConsulta(resultado.direccion); setResultados([]); setErrorBusqueda(''); setCodigoErrorBusqueda(null); setSinResultados('');
     colocarMarcador({ latitud: resultado.latitud, longitud: resultado.longitud }, resultado.principal || 'Punto seleccionado');
   }
 
@@ -158,7 +163,7 @@ export function MapaUbicacion({ latitud, longitud }: { latitud: number | null; l
               setSinResultados('');
             }
           }} placeholder="Ej. Senac, avenida, barrio o localidad" autoComplete="off" aria-autocomplete="list" aria-expanded={resultados.length > 0} aria-controls="sugerencias-direccion" />
-          <div className="ubicacion-buscador-acciones">{buscando && <span className="ubicacion-buscando">Buscando…</span>}{consulta && !buscando && <button type="button" className="ubicacion-limpiar" aria-label="Limpiar búsqueda" onClick={() => { setConsulta(''); setResultados([]); setErrorBusqueda(''); setSinResultados(''); }}>×</button>}</div>
+          <div className="ubicacion-buscador-acciones">{buscando && <span className="ubicacion-buscando">Buscando…</span>}{consulta && !buscando && <button type="button" className="ubicacion-limpiar" aria-label="Limpiar búsqueda" onClick={() => { setConsulta(''); setResultados([]); setErrorBusqueda(''); setCodigoErrorBusqueda(null); setSinResultados(''); }}>×</button>}</div>
         </div>
         {resultados.length > 0 && (
           <div id="sugerencias-direccion" className="ubicacion-sugerencias" role="listbox" aria-label="Direcciones sugeridas en Tarija">
@@ -170,13 +175,13 @@ export function MapaUbicacion({ latitud, longitud }: { latitud: number | null; l
           </div>
         )}
         {sinResultados && <p className="ubicacion-busqueda-vacia" role="status">{sinResultados}</p>}
-        {errorBusqueda && <p className="ubicacion-busqueda-error" role="status">{errorBusqueda}</p>}
+        {errorBusqueda && <p className="ubicacion-busqueda-error" role="status">{codigoErrorBusqueda ? `${codigoErrorBusqueda} · ` : ''}{errorBusqueda}</p>}
       </div>
 
       <div className="mapa-selector-wrap">
         <div ref={contenedorRef} className="mapa-selector" role="application" aria-label="Mapa para seleccionar la ubicación de Venta y Despacho" />
         {estado === 'cargando' && <div className="mapa-estado">Cargando mapa…</div>}
-        {estado === 'error' && <div className="mapa-estado mapa-error">No se pudo cargar el mapa. Comprueba la conexión e inténtalo nuevamente.</div>}
+        {estado === 'error' && <div className="mapa-estado mapa-error"><strong>SIN RESPUESTA HTTP</strong> · No se pudo cargar el mapa. Comprueba la conexión e inténtalo nuevamente.</div>}
       </div>
 
       <input type="hidden" name="latitud" value={punto?.latitud ?? ''} readOnly />
