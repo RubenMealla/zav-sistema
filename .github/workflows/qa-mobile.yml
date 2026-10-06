@@ -51,8 +51,37 @@ jobs:
       - name: Instalar dependencias
         run: pnpm install --frozen-lockfile
 
+      - name: Preparar carpeta de evidencias
+        run: mkdir -p apps/mobile/test-results
+
       - name: Verificar lint móvil
-        run: pnpm --filter @zav/mobile lint
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm --filter @zav/mobile lint 2>&1 | tee apps/mobile/test-results/lint.log
 
       - name: Verificar TypeScript móvil
-        run: pnpm --filter @zav/mobile exec tsc --noEmit
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm --filter @zav/mobile exec tsc --noEmit 2>&1 | tee apps/mobile/test-results/typescript.log
+
+      - name: Registrar resumen reproducible
+        if: always()
+        shell: bash
+        run: |
+          echo "QA mobile · ZAV Vendedor" > apps/mobile/test-results/resumen-qa.txt
+          echo "commit=$GITHUB_SHA" >> apps/mobile/test-results/resumen-qa.txt
+          echo "run_id=$GITHUB_RUN_ID" >> apps/mobile/test-results/resumen-qa.txt
+          echo "run_number=$GITHUB_RUN_NUMBER" >> apps/mobile/test-results/resumen-qa.txt
+          node --version >> apps/mobile/test-results/resumen-qa.txt
+          pnpm --version >> apps/mobile/test-results/resumen-qa.txt
+
+      - name: Guardar evidencias QA móvil
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-mobile-${{ github.run_number }}
+          path: apps/mobile/test-results/
+          retention-days: 30
+          if-no-files-found: error
