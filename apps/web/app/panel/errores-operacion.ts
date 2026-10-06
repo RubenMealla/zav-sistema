@@ -6,3 +6,13 @@ export function claveErrorOperacion(estado: number | 'conexion', fallback: strin
   if (estado >= 500) return 'servicio';
   return fallback;
 }
+
+
+export function parametrosError(estado: number | 'conexion', clave: string, detalle?: string) {
+  const parametros = new URLSearchParams({
+    error: clave,
+    codigo: estado === 'conexion' ? 'RED' : String(estado),
+  });
+  if (detalle) parametros.set('detalle', detalle.slice(0, 500));
+  return parametros.toString();
+}

@@ -2,7 +2,7 @@
 
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { claveErrorOperacion } from './errores-operacion';
+import { claveErrorOperacion, parametrosError } from './errores-operacion';
 
 const API = process.env.API_BASE_URL ?? (process.env.NODE_ENV === 'production' ? 'https://zav-api-2026.onrender.com' : 'http://localhost:3001');
 
@@ -16,12 +16,6 @@ function extraerDetalle(cuerpo: unknown) {
     return partes.length ? partes.join(' ') : undefined;
   }
   return typeof mensaje === 'string' && mensaje.trim() ? mensaje.trim() : undefined;
-}
-
-export function parametrosError(estado: number | 'conexion', clave: string, detalle?: string) {
-  const parametros = new URLSearchParams({ error: clave, codigo: estado === 'conexion' ? 'RED' : String(estado) });
-  if (detalle) parametros.set('detalle', detalle.slice(0, 500));
-  return parametros.toString();
 }
 
 export async function enviar(ruta: string, datos: Record<string, unknown>, metodo: 'POST' | 'PATCH' = 'POST'): Promise<ResultadoEnvio> {
