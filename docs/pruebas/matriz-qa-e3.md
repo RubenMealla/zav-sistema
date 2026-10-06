@@ -1,37 +1,50 @@
-# Matriz de QA · E3
+# Matriz de QA · E3 · cierre del apartado 2.8
 
-Estado: **IMPLEMENTADO EN RAMA DE PRUEBAS / PENDIENTE DE MERGE**  
-Rama: `pruebas/e3-evidencias-http`
+**Estado:** EJECUTADO Y VERIFICADO  
+**Rama de cierre:** `pruebas/e3-qa-final-2-8`  
+**PR:** #51  
+**Datos de prueba:** sintéticos; no se versionan contraseñas reales, JWT ni secretos.
 
-Esta matriz relaciona riesgo o requisito, nivel de prueba, precondición, resultado esperado y evidencia verificable. No sustituye los archivos de prueba; los referencia.
+La matriz relaciona cada requisito o riesgo con su camino feliz, camino de error, nivel de prueba y evidencia reproducible. Los casos CP-01 a CP-21 se ejecutan en el workflow web con PostgreSQL aislado; CP-20 se acredita además mediante la suite E2E backend que fuerza un fallo transaccional; CP-22 usa capturas responsive reales; CP-23 combina QA estático, APK firmado y validación física documentada.
 
-| ID | Requisito/riesgo | Nivel/tipo | Precondición/datos | Resultado esperado | Evidencia / estado |
-|---|---|---|---|---|---|
-| QA-SEC-001 | RF-02 / autenticación | API + seguridad | GET protegido sin Bearer | HTTP 401, formato común, sin datos internos | Playwright HTTP `http-401.png`; **PASS** |
-| QA-SEC-002 | RF-03/RF-07 / autorización | API + seguridad | Administrador intenta ruta exclusiva del Vendedor | HTTP 403 | `http-403.png` + E2E pedidos; **PASS** |
-| QA-VAL-001 | RF-07/RF-11 / validación | API | Cliente incompleto o coordenada fuera de rango | HTTP 400 | `http-400.png`; **PASS** |
-| QA-NF-001 | Recursos inexistentes | API | UUID válido no existente | HTTP 404 | `http-404.png`; **PASS** |
-| QA-CON-001 | RF-03/RF-08 / conflicto | API | Código de Producto duplicado / sobreventa / estado incompatible | HTTP 409 | `http-409.png` + E2E; **PASS** |
-| QA-EXT-001 | Geocodificación | Integración externa | Geoapify no configurado en QA aislado | HTTP 503 genérico, sin clave | `http-503.png`; **PASS** |
-| QA-INT-001 | Transaccionalidad | E2E backend | Trigger QA fuerza fallo al registrar movimiento | HTTP 500 y rollback: 0 lote, 0 movimiento | `permisos-inventario.e2e-spec.ts`; **PASS** |
-| QA-FUN-001 | RF-03 | E2E + UI | Administrador autenticado | Crear/editar/desactivar Producto | Backend + Playwright; **PASS** |
-| QA-FUN-002 | RF-04/RF-05 | E2E + UI | Producto/lote QA | Ingreso, traslado y condición auditables | Backend + Playwright; **PASS** |
-| QA-FUN-003 | RF-08 | E2E backend | Vendedor, Cliente y stock disponibles | Pedido REGISTRADO y reserva disponibilidad | `pedidos-distribucion.e2e-spec.ts`; **PASS** |
-| QA-FUN-004 | RF-10 | E2E backend | Pedido REGISTRADO | Retiro idempotente → EN_DISTRIBUCION | E2E individual/múltiple; **PASS** |
-| QA-FUN-005 | RF-11 | E2E + Android | Pedido EN_DISTRIBUCION | Entrega con GPS puntual → ENTREGADO | E2E + validación física 04/10; **PASS** |
-| QA-UI-001 | RNF-03/RNF-04 | UI web | Viewports 390, 768 y 1440 | Sin desborde horizontal; navegación visible | Playwright #484/#492; **PASS** |
-| QA-UI-002 | RNF-03 | Accesibilidad | Teclado + reduced motion | Foco visible, trap de modal, contraste >= 4.5:1 | `identidad-teclado-contraste.png`; **PASS** |
-| QA-UI-003 | Manejo de error | UI web | Credenciales inválidas | Mensaje legible; no oculta error | `identidad-acceso-error.png`; **PASS** |
-| QA-MOB-001 | RNF-04 | Android | APK ZAV Vendedor 1.0.0 | Safe Area y navegación sin solaparse con barras del sistema | Validación física 04/10; **PASS** |
-| QA-MOB-002 | RF-07 | Android | Vendedor autenticado | Cliente + selector de mapa + GPS foreground | Validación física 04/10; **PASS** |
-| QA-MOB-003 | RF-08/RF-10/RF-11 | Android | Datos operativos QA | Pedido → retiro → entrega | Validación física 04/10; **PASS** |
+| ID | Requisito / riesgo | Nivel | Caso | Resultado esperado | Resultado obtenido | Evidencia |
+|---|---|---|---|---|---|---|
+| CP-01 | RF-02 | API / seguridad | Login con credenciales válidas | HTTP 200 y sesión autenticada | PASS | `CP-01.png` · Playwright #651 |
+| CP-02 | RF-02 | API / seguridad | Login con credenciales inválidas | HTTP 401, sin sesión | PASS | `CP-02.png` · Playwright #651 |
+| CP-03 | Seguridad | API | Ruta protegida sin token | HTTP 401 | PASS | `CP-03.png` · Playwright #651 |
+| CP-04 | Seguridad / roles | API | Administrador intenta ruta exclusiva del Vendedor | HTTP 403 | PASS | `CP-04.png` · Playwright #651 |
+| CP-05 | RF-03 | API + UI | Crear, editar y dar de baja Producto | Persistencia y baja lógica correctas | PASS | `CP-05.png` + evidencia UI · Playwright #651 |
+| CP-06 | RF-03 | API | Código de Producto duplicado | HTTP 409, sin duplicidad | PASS | `CP-06.png` · Playwright #651 |
+| CP-07 | RF-04 | API | Registrar Lote e ingreso inicial | HTTP 201 y movimiento inicial | PASS | `CP-07.png` · Playwright #651 |
+| CP-08 | RF-04 | API | Lote con cantidad inicial inválida | HTTP 400 | PASS | `CP-08.png` · Playwright #651 |
+| CP-09 | RF-05 | API + integración | Traslado con saldo suficiente | HTTP 201; origen disminuye y destino aumenta | PASS | `CP-09.png` · Playwright #651 |
+| CP-10 | RF-05 | API | Traslado superior al saldo | HTTP 409; operación no aplicada | PASS | `CP-10.png` · Playwright #651 |
+| CP-11 | RF-06 | API / móvil | Registrar Cliente georreferenciado | HTTP 201 con coordenadas confirmadas | PASS | `CP-11.png` · Playwright #651 |
+| CP-12 | RF-06 | API / validación | Cliente incompleto | HTTP 400 | PASS | `CP-12.png` · Playwright #651 |
+| CP-13 | RF-07 | API / móvil | Registrar Pedido con disponibilidad | HTTP 201 y estado REGISTRADO | PASS | `CP-13.png` · Playwright #651 |
+| CP-14 | RF-07 | API / negocio | Pedido superior a disponibilidad | HTTP 409; sin sobreventa | PASS | `CP-14.png` · Playwright #651 |
+| CP-15 | RF-09 | API / móvil | Retirar Pedido | HTTP 201 y EN_DISTRIBUCION | PASS | `CP-15.png` · Playwright #651 |
+| CP-16 | RF-09 | E2E / idempotencia | Repetir Retiro con la misma clave | No duplica movimiento ni descuento | PASS | `CP-16.png` + `pedidos-distribucion.e2e-spec.ts` |
+| CP-17 | RF-10 | API / móvil | Confirmar entrega con GPS puntual | HTTP 201, ENTREGADO y georreferencia | PASS | `CP-17.png` · Playwright #651 |
+| CP-18 | RF-10 | API / estado | Entregar antes del Retiro | HTTP 409 | PASS | `CP-18.png` · Playwright #651 |
+| CP-19 | Contrato HTTP | API | UUID válido inexistente | HTTP 404 | PASS | `CP-19.png` · Playwright #651 |
+| CP-20 | RF-04 / RF-05 | E2E / transacción | Fallo forzado durante ingreso | HTTP 500 y rollback completo | PASS | QA backend #609 · `permisos-inventario.e2e-spec.ts` |
+| CP-21 | Integración externa | API | Geocodificación sin proveedor configurado en QA aislado | HTTP 503 genérico, sin clave | PASS | `CP-21.png` · Playwright #651 |
+| CP-22 | RNF-03 / RNF-04 | UI web | 390, 768 y 1440 px | Sin desborde horizontal; navegación utilizable | PASS | capturas responsive · Playwright #651 |
+| CP-23 | RNF-04 / móvil | Mobile / build / físico | ZAV Vendedor 1.0.0 | Lint/TS correctos, APK instalable y flujo físico aceptado | PASS | QA mobile #445 · APK #247 · `verificacion-app-movil-e3.md` |
+
+## Resumen de ejecuciones de cierre
+
+- **QA backend #609:** lint y build satisfactorios; 13/13 pruebas unitarias y 26/26 pruebas E2E en PostgreSQL 18 aislado.
+- **QA web Playwright #651:** lint, build y 14/14 pruebas Playwright satisfactorias; artifact `qa-web-playwright-651`.
+- **QA mobile #445:** `expo lint` y `tsc --noEmit` satisfactorios; artifact `qa-mobile-445`.
+- **APK móvil E3 #247:** `BUILD SUCCESSFUL`; package `bo.zav.gestion.vendedor`, versión 1.0.0, versionCode 10000, firma v2 válida y SHA-256 generado.
+- **Validación física:** ZAV Vendedor 1.0.0 fue aceptado en dispositivo Android el 4 de octubre de 2026, según `docs/pruebas/verificacion-app-movil-e3.md`.
 
 ## Criterio sobre HTTP 422
 
-La plenaria P3 muestra **422 Unprocessable Entity** como alternativa válida para una regla de negocio violada. ZAV E3 no lo implementa actualmente: los conflictos de negocio/estado se modelan con **409**, mientras **400** se reserva para entrada inválida. No se simula un 422 inexistente; cualquier cambio futuro exige actualizar contrato, implementación y pruebas.
+La plenaria P3 presenta 422 como una alternativa para reglas de negocio. ZAV no lo utiliza en su contrato actual: la entrada inválida responde 400 y los conflictos de negocio o estado responden 409. No se declara una respuesta 422 que no existe en la implementación.
 
-## Ejecuciones principales
+## Trazabilidad de artifacts
 
-- QA backend de cierre: run documentado del PR #35.
-- QA web Playwright #492: 9/9 pruebas, artifact `qa-web-playwright-492`.
-- Smoke público E3: salud pública + rechazo de credenciales inválidas + 401 sin token, sin almacenar credenciales válidas en el repositorio. La autenticación y autorización de ambos roles se verifican en las suites aisladas de QA.
+Los artifacts de GitHub Actions conservan reportes, logs y capturas. Las credenciales sintéticas solo existen durante la ejecución aislada de CI y los JWT se omiten de las imágenes de evidencia.

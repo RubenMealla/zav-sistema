@@ -98,6 +98,19 @@ jobs:
       - name: Ejecutar Playwright
         run: pnpm --filter @zav/web test:e2e
 
+      - name: Registrar resumen reproducible
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p apps/web/test-results
+          echo "QA web Playwright · ZAV" > apps/web/test-results/resumen-qa.txt
+          echo "commit=$GITHUB_SHA" >> apps/web/test-results/resumen-qa.txt
+          echo "run_id=$GITHUB_RUN_ID" >> apps/web/test-results/resumen-qa.txt
+          echo "run_number=$GITHUB_RUN_NUMBER" >> apps/web/test-results/resumen-qa.txt
+          node --version >> apps/web/test-results/resumen-qa.txt
+          pnpm --version >> apps/web/test-results/resumen-qa.txt
+          pnpm --filter @zav/web exec playwright --version >> apps/web/test-results/resumen-qa.txt
+
       - name: Guardar evidencias Playwright
         if: always()
         uses: actions/upload-artifact@v4
