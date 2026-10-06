@@ -1,0 +1,148 @@
+name: Evidencias móvil QA
+
+on:
+  push:
+    branches:
+      - pruebas/evidencias-qa-2-8-reales
+    paths:
+      - "apps/mobile/**"
+      - "apps/api/**"
+      - ".github/workflows/evidencias-mobile-qa.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: evidencias-mobile-qa-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  capturar-mobile:
+    name: Capturar pantallas Android
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: zav_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d zav_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/zav_test
+      JWT_SECRET: zav-qa-mobile-evidence-secret-2026-0123456789
+      QA_ADMIN_IDENTIFICADOR: admin@zav.test
+      QA_ADMIN_PASSWORD: Admin-QA-2026-Pruebas!
+      QA_VENDEDOR_IDENTIFICADOR: vendedor@zav.test
+      QA_VENDEDOR_PASSWORD: Vendedor-QA-2026-Pruebas!
+      EXPO_PUBLIC_API_BASE_URL: http://127.0.0.1:3001
+      EXPO_PUBLIC_MAP_STYLE_URL: https://tiles.openfreemap.org/styles/liberty
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.4.2
+          run_install: false
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Configurar Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+
+      - name: Preparar PostgreSQL aislado
+        run: NODE_ENV=test node -e "import('./apps/api/test/global-setup-e2e.mjs').then((m) => m.default())"
+
+      - name: Compilar API
+        run: pnpm --filter @zav/api build
+
+      - name: Iniciar API local
+        shell: bash
+        run: |
+          mkdir -p apps/mobile/test-results
+          NODE_ENV=test PORT=3001 pnpm --filter @zav/api start:prod > apps/mobile/test-results/api-mobile.log 2>&1 &
+          echo $! > apps/mobile/test-results/api.pid
+          for intento in {1..60}; do
+            if curl --fail --silent http://127.0.0.1:3001/api/v1/salud > /dev/null; then
+              echo "API lista"
+              exit 0
+            fi
+            sleep 1
+          done
+          cat apps/mobile/test-results/api-mobile.log
+          exit 1
+
+      - name: Sembrar datos sintéticos visibles
+        shell: bash
+        run: |
+          node <<'NODE'
+          const API='http://127.0.0.1:3001';
+          const post=async(path,token,data)=>{
+            const r=await fetch(API+path,{method:'POST',headers:{'content-type':'application/json',...(token?{authorization:'Bearer '+token}:{})},body:JSON.stringify(data)});
+            const body=await r.json().catch(()=>({}));
+            if(!r.ok) throw new Error(path+' '+r.status+' '+JSON.stringify(body));
+            return body;
+          };
+          const login=async(id,pw)=>(await post('/api/v1/auth/login',null,{identificador:id,contrasena:pw})).accessToken;
+          const admin=await login(process.env.QA_ADMIN_IDENTIFICADOR,process.env.QA_ADMIN_PASSWORD);
+          const prod=await post('/api/v1/productos',admin,{codigo:'QA-MOBILE-01',nombre:'Jamón cocido QA',familia:'Fiambres',presentacion:'Unidad de 250 g',pesoGramos:250,precioBob:24.5});
+          const lote=await post('/api/v1/lotes',admin,{operacionClave:crypto.randomUUID(),productoId:prod.id,codigo:'LOTE-QA-MOBILE-01',elaboradoEl:'2026-10-01',venceEl:'2026-12-31',cantidadInicial:12,ubicacionCodigo:'PRODUCCION_ALMACENAMIENTO'});
+          await post('/api/v1/lotes/'+lote.id+'/liberar',admin,{operacionClave:crypto.randomUUID(),motivo:'Datos sintéticos para evidencia visual'});
+          await post('/api/v1/movimientos/traslado',admin,{operacionClave:crypto.randomUUID(),loteId:lote.id,origenCodigo:'PRODUCCION_ALMACENAMIENTO',destinoCodigo:'VENTA_DESPACHO',cantidad:8,referencia:'QA-MOBILE'});
+          const vendedor=await login(process.env.QA_VENDEDOR_IDENTIFICADOR,process.env.QA_VENDEDOR_PASSWORD);
+          const cliente=await post('/api/v1/clientes',vendedor,{nombre:'Cliente demostración QA',telefono:'70000000',direccion:'Zona central, Tarija',latitud:-21.535,longitud:-64.73});
+          await post('/api/v1/pedidos',vendedor,{clienteId:cliente.id,observacion:'Pedido sintético para evidencia visual',detalles:[{productoId:prod.id,cantidad:2}]});
+          console.log('Datos sintéticos creados.');
+          NODE
+
+      - name: Generar proyecto Android
+        run: pnpm --filter @zav/mobile exec expo prebuild --platform android --no-install --clean
+
+      - name: Compilar APK release para evidencia
+        working-directory: apps/mobile/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon
+
+      - name: Ejecutar y capturar en emulador Android
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 33
+          arch: x86_64
+          profile: Nexus 5X
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none
+          script: |
+            adb install -r apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+            python3 apps/mobile/scripts/capturar-evidencias-qa.py
+
+      - name: Guardar capturas y logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidencias-mobile-qa-${{ github.run_number }}
+          path: |
+            apps/mobile/test-results/evidencias-mobile/
+            apps/mobile/test-results/api-mobile.log
+          retention-days: 30
+          if-no-files-found: error
