@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useId, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useId, useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import {
   cambiarCondicionLote,
   registrarLote,
@@ -73,6 +73,42 @@ function CampoAyuda({ id, children }: { id: string; children: ReactNode }) {
   return <small id={id} className="campo-ayuda">{children}</small>;
 }
 
+type ControlValidable = HTMLInputElement | HTMLSelectElement;
+
+function mensajeValidacion(control: ControlValidable) {
+  const validez = control.validity;
+  if (validez.valueMissing) return 'Completa este campo obligatorio.';
+  if (validez.tooShort) return `Ingresa al menos ${control.minLength} caracteres.`;
+  if (validez.tooLong) return `Usa como máximo ${control.maxLength} caracteres.`;
+  if (validez.patternMismatch) return 'Usa únicamente letras, números, punto, guion o guion bajo.';
+  if (validez.rangeUnderflow) {
+    return control instanceof HTMLInputElement && control.type === 'date'
+      ? `Selecciona una fecha igual o posterior a ${control.min}.`
+      : `El valor mínimo permitido es ${control.min}.`;
+  }
+  if (validez.rangeOverflow) {
+    return control instanceof HTMLInputElement && control.type === 'date'
+      ? `Selecciona una fecha igual o anterior a ${control.max}.`
+      : `El valor máximo permitido es ${control.max}.`;
+  }
+  if (validez.stepMismatch) return 'Ingresa un valor compatible con el formato solicitado.';
+  if (validez.badInput || validez.typeMismatch) return 'Ingresa un valor válido.';
+  return 'Revisa este campo antes de continuar.';
+}
+
+function manejarInvalido(evento: FormEvent<HTMLFormElement>) {
+  const control = evento.target;
+  if (!(control instanceof HTMLInputElement || control instanceof HTMLSelectElement)) return;
+  control.setCustomValidity('');
+  control.setCustomValidity(mensajeValidacion(control));
+}
+
+function limpiarInvalido(evento: FormEvent<HTMLFormElement>) {
+  const control = evento.target;
+  if (!(control instanceof HTMLInputElement || control instanceof HTMLSelectElement)) return;
+  control.setCustomValidity('');
+}
+
 export function FormularioNuevoProducto() {
   const baseId = useId();
   const [familia, setFamilia] = useState('');
@@ -113,7 +149,7 @@ export function FormularioNuevoProducto() {
   const idPrecio = `${baseId}-precio`;
 
   return (
-    <form action={registrarProducto} className="formulario formulario-modal">
+    <form action={registrarProducto} className="formulario formulario-modal" onInvalid={manejarInvalido} onInput={limpiarInvalido}>
       <section className="form-seccion">
         <header className="form-seccion-cabecera">
           <div><strong>Identificación</strong><p>El código se propone automáticamente y sigue siendo editable.</p></div>
@@ -173,7 +209,9 @@ export function FormularioNuevoProducto() {
             <CampoAyuda id={`${idCodigo}-ayuda`}>
               {estadoCodigo === 'error'
                 ? 'No se pudo calcular la sugerencia. Puedes escribir el código manualmente.'
-                : 'Formato interno sugerido: SIGLA-###. La sugerencia no reemplaza tu criterio y puede editarse.'}
+                : codigoAutomatico
+                  ? 'Generado automáticamente con la sigla de la familia y el siguiente correlativo disponible. Puedes editarlo.'
+                  : 'Código editado manualmente. Usa “Sugerir” para volver a la propuesta automática.'}
             </CampoAyuda>
           </div>
 
@@ -224,7 +262,7 @@ export function FormularioNuevoProducto() {
 export function FormularioEditarProducto({ producto }: { producto: ProductoEditable }) {
   const baseId = useId();
   return (
-    <form action={editarProducto} className="formulario formulario-modal">
+    <form action={editarProducto} className="formulario formulario-modal" onInvalid={manejarInvalido} onInput={limpiarInvalido}>
       <input type="hidden" name="productoId" value={producto.id} />
       <section className="form-seccion">
         <header className="form-seccion-cabecera">
@@ -239,7 +277,8 @@ export function FormularioEditarProducto({ producto }: { producto: ProductoEdita
           </div>
           <div className="campo">
             <div className="campo-etiqueta"><label htmlFor={`${baseId}-familia`}>Familia</label><span>Obligatorio</span></div>
-            <input id={`${baseId}-familia`} name="familia" minLength={2} maxLength={70} required defaultValue={producto.familia} />
+            <input id={`${baseId}-familia`} name="familia" list={`${baseId}-familias-editar`} minLength={2} maxLength={70} required defaultValue={producto.familia} autoComplete="off" />
+            <datalist id={`${baseId}-familias-editar`}>{FAMILIAS_ZAV.map((item) => <option key={item} value={item} />)}</datalist>
           </div>
           <div className="campo campo-ancho">
             <div className="campo-etiqueta"><label htmlFor={`${baseId}-nombre`}>Nombre comercial</label><span>Obligatorio</span></div>
@@ -292,6 +331,7 @@ export function FormularioNuevoLote({ productos, operacionClave }: { productos: 
     () => mayorFecha(hoy, sumarDias(elaboradoEl || hoy, 1)),
     [elaboradoEl, hoy],
   );
+  const elaboracionHistorica = Boolean(elaboradoEl && elaboradoEl < hoy);
 
   useEffect(() => {
     if (!codigoAutomatico || !productoId || !elaboradoEl) return;
@@ -318,7 +358,7 @@ export function FormularioNuevoLote({ productos, operacionClave }: { productos: 
   }, [codigoAutomatico, elaboradoEl, productoId, revisionCodigo]);
 
   return (
-    <form action={registrarLote} className="formulario formulario-modal">
+    <form action={registrarLote} className="formulario formulario-modal" onInvalid={manejarInvalido} onInput={limpiarInvalido}>
       <input type="hidden" name="operacionClave" value={operacionClave} />
 
       <section className="form-seccion">
@@ -368,7 +408,9 @@ export function FormularioNuevoLote({ productos, operacionClave }: { productos: 
             <CampoAyuda id={`${baseId}-codigo-ayuda`}>
               {estadoCodigo === 'error'
                 ? 'No se pudo calcular la sugerencia. Escribe el código del lote manualmente.'
-                : 'Sugerencia interna: TJ-ZAV-CÓDIGO_PRODUCTO-AAAAMMDD-##. Debe coincidir con el lote físico/etiquetado.'}
+                : codigoAutomatico
+                  ? 'Generado automáticamente como TJ-ZAV-CÓDIGO_PRODUCTO-AAAAMMDD-##. Puedes editarlo, pero debe coincidir con el lote físico/etiquetado.'
+                  : 'Código de lote editado manualmente. Usa “Regenerar” para recuperar la propuesta automática.'}
             </CampoAyuda>
           </div>
 
@@ -389,7 +431,7 @@ export function FormularioNuevoLote({ productos, operacionClave }: { productos: 
                 if (venceEl && venceEl < siguienteMinimo) setVenceEl('');
               }}
             />
-            <CampoAyuda id={`${baseId}-elaborado-ayuda`}>Hoy viene precargado. No se permiten fechas futuras; si el lote se elaboró antes, registra la fecha real.</CampoAyuda>
+            <CampoAyuda id={`${baseId}-elaborado-ayuda`}>Hoy viene precargado. Esta es la fecha real de elaboración, no la fecha de registro; por trazabilidad puede ser anterior, pero nunca futura.</CampoAyuda>
           </div>
 
           <div className="campo">
@@ -398,6 +440,12 @@ export function FormularioNuevoLote({ productos, operacionClave }: { productos: 
             <CampoAyuda id={`${baseId}-vence-ayuda`}>Debe ser posterior a la elaboración y no puede estar vencida al registrar el ingreso.</CampoAyuda>
           </div>
         </div>
+        {elaboracionHistorica && (
+          <div className="form-alerta-fecha" role="note">
+            <strong>Fecha de elaboración anterior a hoy</strong>
+            <span>Es válida solo si coincide con la fecha real del lote físico. Revísala antes de guardar para evitar una trazabilidad incorrecta.</span>
+          </div>
+        )}
       </section>
 
       <section className="form-seccion">
@@ -411,6 +459,11 @@ export function FormularioNuevoLote({ productos, operacionClave }: { productos: 
             <input id={`${baseId}-cantidad`} name="cantidadInicial" type="number" min={1} step={1} inputMode="numeric" required placeholder="1" />
           </div>
           <div className="campo">
+            <div className="campo-etiqueta"><label htmlFor={`${baseId}-registro`}>Fecha de registro</label><span>Automática</span></div>
+            <input id={`${baseId}-registro`} value={hoy} readOnly aria-label="Fecha de registro" />
+            <CampoAyuda id={`${baseId}-registro-ayuda`}>El instante de registro lo asigna el servidor al guardar; el usuario no puede retrocederlo.</CampoAyuda>
+          </div>
+          <div className="campo campo-ancho">
             <div className="campo-etiqueta"><label htmlFor={`${baseId}-ubicacion`}>Ubicación inicial</label><span>Automática</span></div>
             <input id={`${baseId}-ubicacion`} value="Producción y Almacenamiento" readOnly aria-label="Ubicación inicial" />
             <CampoAyuda id={`${baseId}-ubicacion-ayuda`}>La ubicación inicial no se cambia desde este formulario.</CampoAyuda>
@@ -424,7 +477,7 @@ export function FormularioNuevoLote({ productos, operacionClave }: { productos: 
       </div>
 
       <div className="modal-acciones">
-        <BotonEnviar disabled={productos.length === 0} confirmacion={{ titulo: 'Registrar lote e ingreso', mensaje: 'Se creará el lote con su existencia inicial en Producción y Almacenamiento. La operación quedará en la trazabilidad.', confirmar: 'Sí, registrar lote' }}>
+        <BotonEnviar disabled={productos.length === 0} confirmacion={{ titulo: 'Registrar lote e ingreso', mensaje: elaboracionHistorica ? 'La fecha de elaboración es anterior a hoy. Confirma que coincide con el lote físico antes de registrar el ingreso y su trazabilidad.' : 'Se creará el lote con su existencia inicial en Producción y Almacenamiento. La operación quedará en la trazabilidad.', confirmar: 'Sí, registrar lote' }}>
           Guardar lote e ingreso
         </BotonEnviar>
       </div>
@@ -435,7 +488,7 @@ export function FormularioNuevoLote({ productos, operacionClave }: { productos: 
 export function FormularioCondicionLote({ lotes, operacionClave }: { lotes: LoteOpcion[]; operacionClave: string }) {
   const baseId = useId();
   return (
-    <form action={cambiarCondicionLote} className="formulario formulario-modal">
+    <form action={cambiarCondicionLote} className="formulario formulario-modal" onInvalid={manejarInvalido} onInput={limpiarInvalido}>
       <input type="hidden" name="operacionClave" value={operacionClave} />
       <section className="form-seccion">
         <header className="form-seccion-cabecera">
@@ -477,7 +530,7 @@ export function FormularioTraslado({ lotes, operacionClave }: { lotes: LoteOpcio
   ];
 
   return (
-    <form action={registrarTraslado} className="formulario formulario-modal">
+    <form action={registrarTraslado} className="formulario formulario-modal" onInvalid={manejarInvalido} onInput={limpiarInvalido}>
       <input type="hidden" name="operacionClave" value={operacionClave} />
       <section className="form-seccion">
         <header className="form-seccion-cabecera">

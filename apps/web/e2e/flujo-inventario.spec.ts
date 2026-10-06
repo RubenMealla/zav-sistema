@@ -118,7 +118,14 @@ test('permite gestionar inventario desde módulos, modales y notificaciones', as
   await codigoLoteCampo.fill(loteCodigo);
   await expect(modalLote.getByLabel('Fecha de elaboración')).toHaveValue(hoy);
   await expect(modalLote.getByLabel('Fecha de elaboración')).toHaveAttribute('max', hoy);
+  await expect(modalLote.getByLabel('Fecha de registro')).toHaveValue(hoy);
+  await expect(modalLote.getByLabel('Fecha de registro')).toHaveAttribute('readonly', '');
   await expect(modalLote.getByLabel('Fecha de vencimiento')).toHaveAttribute('min', manana);
+  await modalLote.getByLabel('Fecha de elaboración').fill(fechaBolivia(1));
+  expect(await modalLote.getByLabel('Fecha de elaboración').evaluate((el) => (el as HTMLInputElement).validity.rangeOverflow)).toBeTruthy();
+  await modalLote.getByLabel('Fecha de elaboración').fill(hoy);
+  await modalLote.getByLabel('Fecha de vencimiento').fill(fechaBolivia(-1));
+  expect(await modalLote.getByLabel('Fecha de vencimiento').evaluate((el) => (el as HTMLInputElement).validity.rangeUnderflow)).toBeTruthy();
   await modalLote.getByLabel('Fecha de elaboración').fill(hoy);
   await modalLote.getByLabel('Fecha de vencimiento').fill(fechaBolivia(90));
   await modalLote.getByLabel('Cantidad inicial').fill('12');
@@ -198,7 +205,15 @@ test('permite gestionar inventario desde módulos, modales y notificaciones', as
   await modulos.getByRole('link', { name: 'Distribución', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Distribución', exact: true })).toBeVisible();
   await expect(page.getByRole('application', { name: 'Mapa para seleccionar la ubicación de Venta y Despacho' })).toBeVisible();
-  await expect(page.locator('.leaflet-bottom.leaflet-right .leaflet-control-zoom')).toBeVisible();
+  const zoomMapa = page.locator('.leaflet-bottom.leaflet-right .leaflet-control-zoom');
+  await expect(zoomMapa).toBeVisible();
+  await expect(page.locator('.leaflet-top.leaflet-left .leaflet-control-zoom')).toHaveCount(0);
+  const cajaMapa = await page.getByRole('application', { name: 'Mapa para seleccionar la ubicación de Venta y Despacho' }).boundingBox();
+  const cajaZoom = await zoomMapa.boundingBox();
+  expect(cajaMapa).not.toBeNull();
+  expect(cajaZoom).not.toBeNull();
+  expect(cajaZoom!.x).toBeGreaterThan(cajaMapa!.x + cajaMapa!.width / 2);
+  expect(cajaZoom!.y).toBeGreaterThan(cajaMapa!.y + cajaMapa!.height / 2);
   await captura(page, '11-distribucion-mapa.png');
 
   await modulos.getByRole('link', { name: 'Resumen', exact: true }).click();

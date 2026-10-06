@@ -665,3 +665,24 @@ body:has(.confirmacion-dialogo[open]){overflow:hidden}
 @media(max-width:520px){
   .confirmacion-dialogo{width:min(100% - 20px,560px)}
 }
+
+
+/* Salvaguarda visual para fechas históricas de elaboración. */
+.form-alerta-fecha{
+  display:grid;
+  gap:4px;
+  margin-top:14px;
+  padding:12px 14px;
+  border:1px solid #dfb77b;
+  border-left:4px solid #b86a20;
+  border-radius:6px;
+  background:#fff9ef;
+}
+.form-alerta-fecha strong{color:#704314;font-size:13px}
+.form-alerta-fecha span{color:#725f49;font-size:12px;line-height:1.5}
+.campo input[readonly]{
+  border-color:#d3cdc2;
+  background:#f2efe9;
+  color:#5f5a52;
+  cursor:default;
+}

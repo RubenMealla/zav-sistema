@@ -43,8 +43,16 @@ test('edita y desactiva un producto desde la web', async ({ page }) => {
 
   await fila.getByRole('button', { name: 'Desactivar' }).click();
   const confirmacionBaja = page.getByRole('alertdialog');
-  await expect(page.locator('body > .confirmacion-capa')).toBeVisible();
+  await expect(page.locator('body > .confirmacion-dialogo[open]')).toBeVisible();
   await expect(confirmacionBaja).toContainText('El registro permanecerá en el historial');
+  const cajaConfirmacion = await confirmacionBaja.boundingBox();
+  const viewport = page.viewportSize();
+  expect(cajaConfirmacion).not.toBeNull();
+  expect(viewport).not.toBeNull();
+  expect(cajaConfirmacion!.x).toBeGreaterThanOrEqual(0);
+  expect(cajaConfirmacion!.x + cajaConfirmacion!.width).toBeLessThanOrEqual(viewport!.width + 1);
+  expect(cajaConfirmacion!.y).toBeGreaterThanOrEqual(0);
+  expect(cajaConfirmacion!.y + cajaConfirmacion!.height).toBeLessThanOrEqual(viewport!.height + 1);
   await confirmacionBaja.getByRole('button', { name: 'Cancelar' }).click();
   await expect(fila.locator('td').nth(6).getByText('ACTIVO', { exact: true })).toBeVisible();
 
