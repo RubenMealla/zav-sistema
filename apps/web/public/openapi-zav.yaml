@@ -783,29 +783,29 @@ components:
       type: object
       required: [operacionClave, productoId, codigo, elaboradoEl, venceEl, cantidadInicial, ubicacionCodigo]
       properties:
-        operacionClave: { type: string, format: uuid }
-        productoId: { type: string, format: uuid }
-        codigo: { type: string }
-        elaboradoEl: { type: string, format: date }
-        venceEl: { type: string, format: date }
-        cantidadInicial: { type: integer, minimum: 1 }
-        ubicacionCodigo: { type: string, enum: [PRODUCCION_ALMACENAMIENTO, VENTA_DESPACHO] }
+        operacionClave: { type: string, format: uuid, example: 11111111-1111-4111-8111-111111111111 }
+        productoId: { type: string, format: uuid, example: 22222222-2222-4222-8222-222222222222 }
+        codigo: { type: string, example: LOTE-SWAGGER-001 }
+        elaboradoEl: { type: string, format: date, example: 2026-10-01 }
+        venceEl: { type: string, format: date, example: 2026-12-31 }
+        cantidadInicial: { type: integer, minimum: 1, example: 10 }
+        ubicacionCodigo: { type: string, enum: [PRODUCCION_ALMACENAMIENTO, VENTA_DESPACHO], example: PRODUCCION_ALMACENAMIENTO }
     CondicionLoteEntrada:
       type: object
       required: [operacionClave, motivo]
       properties:
-        operacionClave: { type: string, format: uuid }
-        motivo: { type: string }
+        operacionClave: { type: string, format: uuid, example: 33333333-3333-4333-8333-333333333333 }
+        motivo: { type: string, example: Liberación para venta }
     TrasladoEntrada:
       type: object
       required: [operacionClave, loteId, origenCodigo, destinoCodigo, cantidad]
       properties:
-        operacionClave: { type: string, format: uuid }
-        loteId: { type: string, format: uuid }
-        origenCodigo: { type: string }
-        destinoCodigo: { type: string }
-        cantidad: { type: integer, minimum: 1 }
-        referencia: { type: string }
+        operacionClave: { type: string, format: uuid, example: 44444444-4444-4444-8444-444444444444 }
+        loteId: { type: string, format: uuid, example: 55555555-5555-4555-8555-555555555555 }
+        origenCodigo: { type: string, example: PRODUCCION_ALMACENAMIENTO }
+        destinoCodigo: { type: string, example: VENTA_DESPACHO }
+        cantidad: { type: integer, minimum: 1, example: 2 }
+        referencia: { type: string, example: Prueba manual Swagger }
     ClienteEntrada:
       type: object
       required: [nombre, direccion, latitud, longitud]
@@ -819,8 +819,8 @@ components:
       type: object
       required: [clienteId, detalles]
       properties:
-        clienteId: { type: string, format: uuid }
-        observacion: { type: string }
+        clienteId: { type: string, format: uuid, example: 66666666-6666-4666-8666-666666666666 }
+        observacion: { type: string, example: Pedido de demostración Swagger }
         detalles:
           type: array
           minItems: 1
@@ -828,13 +828,13 @@ components:
             type: object
             required: [productoId, cantidad]
             properties:
-              productoId: { type: string, format: uuid }
-              cantidad: { type: integer, minimum: 1 }
+              productoId: { type: string, format: uuid, example: 77777777-7777-4777-8777-777777777777 }
+              cantidad: { type: integer, minimum: 1, example: 2 }
     OperacionIdempotente:
       type: object
       required: [operacionClave]
       properties:
-        operacionClave: { type: string, format: uuid }
+        operacionClave: { type: string, format: uuid, example: 88888888-8888-4888-8888-888888888888 }
     RetirosEntrada:
       type: object
       required: [retiros]
@@ -846,16 +846,16 @@ components:
             type: object
             required: [pedidoId, operacionClave]
             properties:
-              pedidoId: { type: string, format: uuid }
-              operacionClave: { type: string, format: uuid }
+              pedidoId: { type: string, format: uuid, example: 99999999-9999-4999-8999-999999999999 }
+              operacionClave: { type: string, format: uuid, example: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa }
     EntregaEntrada:
       type: object
       required: [operacionClave, latitud, longitud]
       properties:
-        operacionClave: { type: string, format: uuid }
-        latitud: { type: number, minimum: -90, maximum: 90 }
-        longitud: { type: number, minimum: -180, maximum: 180 }
-        precisionMetros: { type: number, minimum: 0 }
+        operacionClave: { type: string, format: uuid, example: bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb }
+        latitud: { type: number, minimum: -90, maximum: 90, example: -21.535 }
+        longitud: { type: number, minimum: -180, maximum: 180, example: -64.73 }
+        precisionMetros: { type: number, minimum: 0, example: 8.5 }
     PlanificacionEntrada:
       type: object
       required: [pedidoIds, origenTipo]
@@ -863,13 +863,13 @@ components:
         pedidoIds:
           type: array
           minItems: 2
-          items: { type: string, format: uuid }
-        origenTipo: { type: string, enum: [DESPACHO, ACTUAL] }
+          items: { type: string, format: uuid, example: cccccccc-cccc-4ccc-8ccc-cccccccccccc }
+        origenTipo: { type: string, enum: [DESPACHO, ACTUAL], example: DESPACHO }
         origenActual:
           type: object
           properties:
-            latitud: { type: number }
-            longitud: { type: number }
+            latitud: { type: number, example: -21.535 }
+            longitud: { type: number, example: -64.73 }
     GeorreferenciaEntrada:
       type: object
       required: [latitud, longitud]
