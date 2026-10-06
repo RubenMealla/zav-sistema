@@ -12,22 +12,28 @@ OUT = Path("apps/mobile/test-results/evidencias-movil")
 OUT.mkdir(parents=True, exist_ok=True)
 PKG = "bo.zav.gestion.vendedor"
 
-def run(args: list[str], check: bool = True, capture: bool = False):
-    return subprocess.run(
-        args,
-        check=check,
-        text=True,
-        stdout=subprocess.PIPE if capture else None,
-        stderr=subprocess.STDOUT if capture else None,
-    )
+def run(args: list[str], check: bool = True, capture: bool = False, timeout: int = 20):
+    try:
+        return subprocess.run(
+            args,
+            check=check,
+            text=True,
+            stdout=subprocess.PIPE if capture else None,
+            stderr=subprocess.STDOUT if capture else None,
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired:
+        if check:
+            raise
+        return None
 
 def shot(name: str):
     with (OUT / name).open("wb") as fh:
         subprocess.run(["adb", "exec-out", "screencap", "-p"], check=True, stdout=fh)
 
 def dump_ui(name: str = "ui") -> ET.Element:
-    run(["adb", "shell", "uiautomator", "dump", "/sdcard/window.xml"], check=False)
-    run(["adb", "pull", "/sdcard/window.xml", str(OUT / f"{name}.xml")], check=False)
+    run(["adb", "shell", "uiautomator", "dump", "/sdcard/window.xml"], check=False, timeout=8)
+    run(["adb", "pull", "/sdcard/window.xml", str(OUT / f"{name}.xml")], check=False, timeout=8)
     return ET.parse(OUT / f"{name}.xml").getroot()
 
 def center(bounds: str) -> tuple[int, int]:
@@ -88,11 +94,14 @@ def dismiss_system_anr():
             time.sleep(2)
 
 def relaunch():
-    dismiss_system_anr()
+    # El emulador de CI puede mostrar un diálogo transitorio de System UI.
+    # El toque corresponde al botón "Wait" del diálogo estándar Pixel; si no
+    # existe, se ejecuta antes de lanzar ZAV y no afecta la app.
+    run(["adb", "shell", "input", "tap", "540", "1330"], check=False)
+    time.sleep(2)
     run(["adb", "shell", "am", "force-stop", PKG], check=False)
     run(["adb", "shell", "monkey", "-p", PKG, "-c", "android.intent.category.LAUNCHER", "1"])
     time.sleep(8)
-    dismiss_system_anr()
 
 def login(identifier: str, password: str):
     tap("Identificador")
