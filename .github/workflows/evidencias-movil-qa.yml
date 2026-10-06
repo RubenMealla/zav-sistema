@@ -1,0 +1,121 @@
+name: Evidencias móviles QA
+
+on:
+  push:
+    branches:
+      - pruebas/evidencias-qa-reales
+    paths:
+      - "apps/mobile/**"
+      - "apps/api/**"
+      - ".github/workflows/evidencias-movil-qa.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: evidencias-movil-qa-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  capturas:
+    name: Capturar ZAV Vendedor en Android
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: zav_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d zav_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      CI: 1
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/zav_test
+      JWT_SECRET: zav-qa-jwt-secret-evidencias-movil-0123456789abcdef
+      QA_ADMIN_IDENTIFICADOR: admin@zav.test
+      QA_ADMIN_PASSWORD: AdminQA2026
+      QA_VENDEDOR_IDENTIFICADOR: vendedor@zav.test
+      QA_VENDEDOR_PASSWORD: VendedorQA2026
+      EXPO_PUBLIC_API_BASE_URL: http://127.0.0.1:3001
+      EXPO_PUBLIC_MAP_STYLE_URL: https://tiles.openfreemap.org/styles/liberty
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.4.2
+          run_install: false
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Configurar Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+
+      - name: Preparar PostgreSQL aislado
+        run: NODE_ENV=test node -e "import('./apps/api/test/global-setup-e2e.mjs').then((m) => m.default())"
+
+      - name: Compilar e iniciar API local
+        shell: bash
+        run: |
+          pnpm --filter @zav/api build
+          NODE_ENV=test PORT=3001 pnpm --filter @zav/api start:prod > /tmp/zav-api-mobile.log 2>&1 &
+          for intento in {1..60}; do
+            if curl --fail --silent http://127.0.0.1:3001/api/v1/salud > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/zav-api-mobile.log
+          exit 1
+
+      - name: Generar proyecto Android
+        run: pnpm --filter @zav/mobile exec expo prebuild --platform android --no-install --clean
+
+      - name: Compilar APK x86_64 para evidencia
+        working-directory: apps/mobile/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease -PreactNativeArchitectures=x86_64 --no-daemon -x lintVitalRelease -x lintVitalAnalyzeRelease
+
+      - name: Ejecutar app y capturar pantallas
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -no-snapshot
+          script: |
+            adb install -r apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+            python3 apps/mobile/scripts/capturar-evidencias-movil.py
+
+      - name: Guardar evidencias
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidencias-movil-qa-${{ github.run_number }}
+          path: |
+            apps/mobile/test-results/evidencias-movil/
+            /tmp/zav-api-mobile.log
+          retention-days: 30
+          if-no-files-found: warn
