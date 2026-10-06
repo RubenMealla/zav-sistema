@@ -100,8 +100,14 @@ def relaunch():
     run(["adb", "shell", "input", "tap", "540", "1330"], check=False)
     time.sleep(2)
     run(["adb", "shell", "am", "force-stop", PKG], check=False)
-    run(["adb", "shell", "monkey", "-p", PKG, "-c", "android.intent.category.LAUNCHER", "1"])
-    time.sleep(8)
+    # Arranque determinista de la actividad principal. "monkey" puede dejar
+    # el proceso ADB abierto aun después de inyectar el evento en CI.
+    run(
+        ["adb", "shell", "am", "start", "-W", "-n", f"{PKG}/.MainActivity"],
+        check=True,
+        timeout=35,
+    )
+    time.sleep(6)
 
 def login(identifier: str, password: str):
     tap("Identificador")
