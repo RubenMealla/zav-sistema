@@ -59,6 +59,12 @@ def iniciar_limpio():
     time.sleep(165)
     shot("MOV-00-arranque-diagnostico.png")
 
+def borrar_campo(punto: tuple[int, int], repeticiones: int = 48):
+    tap(punto)
+    for _ in range(repeticiones):
+        run(["adb", "shell", "input", "keyevent", "67"], check=False, timeout=5)
+    time.sleep(0.5)
+
 def escribir_login(identificador: str, password: str):
     tap(LOGIN_IDENTIFICADOR)
     texto(identificador)
@@ -77,45 +83,55 @@ def main():
     # 1. Pantalla real de acceso.
     shot("MOV-01-acceso-vendedor.png")
 
-    # 2. Validación visible sin inventar respuestas del servidor.
+    # 2. Validación de cliente: campos obligatorios vacíos.
     tap(LOGIN_BOTON)
     time.sleep(1)
     shot("MOV-02-validacion-login.png")
 
-    # 3. Inicio de sesión real contra la API local aislada.
-    escribir_login(vendedor, password)
+    # 3. Error real HTTP 401 con credenciales incorrectas.
+    escribir_login("usuario.invalido@zav.test", "incorrecta")
+    tap(LOGIN_BOTON)
+    time.sleep(5)
+    shot("MOV-03-error-login-401.png")
+
+    # 4. Inicio de sesión real contra la API local aislada.
+    borrar_campo(LOGIN_IDENTIFICADOR)
+    texto(vendedor)
+    borrar_campo(LOGIN_PASSWORD)
+    texto(password)
+    run(["adb", "shell", "input", "keyevent", "4"], check=False)
     tap(LOGIN_BOTON)
     time.sleep(15)
-    shot("MOV-03-pedidos.png")
+    shot("MOV-04-pedidos.png")
 
-    # 4. Formulario móvil de Pedido.
+    # 5. Formulario móvil de Pedido.
     tap(TAB_NUEVO)
     time.sleep(2)
-    shot("MOV-04-nuevo-pedido.png")
+    shot("MOV-05-nuevo-pedido.png")
 
-    # 5. Formulario/directorio de Clientes.
+    # 6. Formulario/directorio de Clientes.
     tap(TAB_CLIENTES)
     time.sleep(2)
-    shot("MOV-05-clientes.png")
+    shot("MOV-06-clientes.png")
 
-    # 6. Validación visible de Cliente sin ubicación obligatoria.
+    # 7. Validación visible de Cliente sin ubicación obligatoria.
     tap(CLIENTE_GUARDAR)
     time.sleep(1)
-    shot("MOV-06-validacion-cliente.png")
+    shot("MOV-07-validacion-cliente.png")
 
-    # 7. Selector geográfico real de la aplicación.
+    # 8. Selector geográfico real de la aplicación.
     # La notificación de validación es temporal; se espera a que desaparezca.
     time.sleep(6)
     tap(CLIENTE_DEFINIR_UBICACION)
     time.sleep(8)
-    shot("MOV-07-mapa-cliente.png")
+    shot("MOV-08-mapa-cliente.png")
 
     # Volver a la pantalla principal sin depender de UIAutomator.
     run(["adb", "shell", "input", "keyevent", "4"], check=False)
     time.sleep(2)
     tap(TAB_PEDIDOS)
     time.sleep(2)
-    shot("MOV-08-pedidos-acciones.png")
+    shot("MOV-09-pedidos-acciones.png")
 
     print("Capturas móviles reales generadas:")
     for img in sorted(OUT.glob("MOV-*.png")):
