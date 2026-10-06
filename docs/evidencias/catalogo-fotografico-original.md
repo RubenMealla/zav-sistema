@@ -1,11 +1,11 @@
 # Catálogo fotográfico original ZAV
 
-**Estado:** CÓDIGO PREPARADO Y ORIGINALES VERIFICADOS; PENDIENTE ÚNICAMENTE LA TRANSFERENCIA DE LOS 13 BINARIOS PNG AL REPOSITORIO.
+**Estado:** IMPLEMENTADO Y VERIFICADO — 13/13 PNG ORIGINALES INCORPORADOS EN LA RAMA DE TRABAJO.
 
 La landing está preparada para servir 13 PNG originales desde `apps/web/public/catalogo-original/`.  
 Los PNG deben incorporarse con los bytes originales entregados: no se convierten a WebP/JPG, no se recomprimen, no se retocan y no se regeneran. El tamaño visual se controla con CSS mediante `object-fit: contain`, sin recortar el producto.
 
-Mientras los archivos no estén presentes, la interfaz conserva temporalmente el sprite anterior como fallback para no romper el Preview. Se añadió `scripts/incorporar-catalogo-original.ps1`, que localiza las imágenes dentro del ZIP por SHA-256 (no por nombre), las copia con nombres estables y vuelve a verificar 13/13 hashes antes de terminar.
+Los 13 archivos ya están presentes en `apps/web/public/catalogo-original/`. La landing carga directamente esos PNG y dejó de depender del sprite como fallback. Se conserva `scripts/incorporar-catalogo-original.ps1` como utilidad reproducible: localiza las imágenes dentro del ZIP por SHA-256 (no por nombre), las copia con nombres estables y verifica 13/13 hashes.
 
 | Archivo esperado | Bytes | SHA-256 del PNG entregado |
 | --- | ---: | --- |
@@ -28,6 +28,11 @@ Los hashes permiten demostrar que el archivo usado corresponde al PNG original e
 
 ## Verificación del material recibido
 
-Los 13 originales entregados fueron comprobados fuera del repositorio: cada archivo es PNG RGBA de 1254 × 1254 px y los SHA-256 coinciden con esta tabla. También existen derivados de prueba redimensionados, pero **no se usarán como fuente canónica** mientras los originales puedan incorporarse sin modificación.
+Los 13 originales entregados fueron comprobados y transferidos al repositorio conservando sus bytes: cada archivo es PNG RGBA de 1254 × 1254 px y los SHA-256 coinciden con esta tabla. Existen derivados de prueba redimensionados fuera del repositorio, pero **no forman parte de la fuente canónica ni de la landing**.
 
-La transferencia binaria debe conservar exactamente estos hashes. Si cualquiera cambia, el estado vuelve a **PENDIENTE DE VALIDAR** y no debe afirmarse que se usa el original.
+La transferencia binaria conservó exactamente estos hashes. Si una modificación futura altera cualquiera de ellos, el estado de esa imagen debe volver a **PENDIENTE DE VALIDAR** hasta contrastarla otra vez con el original entregado.
+
+
+## Decisión visual
+
+No se aplicó recorte, retoque, regeneración, conversión a WebP/JPG ni recomprensión de los archivos fuente. El encuadre visible se resuelve mediante CSS con `object-fit: contain`, por lo que el producto completo y su transparencia permanecen visibles dentro de la tarjeta.

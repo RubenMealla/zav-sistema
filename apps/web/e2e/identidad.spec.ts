@@ -129,7 +129,10 @@ test('landing pública conserva la nueva jerarquía editorial', async ({ page })
   await expect(page.getByRole('heading', { name: 'Siete familias de productos ZAV.' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Mortadelas' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Fiambres especiales' })).toBeVisible();
-  await expect(page.locator('#productos').getByRole('img', { name: 'Mortadela Primavera' })).toBeVisible();
+  const mortadelaOriginal = page.locator('#productos').getByRole('img', { name: 'Mortadela Primavera' });
+  await expect(mortadelaOriginal).toBeVisible();
+  await expect(mortadelaOriginal).toHaveAttribute('src', '/catalogo-original/mortadela-primavera.png');
+  await expect(page.locator('.foto-sprite')).toHaveCount(0);
 
   await nav.getByRole('link', { name: 'Productos' }).click();
   await expect.poll(async () => nav.getByRole('link', { name: 'Productos' }).getAttribute('class')).toContain('activo');
