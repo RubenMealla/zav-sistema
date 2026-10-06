@@ -27,8 +27,8 @@ const html = `<!doctype html>
   </div>
   <div class="zav-aviso">
     <b>Uso rápido</b>
-    1) Ejecuta <code>POST /api/v1/auth/login</code>. 2) Copia el <code>accessToken</code>. 3) Pulsa <b>Authorize</b> y pega solo el token. 4) Prueba los endpoints con <b>Try it out</b>.<br/>
-    Los códigos 400, 401, 403, 404, 409, 500 y 503 están documentados abajo. No muestres contraseñas ni JWT en capturas de evidencia.
+    1) Ejecuta <code>POST /api/v1/auth/login</code> usando uno de los ejemplos. 2) Copia el <code>accessToken</code>. 3) Pulsa <b>Authorize</b> y pega solo el token. 4) Abre un endpoint y pulsa <b>Try it out</b>: los cuerpos y parámetros ya incluyen valores de ejemplo editables. 5) Cuando una operación requiera un UUID, sustituye el valor de ejemplo por el ID retornado en el paso anterior y pulsa <b>Execute</b>.<br/>
+    Los casos 400, 401, 403, 404, 409 y 503 tienen ejemplos directos; el 500 transaccional se verifica mediante la suite E2E. No muestres contraseñas ni JWT en capturas de evidencia.
   </div>
   <div id="swagger-ui"></div>
   <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
