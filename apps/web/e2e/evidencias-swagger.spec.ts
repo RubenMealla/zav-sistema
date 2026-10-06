@@ -58,6 +58,12 @@ async function esperarCodigo(op: Locator, codigo: string) {
 
 async function capturar(op: Locator, nombre: string) {
   await mkdir(DIR, { recursive: true });
+  // El visor genera un snippet cURL que incluye Authorization cuando la
+  // operación está autenticada. Se oculta antes de la captura para no
+  // convertir un JWT efímero de QA en parte de la evidencia documental.
+  await op.locator('.curl-command').evaluateAll((nodos) => {
+    for (const nodo of nodos) (nodo as HTMLElement).style.display = 'none';
+  });
   await op.screenshot({ path: path.join(DIR, nombre) });
 }
 
