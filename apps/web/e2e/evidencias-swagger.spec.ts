@@ -51,20 +51,20 @@ async function ejecutar(op: Locator) {
 }
 
 async function esperarCodigo(op: Locator, codigo: string) {
-  await expect(op.locator('.response-col_status').filter({ hasText: codigo }).first()).toBeVisible({
-    timeout: 15000,
-  });
+  const respuestaReal = op.locator('.live-responses-table');
+  await expect(respuestaReal).toBeVisible({ timeout: 15000 });
+  await expect(
+    respuestaReal.locator('.response-col_status').filter({ hasText: codigo }).first(),
+  ).toBeVisible({ timeout: 15000 });
 }
 
 async function capturar(op: Locator, nombre: string) {
   await mkdir(DIR, { recursive: true });
-  // El visor genera un snippet cURL que incluye Authorization cuando la
-  // operación está autenticada. Se oculta antes de la captura para no
-  // convertir un JWT efímero de QA en parte de la evidencia documental.
-  await op.locator('.curl-command').evaluateAll((nodos) => {
-    for (const nodo of nodos) (nodo as HTMLElement).style.display = 'none';
-  });
-  await op.screenshot({ path: path.join(DIR, nombre) });
+  // Se captura exclusivamente la respuesta real devuelta por el servidor.
+  // Así la evidencia queda legible y no incluye el snippet cURL con JWT.
+  const respuestaReal = op.locator('.live-responses-table');
+  await expect(respuestaReal).toBeVisible();
+  await respuestaReal.screenshot({ path: path.join(DIR, nombre) });
 }
 
 async function autorizar(page: Page, jwt: string) {
