@@ -181,6 +181,7 @@ test('credenciales inválidas muestran un error legible', async ({ page }) => {
   await page.getByLabel('Identificador', { exact: true }).fill('no-existe.qa');
   await page.getByLabel('Contraseña', { exact: true }).fill('No-es-una-cuenta-real');
   await page.getByRole('button', { name: 'Ingresar al sistema' }).click();
+  await expect(page.locator('.mensaje-error')).toContainText('HTTP 401');
   await expect(page.locator('.mensaje-error')).toContainText('Verifica los datos de acceso');
   await captura(page, 'identidad-acceso-error.png');
 });
