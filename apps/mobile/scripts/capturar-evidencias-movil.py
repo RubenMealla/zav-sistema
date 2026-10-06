@@ -134,15 +134,37 @@ def main():
     login(vendedor, password)
 
     wait_for("Pedidos")
+    wait_for("Cliente Centro QA")
     shot("MOV-03-pedidos.png")
 
     tap("Nuevo pedido")
     wait_for("Nuevo pedido")
     shot("MOV-04-nuevo-pedido.png")
 
+    tap("Registrar pedido")
+    wait_for("VALIDACIÓN")
+    shot("MOV-05-validacion-pedido.png")
+
+    tap("Buscar y seleccionar cliente")
+    wait_for("Seleccionar cliente")
+    shot("MOV-06-selector-clientes.png")
+    tap("Elegir")
+    wait_for("CLIENTE SELECCIONADO")
+    shot("MOV-07-cliente-seleccionado.png")
+
+    tap("Buscar y agregar productos")
+    wait_for("Agregar productos")
+    wait_for("Jamón cocido QA")
+    shot("MOV-08-selector-productos.png")
+    tap("Sumar una unidad de Jamón cocido QA")
+    tap("Listo")
+    wait_for("1 producto(s)")
+    shot("MOV-09-pedido-preparado.png")
+
     tap("Clientes")
     wait_for("Clientes")
-    shot("MOV-05-clientes.png")
+    wait_for("Cliente Centro QA")
+    shot("MOV-10-clientes.png")
 
     dump_ui("arbol-final")
     print("Capturas móviles reales generadas:")
