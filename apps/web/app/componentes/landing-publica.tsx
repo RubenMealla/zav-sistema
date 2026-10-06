@@ -39,8 +39,16 @@ function estiloSprite(indice:number):CSSProperties{
 }
 
 function FotoCatalogo({nombre,imagen,sprite,destacada=false}:{nombre:string;imagen:string;sprite:number;destacada?:boolean}){
- const[fallback,setFallback]=useState(false);
- if(fallback){
+ const[originalDisponible,setOriginalDisponible]=useState(false);
+ useEffect(()=>{
+  let activo=true;
+  const precarga=new Image();
+  precarga.onload=()=>{if(activo)setOriginalDisponible(true)};
+  precarga.onerror=()=>{if(activo)setOriginalDisponible(false)};
+  precarga.src=imagen;
+  return()=>{activo=false;precarga.onload=null;precarga.onerror=null};
+ },[imagen]);
+ if(!originalDisponible){
   return <div className={destacada?'foto-sprite foto-sprite-destacada':'foto-sprite foto-sprite-producto'} style={estiloSprite(sprite)} role="img" aria-label={nombre}/>;
  }
  return <img
@@ -49,7 +57,6 @@ function FotoCatalogo({nombre,imagen,sprite,destacada=false}:{nombre:string;imag
   alt={nombre}
   loading={destacada?'eager':'lazy'}
   decoding="async"
-  onError={()=>setFallback(true)}
  />;
 }
 
