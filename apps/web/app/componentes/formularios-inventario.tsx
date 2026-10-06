@@ -78,8 +78,8 @@ type ControlValidable = HTMLInputElement | HTMLSelectElement;
 function mensajeValidacion(control: ControlValidable) {
   const validez = control.validity;
   if (validez.valueMissing) return 'Completa este campo obligatorio.';
-  if (validez.tooShort) return `Ingresa al menos ${control.minLength} caracteres.`;
-  if (validez.tooLong) return `Usa como máximo ${control.maxLength} caracteres.`;
+  if (validez.tooShort && control instanceof HTMLInputElement) return `Ingresa al menos ${control.minLength} caracteres.`;
+  if (validez.tooLong && control instanceof HTMLInputElement) return `Usa como máximo ${control.maxLength} caracteres.`;
   if (validez.patternMismatch) return 'Usa únicamente letras, números, punto, guion o guion bajo.';
   if (validez.rangeUnderflow) {
     return control instanceof HTMLInputElement && control.type === 'date'
