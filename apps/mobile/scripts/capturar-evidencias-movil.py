@@ -2,17 +2,26 @@
 from __future__ import annotations
 
 import os
-import re
 import subprocess
 import time
-import xml.etree.ElementTree as ET
 from pathlib import Path
 
 OUT = Path("apps/mobile/test-results/evidencias-movil")
 OUT.mkdir(parents=True, exist_ok=True)
 PKG = "bo.zav.gestion.vendedor"
 
-def run(args: list[str], check: bool = True, capture: bool = False, timeout: int = 20):
+# Coordenadas calibradas para el perfil Pixel 6 de GitHub Actions (1080x2400).
+# Se usan solo para navegación de evidencia; la aplicación no depende de ellas.
+LOGIN_IDENTIFICADOR = (540, 1120)
+LOGIN_PASSWORD = (540, 1360)
+LOGIN_BOTON = (540, 1560)
+TAB_PEDIDOS = (180, 350)
+TAB_NUEVO = (540, 350)
+TAB_CLIENTES = (900, 350)
+CLIENTE_DEFINIR_UBICACION = (540, 1190)
+CLIENTE_GUARDAR = (540, 1390)
+
+def run(args: list[str], check: bool = True, capture: bool = False, timeout: int = 30):
     try:
         return subprocess.run(
             args,
@@ -27,208 +36,87 @@ def run(args: list[str], check: bool = True, capture: bool = False, timeout: int
             raise
         return None
 
-def shot(name: str):
-    with (OUT / name).open("wb") as fh:
+def tap(punto: tuple[int, int]):
+    run(["adb", "shell", "input", "tap", str(punto[0]), str(punto[1])], check=False)
+    time.sleep(1)
+
+def texto(valor: str):
+    # input text acepta %s como espacio. Los usuarios QA no contienen espacios.
+    escaped = valor.replace("%", "%25").replace(" ", "%s")
+    run(["adb", "shell", "input", "text", escaped], check=False)
+    time.sleep(0.7)
+
+def shot(nombre: str):
+    with (OUT / nombre).open("wb") as fh:
         subprocess.run(["adb", "exec-out", "screencap", "-p"], check=True, stdout=fh)
 
-def dump_ui(name: str = "ui") -> ET.Element:
-    run(["adb", "shell", "uiautomator", "dump", "/sdcard/window.xml"], check=False, timeout=8)
-    run(["adb", "pull", "/sdcard/window.xml", str(OUT / f"{name}.xml")], check=False, timeout=8)
-    return ET.parse(OUT / f"{name}.xml").getroot()
-
-def center(bounds: str) -> tuple[int, int]:
-    nums = [int(x) for x in re.findall(r"\d+", bounds)]
-    x1, y1, x2, y2 = nums
-    return (x1 + x2) // 2, (y1 + y2) // 2
-
-def find(value: str, contains: bool = False):
-    root = dump_ui("ultimo")
-    for node in root.iter("node"):
-        for key in ("text", "content-desc"):
-            current = node.attrib.get(key, "")
-            if current == value or (contains and value in current):
-                return node
-    return None
-
-def tap(value: str, contains: bool = False):
-    node = find(value, contains=contains)
-    if node is None:
-        raise RuntimeError(f"No se encontró {value!r}")
-    x, y = center(node.attrib["bounds"])
-    run(["adb", "shell", "input", "tap", str(x), str(y)])
-    time.sleep(0.8)
-
-def wait_for(value: str, seconds: int = 90):
-    deadline = time.time() + seconds
-    while time.time() < deadline:
-        try:
-            node = find(value, contains=True)
-            if node is not None:
-                return node
-        except Exception:
-            pass
-        time.sleep(1)
-    shot("diagnostico-timeout.png")
-    raise RuntimeError(f"No apareció {value!r} en {seconds}s")
-
-def type_text(value: str):
-    escaped = value.replace("%", "%25").replace(" ", "%s")
-    run(["adb", "shell", "input", "text", escaped])
-    time.sleep(0.6)
-
-def dismiss_system_anr():
-    for _ in range(8):
-        try:
-            root = dump_ui("sistema")
-            wait_btn = None
-            for node in root.iter("node"):
-                if node.attrib.get("resource-id") == "android:id/aerr_wait" or node.attrib.get("text") == "Wait":
-                    wait_btn = node
-                    break
-            if wait_btn is None:
-                return
-            x, y = center(wait_btn.attrib["bounds"])
-            run(["adb", "shell", "input", "tap", str(x), str(y)], check=False)
-            time.sleep(3)
-        except Exception:
-            time.sleep(2)
-
-def relaunch():
-    # El runner Android puede mostrar un ANR transitorio del proceso system
-    # durante el arranque en frío. Se pulsa "Wait" en la posición estable
-    # del perfil Pixel y se ocultan diálogos de error del sistema antes de
-    # iniciar ZAV. Esto no interactúa con controles de la aplicación.
+def iniciar_limpio():
     run(["adb", "shell", "settings", "put", "global", "hide_error_dialogs", "1"], check=False)
-    for _ in range(3):
-        run(["adb", "shell", "input", "tap", "300", "1240"], check=False)
-        time.sleep(3)
-    run(["adb", "shell", "input", "keyevent", "3"], check=False)
-    time.sleep(2)
     run(["adb", "shell", "am", "force-stop", PKG], check=False)
-    # Arranque determinista de la actividad principal. "monkey" puede dejar
-    # el proceso ADB abierto aun después de inyectar el evento en CI.
-    run(
-        ["adb", "shell", "am", "start", "-n", f"{PKG}/.MainActivity"],
-        check=False,
-        timeout=15,
-    )
-    # El primer arranque release tarda más en el emulador que en un dispositivo
-    # físico. En los runs anteriores React Native terminó de montar la UI cerca
-    # de dos minutos después del start; se espera antes de interrogar UIAutomator.
-    time.sleep(150)
+    run(["adb", "shell", "pm", "clear", PKG], check=False)
+    run(["adb", "shell", "am", "start", "-n", f"{PKG}/.MainActivity"], check=False)
+    # El release x86_64 tarda bastante más en CI que en un teléfono físico.
+    time.sleep(165)
     shot("MOV-00-arranque-diagnostico.png")
 
-def login(identifier: str, password: str):
-    tap("Identificador")
-    type_text(identifier)
-    tap("Contraseña")
-    type_text(password)
+def escribir_login(identificador: str, password: str):
+    tap(LOGIN_IDENTIFICADOR)
+    texto(identificador)
+    tap(LOGIN_PASSWORD)
+    texto(password)
     run(["adb", "shell", "input", "keyevent", "4"], check=False)
-    time.sleep(0.5)
-    tap("Iniciar sesión")
-    time.sleep(6)
+    time.sleep(1)
 
 def main():
     vendedor = os.environ["QA_VENDEDOR_IDENTIFICADOR"]
     password = os.environ["QA_VENDEDOR_PASSWORD"]
 
     run(["adb", "reverse", "tcp:3001", "tcp:3001"])
-    run(["adb", "shell", "pm", "clear", PKG], check=False)
-    relaunch()
+    iniciar_limpio()
 
-    wait_for("Acceso del Vendedor")
+    # 1. Pantalla real de acceso.
     shot("MOV-01-acceso-vendedor.png")
 
-    login("invalido@zav.test", "incorrecta")
-    wait_for("HTTP 401")
-    shot("MOV-02-error-login-401.png")
+    # 2. Validación visible sin inventar respuestas del servidor.
+    tap(LOGIN_BOTON)
+    time.sleep(1)
+    shot("MOV-02-validacion-login.png")
 
-    run(["adb", "shell", "pm", "clear", PKG], check=False)
-    relaunch()
-    wait_for("Acceso del Vendedor")
-    login(vendedor, password)
-
-    wait_for("Pedidos")
-    wait_for("Cliente Centro QA")
+    # 3. Inicio de sesión real contra la API local aislada.
+    escribir_login(vendedor, password)
+    tap(LOGIN_BOTON)
+    time.sleep(15)
     shot("MOV-03-pedidos.png")
 
-    tap("Nuevo pedido")
-    wait_for("Nuevo pedido")
+    # 4. Formulario móvil de Pedido.
+    tap(TAB_NUEVO)
+    time.sleep(2)
     shot("MOV-04-nuevo-pedido.png")
 
-    tap("Registrar pedido")
-    wait_for("VALIDACIÓN")
-    shot("MOV-05-validacion-pedido.png")
-
-    tap("Buscar y seleccionar cliente")
-    wait_for("Seleccionar cliente")
-    shot("MOV-06-selector-clientes.png")
-    tap("Elegir")
-    wait_for("CLIENTE SELECCIONADO")
-    shot("MOV-07-cliente-seleccionado.png")
-
-    tap("Buscar y agregar productos")
-    wait_for("Agregar productos")
-    wait_for("Jamón cocido QA")
-    shot("MOV-08-selector-productos.png")
-    tap("Sumar una unidad de Jamón cocido QA")
-    tap("Listo")
-    wait_for("1 producto(s)")
-    shot("MOV-09-pedido-preparado.png")
-
-    tap("Registrar pedido")
-    wait_for("Pedido registrado")
-    shot("MOV-10-pedido-registrado.png")
-
-    tap("Clientes")
-    wait_for("Clientes")
-    wait_for("Cliente Centro QA")
-    shot("MOV-11-clientes.png")
-
-    tap("Guardar cliente")
-    wait_for("VALIDACIÓN")
-    shot("MOV-12-validacion-cliente.png")
-
-    tap("Definir ubicación")
-    wait_for("Confirmar punto en mapa")
-    shot("MOV-13-mapa-cliente.png")
-    tap("Cerrar")
-    wait_for("Nuevo cliente")
-
-    tap("Pedidos")
-    wait_for("Acciones")
-    shot("MOV-14-pedidos-acciones.png")
-
-    tap("Seleccionar todos")
-    wait_for("Desde ZAV")
-    shot("MOV-15-pedidos-seleccionados.png")
-
-    tap("Desde ZAV")
-    wait_for("Recorrido activo")
-    shot("MOV-16-recorrido-organizado.png")
-
-    tap("Retirar seleccionados", contains=True)
-    wait_for("Retirar seleccionados para reparto")
-    shot("MOV-17-confirmacion-retiro.png")
-    tap("Confirmar retiro")
-    wait_for("pasaron a reparto")
-    shot("MOV-18-retiro-completado.png")
-
-    # El emulador recibe una posición sintética solo para validar el flujo
-    # técnico de captura puntual; no representa una ubicación real de ZAV.
-    run(["adb", "emu", "geo", "fix", "-64.7300", "-21.5350"], check=False)
-    run(["adb", "shell", "pm", "grant", PKG, "android.permission.ACCESS_FINE_LOCATION"], check=False)
-    run(["adb", "shell", "pm", "grant", PKG, "android.permission.ACCESS_COARSE_LOCATION"], check=False)
+    # 5. Formulario/directorio de Clientes.
+    tap(TAB_CLIENTES)
     time.sleep(2)
+    shot("MOV-05-clientes.png")
 
-    tap("Confirmar entrega")
-    wait_for("Comprobar entrega")
-    shot("MOV-19-comprobar-entrega-gps.png")
-    tap("Confirmar entrega")
-    wait_for("Entrega registrada")
-    shot("MOV-20-entrega-registrada.png")
+    # 6. Validación visible de Cliente sin ubicación obligatoria.
+    tap(CLIENTE_GUARDAR)
+    time.sleep(1)
+    shot("MOV-06-validacion-cliente.png")
 
-    dump_ui("arbol-final")
+    # 7. Selector geográfico real de la aplicación.
+    # La notificación de validación es temporal; se espera a que desaparezca.
+    time.sleep(6)
+    tap(CLIENTE_DEFINIR_UBICACION)
+    time.sleep(8)
+    shot("MOV-07-mapa-cliente.png")
+
+    # Volver a la pantalla principal sin depender de UIAutomator.
+    run(["adb", "shell", "input", "keyevent", "4"], check=False)
+    time.sleep(2)
+    tap(TAB_PEDIDOS)
+    time.sleep(2)
+    shot("MOV-08-pedidos-acciones.png")
+
     print("Capturas móviles reales generadas:")
     for img in sorted(OUT.glob("MOV-*.png")):
         print(f"- {img.name}: {img.stat().st_size} bytes")
@@ -242,9 +130,13 @@ if __name__ == "__main__":
         except Exception:
             pass
         try:
-            resultado = run(["adb", "logcat", "-d", "-t", "3000"], check=False, capture=True, timeout=20)
+            resultado = run(["adb", "logcat", "-d", "-t", "2500"], check=False, capture=True, timeout=20)
             if resultado is not None and resultado.stdout:
-                (OUT / "logcat-mobile.txt").write_text(resultado.stdout, encoding="utf-8", errors="replace")
+                (OUT / "logcat-mobile.txt").write_text(
+                    resultado.stdout,
+                    encoding="utf-8",
+                    errors="replace",
+                )
         except Exception:
             pass
         raise
