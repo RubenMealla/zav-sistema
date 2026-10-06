@@ -43,7 +43,7 @@ export default defineConfig({
     },
     {
       command: 'pnpm start',
-      env: { NODE_ENV: 'production', PORT: '3000', ZAV_LANDING_EXTENDIDA: 'true' },
+      env: { NODE_ENV: 'production', PORT: '3000', ZAV_LANDING_EXTENDIDA: 'true', API_BASE_URL: 'http://127.0.0.1:3001' },
       url: 'http://127.0.0.1:3000/acceso',
       reuseExistingServer: !esCI,
       timeout: 120_000,
