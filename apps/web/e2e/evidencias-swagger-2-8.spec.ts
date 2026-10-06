@@ -186,7 +186,6 @@ test.describe.serial('Evidencias reales Swagger del apartado 2.8', () => {
 
     const cliente404 = await abrir(page, 'GET', '/api/v1/clientes/{id}');
     await probar(cliente404);
-    const parametroId = cliente404.locator('input').filter({ has: page.locator('') }).first();
     await cliente404.locator('input').first().fill('00000000-0000-4000-8000-000000000404');
     await ejecutar(cliente404);
     await esperarCodigo(cliente404, '404');
