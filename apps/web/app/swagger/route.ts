@@ -34,7 +34,7 @@ const html = `<!doctype html>
   <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
   <script>
     window.addEventListener('load', () => {
-      SwaggerUIBundle({
+      window.ui = SwaggerUIBundle({
         url: '/openapi-zav.yaml',
         dom_id: '#swagger-ui',
         deepLinking: true,
