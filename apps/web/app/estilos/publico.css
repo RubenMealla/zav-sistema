@@ -83,3 +83,10 @@
   .publico-noticia{min-height:500px}
   .publico-productos,.publico-zav{padding-block:42px}
 }
+
+
+/* Fotografías originales ZAV: el archivo PNG se sirve sin conversión; el ajuste es únicamente visual. */
+.foto-original{position:absolute;inset:0;width:100%;height:100%;display:block;object-fit:contain;object-position:center;background:#ece7dd}
+.foto-original-destacada{padding:clamp(18px,3vw,38px)}
+.foto-original-producto{padding:16px;transition:transform .2s ease}
+.producto-publico:hover .foto-original-producto{transform:scale(1.025)}
