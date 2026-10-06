@@ -1,11 +1,11 @@
 # Catálogo fotográfico original ZAV
 
-**Estado:** PENDIENTE DE INCORPORAR BINARIOS AL REPOSITORIO / CÓDIGO PREPARADO.
+**Estado:** CÓDIGO PREPARADO Y ORIGINALES VERIFICADOS; PENDIENTE ÚNICAMENTE LA TRANSFERENCIA DE LOS 13 BINARIOS PNG AL REPOSITORIO.
 
 La landing está preparada para servir 13 PNG originales desde `apps/web/public/catalogo-original/`.  
-Los PNG no deben convertirse a WebP/JPG, recomprimirse, retocarse ni regenerarse. El ajuste de tamaño se realiza con CSS mediante `object-fit: contain`.
+Los PNG deben incorporarse con los bytes originales entregados: no se convierten a WebP/JPG, no se recomprimen, no se retocan y no se regeneran. El tamaño visual se controla con CSS mediante `object-fit: contain`, sin recortar el producto.
 
-Mientras los archivos no estén presentes, la interfaz conserva temporalmente el sprite anterior como fallback para no romper el Preview.
+Mientras los archivos no estén presentes, la interfaz conserva temporalmente el sprite anterior como fallback para no romper el Preview. Se añadió `scripts/incorporar-catalogo-original.ps1`, que localiza las imágenes dentro del ZIP por SHA-256 (no por nombre), las copia con nombres estables y vuelve a verificar 13/13 hashes antes de terminar.
 
 | Archivo esperado | Bytes | SHA-256 del PNG entregado |
 | --- | ---: | --- |
@@ -24,3 +24,10 @@ Mientras los archivos no estén presentes, la interfaz conserva temporalmente el
 | tocino-ahumado.png | 2949258 | 88d67e8f29272d710d513e4d521000fa79747546e523e9ca2b568d2a06b2f390 |
 
 Los hashes permiten demostrar que el archivo usado corresponde al PNG original entregado.
+
+
+## Verificación del material recibido
+
+Los 13 originales entregados fueron comprobados fuera del repositorio: cada archivo es PNG RGBA de 1254 × 1254 px y los SHA-256 coinciden con esta tabla. También existen derivados de prueba redimensionados, pero **no se usarán como fuente canónica** mientras los originales puedan incorporarse sin modificación.
+
+La transferencia binaria debe conservar exactamente estos hashes. Si cualquiera cambia, el estado vuelve a **PENDIENTE DE VALIDAR** y no debe afirmarse que se usa el original.
