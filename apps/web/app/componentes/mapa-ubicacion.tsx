@@ -127,7 +127,7 @@ export function MapaUbicacion({ latitud, longitud }: { latitud: number | null; l
         const cuerpo = await respuesta.json() as RespuestaDirecciones;
         const lista = Array.isArray(cuerpo.resultados) ? cuerpo.resultados : [];
         setResultados(lista);
-        setSinResultados(lista.length ? '' : 'No encontramos coincidencias dentro del departamento de Tarija. Prueba con un barrio, calle, localidad o referencia más específica.');
+        setSinResultados(lista.length ? '' : 'SIN RESULTADOS · No encontramos coincidencias dentro del departamento de Tarija. Prueba con un barrio, calle, localidad o referencia más específica.');
       } catch (error) {
         if ((error as Error).name !== 'AbortError') {
           setResultados([]);

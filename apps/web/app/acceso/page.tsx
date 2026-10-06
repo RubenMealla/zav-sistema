@@ -4,7 +4,7 @@ import { BotonEnviar, CampoContrasena, Notificacion } from '../componentes/inter
 import { Icono } from '../componentes/icono';
 import { Marca } from '../componentes/marca';
 
-const errores:Record<string,string>={datos:'Completa el identificador y la contraseña.',credenciales:'No fue posible iniciar sesión. Verifica los datos de acceso.',permisos:'Esta pantalla está disponible para el Administrador.',conexion:'No se pudo conectar con el servicio de ZAV.',sesion:'La sesión terminó o ya no es válida. Vuelve a ingresar.'};
+const errores:Record<string,string>={datos:'Completa el identificador y la contraseña.',credenciales:'No fue posible iniciar sesión. Verifica los datos de acceso.',permisos:'Esta pantalla está disponible para el Administrador.',conexion:'No se pudo conectar con el servicio de ZAV.',sesion:'La sesión terminó o ya no es válida. Vuelve a ingresar.',servicio:'El servicio de ZAV no pudo completar el inicio de sesión. Inténtalo nuevamente; si persiste, revisa el estado de la API.'};
 
 function etiquetaCodigo(codigo?: string) {
  if (!codigo) return '';

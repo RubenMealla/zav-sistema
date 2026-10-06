@@ -77,23 +77,23 @@ type ControlValidable = HTMLInputElement | HTMLSelectElement;
 
 function mensajeValidacion(control: ControlValidable) {
   const validez = control.validity;
-  if (validez.valueMissing) return 'Completa este campo obligatorio.';
-  if (validez.tooShort && control instanceof HTMLInputElement) return `Ingresa al menos ${control.minLength} caracteres.`;
-  if (validez.tooLong && control instanceof HTMLInputElement) return `Usa como máximo ${control.maxLength} caracteres.`;
-  if (validez.patternMismatch) return 'Usa únicamente letras, números, punto, guion o guion bajo.';
+  if (validez.valueMissing) return 'VALIDACIÓN · Completa este campo obligatorio.';
+  if (validez.tooShort && control instanceof HTMLInputElement) return `VALIDACIÓN · Ingresa al menos ${control.minLength} caracteres.`;
+  if (validez.tooLong && control instanceof HTMLInputElement) return `VALIDACIÓN · Usa como máximo ${control.maxLength} caracteres.`;
+  if (validez.patternMismatch) return 'VALIDACIÓN · Usa únicamente letras, números, punto, guion o guion bajo.';
   if (validez.rangeUnderflow && control instanceof HTMLInputElement) {
     return control.type === 'date'
-      ? `Selecciona una fecha igual o posterior a ${control.min}.`
-      : `El valor mínimo permitido es ${control.min}.`;
+      ? `VALIDACIÓN · Selecciona una fecha igual o posterior a ${control.min}.`
+      : `VALIDACIÓN · El valor mínimo permitido es ${control.min}.`;
   }
   if (validez.rangeOverflow && control instanceof HTMLInputElement) {
     return control.type === 'date'
-      ? `Selecciona una fecha igual o anterior a ${control.max}.`
-      : `El valor máximo permitido es ${control.max}.`;
+      ? `VALIDACIÓN · Selecciona una fecha igual o anterior a ${control.max}.`
+      : `VALIDACIÓN · El valor máximo permitido es ${control.max}.`;
   }
-  if (validez.stepMismatch) return 'Ingresa un valor compatible con el formato solicitado.';
-  if (validez.badInput || validez.typeMismatch) return 'Ingresa un valor válido.';
-  return 'Revisa este campo antes de continuar.';
+  if (validez.stepMismatch) return 'VALIDACIÓN · Ingresa un valor compatible con el formato solicitado.';
+  if (validez.badInput || validez.typeMismatch) return 'VALIDACIÓN · Ingresa un valor válido.';
+  return 'VALIDACIÓN · Revisa este campo antes de continuar.';
 }
 
 function manejarInvalido(evento: FormEvent<HTMLFormElement>) {

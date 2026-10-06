@@ -38,6 +38,12 @@ function esHoyBolivia(valor: string) {
   return !Number.isNaN(fecha.getTime()) && clave(fecha) === clave(new Date());
 }
 
+function separarAviso(mensaje?: string) {
+  if (!mensaje) return { codigo: null as string | null, mensaje: '' };
+  const coincidencia = mensaje.match(/^(HTTP \d{3}|SIN RESPUESTA HTTP|VALIDACIÓN|ERROR LOCAL|ERROR DE CARGA|SIN RESULTADOS|ROL NO PERMITIDO) · (.+)$/s);
+  return { codigo: coincidencia?.[1] ?? null, mensaje: coincidencia?.[2] ?? mensaje };
+}
+
 export function HistorialPedidosModal({
   visible,
   pedidos,
@@ -54,6 +60,7 @@ export function HistorialPedidosModal({
   const [busqueda, setBusqueda] = useState('');
   const [periodo, setPeriodo] = useState<'HOY' | 'TODOS'>('TODOS');
   const [estado, setEstado] = useState<'ENTREGADO' | 'CANCELADO' | 'TODOS'>('ENTREGADO');
+  const aviso = separarAviso(mensaje);
 
   const filtrados = useMemo(() => {
     const q = busqueda.trim().toLocaleLowerCase('es-BO');
@@ -132,7 +139,8 @@ export function HistorialPedidosModal({
           {mensaje ? (
             <View style={styles.informacion}>
               <Text style={styles.informacionTitulo}>Información del historial</Text>
-              <Text style={styles.informacionTexto}>{mensaje}</Text>
+              {aviso.codigo ? <Text style={styles.informacionCodigo}>{aviso.codigo}</Text> : null}
+              <Text style={styles.informacionTexto}>{aviso.mensaje}</Text>
             </View>
           ) : null}
 
@@ -258,6 +266,7 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   informacionTitulo: { color: '#38464f', fontSize: 11, fontWeight: '900' },
+  informacionCodigo: { alignSelf: 'flex-start', color: '#8d3b24', backgroundColor: '#fff0e9', borderRadius: 4, paddingHorizontal: 7, paddingVertical: 3, fontSize: 10, fontWeight: '900' },
   informacionTexto: { color: '#5c6870', fontSize: 12, lineHeight: 17 },
   cargando: { padding: 24, alignItems: 'center', gap: 8 },
   vacio: {

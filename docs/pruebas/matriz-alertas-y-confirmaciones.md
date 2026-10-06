@@ -66,3 +66,18 @@ Ejemplos de etiquetas visibles:
 - `ROL NO PERMITIDO`: la sesión es válida, pero corresponde a una aplicación/rol distinto.
 
 El código no reemplaza el mensaje legible: ambos se muestran juntos para facilitar soporte, demostración y defensa.
+
+
+## Auditoría de cobertura del 6 de octubre de 2026
+
+Se contrastó esta matriz contra las acciones reales del frontend web y de la aplicación móvil.
+
+- Las mutaciones web implementadas mediante Server Actions devuelven confirmación previa cuando corresponde, aviso de éxito y aviso de error con código/motivo.
+- El acceso web muestra código y motivo para validación local, red, errores HTTP y respuesta inválida.
+- Las validaciones nativas de formularios web incluyen la etiqueta `VALIDACIÓN` en el mensaje mostrado por el navegador.
+- La búsqueda geográfica distingue `SIN RESULTADOS`, error HTTP y ausencia de respuesta.
+- Las mutaciones móviles de cliente, pedido, anulación, retiro, entrega y organización de recorrido informan éxito o error.
+- Los errores móviles distinguen HTTP, `VALIDACIÓN`, `ERROR LOCAL`, `ERROR DE CARGA`, `SIN RESULTADOS` y `ROL NO PERMITIDO`.
+- La carga parcial del historial conserva el código HTTP o clasificación local en el aviso.
+
+Esta matriz describe cobertura implementada; no sustituye las pruebas de ejecución ni implica que cada rama de error haya sido provocada manualmente.

@@ -713,11 +713,11 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
           (errorCancelados.status === 400 || errorCancelados.status === 404)
         ) {
           setHistorialMensaje(
-            'Los pedidos entregados están disponibles. La consulta de anulados requiere la versión actual del backend.',
+            `HTTP ${errorCancelados.status} · Los pedidos entregados están disponibles, pero la consulta de anulados no está disponible en esta versión del backend.`,
           );
         } else {
           setHistorialMensaje(
-            'Los pedidos entregados están disponibles, pero no fue posible consultar los anulados.',
+            `${mensajeError(errorCancelados)} · Los pedidos entregados están disponibles, pero no fue posible consultar los anulados.`,
           );
         }
       }
