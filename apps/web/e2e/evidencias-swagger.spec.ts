@@ -60,11 +60,17 @@ async function esperarCodigo(op: Locator, codigo: string) {
 
 async function capturar(op: Locator, nombre: string) {
   await mkdir(DIR, { recursive: true });
-  // Se captura exclusivamente la respuesta real devuelta por el servidor.
-  // Así la evidencia queda legible y no incluye el snippet cURL con JWT.
+  // Se captura la operación de Swagger ya ejecutada: método/ruta, parámetros
+  // o body seleccionado y la respuesta real del servidor. Se ocultan los
+  // snippets cURL porque pueden contener el Bearer JWT de la sesión de QA.
   const respuestaReal = op.locator('.live-responses-table');
   await expect(respuestaReal).toBeVisible();
-  await respuestaReal.screenshot({ path: path.join(DIR, nombre) });
+  await op.locator('.curl-command, .request-snippets').evaluateAll((elementos) => {
+    for (const elemento of elementos) {
+      (elemento as HTMLElement).style.display = 'none';
+    }
+  });
+  await op.screenshot({ path: path.join(DIR, nombre) });
 }
 
 async function autorizar(page: Page, jwt: string) {
