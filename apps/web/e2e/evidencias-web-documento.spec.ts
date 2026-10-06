@@ -105,7 +105,12 @@ test('captura el manejo visible de un traslado sin saldo suficiente', async ({ p
   await modulos.getByRole('link', { name: 'Movimientos', exact: true }).click();
   await page.getByRole('button', { name: 'Nuevo traslado' }).click();
   const modal = page.getByRole('dialog');
-  await modal.getByLabel('Lote a trasladar').selectOption({ label: new RegExp(loteCodigo) });
+  const selectorLote = modal.getByLabel('Lote a trasladar');
+  const opcionLote = selectorLote.locator('option').filter({ hasText: loteCodigo }).first();
+  await expect(opcionLote).toHaveCount(1);
+  const valorLote = await opcionLote.getAttribute('value');
+  expect(valorLote).toBeTruthy();
+  await selectorLote.selectOption(valorLote!);
   await modal.getByLabel('Cantidad').fill('999');
   await modal.getByLabel('Origen').selectOption('PRODUCCION_ALMACENAMIENTO');
   await modal.getByLabel('Destino').selectOption('VENTA_DESPACHO');
