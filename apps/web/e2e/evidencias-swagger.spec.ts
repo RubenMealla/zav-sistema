@@ -109,6 +109,41 @@ test.describe.serial('Evidencias verificables de Swagger UI', () => {
     await capturar(op, 'SW-02-salud-200.png');
   });
 
+  test('operaciones protegidas correctas: HTTP 200 y 201', async ({ page, request }) => {
+    const admin = await token(request, 'admin');
+    await autorizar(page, admin);
+
+    const me = await abrir(page, 'GET', '/api/v1/auth/me');
+    await probar(me);
+    await ejecutar(me);
+    await esperarCodigo(me, '200');
+    await capturar(me, 'SW-10-auth-me-200.png');
+
+    const producto = await abrir(page, 'POST', '/api/v1/productos');
+    await probar(producto);
+    const codigo = `SWAGGER-OK-${Date.now()}`;
+    await producto.locator('textarea').first().fill(JSON.stringify({
+      codigo,
+      nombre: 'Producto verificación Swagger',
+      familia: 'QA',
+      presentacion: 'Unidad',
+      pesoGramos: 250,
+      precioBob: 19.5,
+    }, null, 2));
+    await ejecutar(producto);
+    await esperarCodigo(producto, '201');
+    await capturar(producto, 'SW-11-producto-201.png');
+
+    await desautorizar(page);
+    const vendedor = await token(request, 'vendedor');
+    await autorizar(page, vendedor);
+    const pedidos = await abrir(page, 'GET', '/api/v1/pedidos');
+    await probar(pedidos);
+    await ejecutar(pedidos);
+    await esperarCodigo(pedidos, '200');
+    await capturar(pedidos, 'SW-12-pedidos-vendedor-200.png');
+  });
+
   test('HTTP 400 y 401 visibles en Swagger', async ({ page }) => {
     const login400 = await abrir(page, 'POST', '/api/v1/auth/login');
     await probar(login400);
