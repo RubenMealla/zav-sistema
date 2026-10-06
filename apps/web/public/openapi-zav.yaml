@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: ZAV API E3
+  title: ZAV API
   version: 1.0.0
   description: >
     Contrato interactivo de la API REST de ZAV para demostración y revisión.
