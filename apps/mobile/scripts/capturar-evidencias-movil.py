@@ -166,6 +166,10 @@ def main():
     wait_for("Cliente Centro QA")
     shot("MOV-10-clientes.png")
 
+    tap("Guardar cliente")
+    wait_for("VALIDACIÓN")
+    shot("MOV-11-validacion-cliente.png")
+
     dump_ui("arbol-final")
     print("Capturas móviles reales generadas:")
     for img in sorted(OUT.glob("MOV-*.png")):
