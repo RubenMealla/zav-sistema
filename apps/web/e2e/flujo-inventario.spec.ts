@@ -46,8 +46,9 @@ test('muestra una portada profesional y protege el panel sin sesion', async ({ p
   await captura(page, '01-inicio-redisenado.png');
 
   await page.goto('/panel');
-  await expect(page).toHaveURL(/\/acceso\?error=sesion$/);
+  await expect(page).toHaveURL(/\/acceso\?error=sesion&codigo=401$/);
   await expect(page.getByRole('heading', { name: 'Iniciar sesión' })).toBeVisible();
+  await expect(page.locator('.mensaje-error[role="alert"]')).toContainText('HTTP 401');
   await expect(page.locator('.mensaje-error[role="alert"]')).toContainText('La sesión terminó o ya no es válida');
   await captura(page, '02-acceso-protegido-redisenado.png');
 });
@@ -66,7 +67,7 @@ test('permite gestionar inventario desde módulos, modales y notificaciones', as
   await page.getByLabel('Contraseña', { exact: true }).fill(contrasena);
   await page.getByRole('button', { name: /Ingresar al sistema/ }).click();
 
-  await expect(page).toHaveURL(/\/panel$/);
+  await expect(page).toHaveURL(/\/panel\?mensaje=sesion-iniciada$/);
   const modulos = page.getByRole('navigation', { name: 'Módulos del sistema', exact: true });
   await expect(page.getByRole('heading', { name: 'Resumen' })).toBeVisible();
   await expect(page.getByText('Trabaja por módulo')).toBeVisible();
