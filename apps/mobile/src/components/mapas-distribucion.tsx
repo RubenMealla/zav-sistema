@@ -64,6 +64,14 @@ function esPlusCode(valor: string) {
   return /^[A-Z0-9]{4,8}\+[A-Z0-9]{2,4}$/i.test(valor.trim());
 }
 
+function separarError(mensaje: string) {
+  const coincidencia = mensaje.match(/^(HTTP \d{3}|SIN RESPUESTA HTTP|VALIDACIÓN|ERROR LOCAL|SIN RESULTADOS) · (.+)$/s);
+  return {
+    codigo: coincidencia?.[1] ?? null,
+    mensaje: coincidencia?.[2] ?? mensaje,
+  };
+}
+
 function limpiarDireccion(valor: string) {
   return valor
     .replace(/^[A-Z0-9]{4,8}\+[A-Z0-9]{2,4},?\s*/i, '')
@@ -287,6 +295,8 @@ export function SelectorUbicacionMapa({
     }
   }
 
+  const errorVisible = separarError(error);
+
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onCancelar}>
       <SafeAreaView style={styles.modal} edges={['top', 'bottom']}>
@@ -357,7 +367,12 @@ export function SelectorUbicacionMapa({
           </View>
         </View>
 
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+        {error ? (
+          <View style={styles.error}>
+            {errorVisible.codigo ? <Text style={styles.errorCodigo}>{errorVisible.codigo}</Text> : null}
+            <Text style={styles.errorMensaje}>{errorVisible.mensaje}</Text>
+          </View>
+        ) : null}
         {cargando ? (
           <View style={styles.cargando}>
             <ActivityIndicator color="#b83b17" />
@@ -796,10 +811,20 @@ const styles = StyleSheet.create({
   error: {
     marginHorizontal: 16,
     marginBottom: 8,
-    color: '#a1322c',
     backgroundColor: '#fcefeb',
     padding: 10,
     borderRadius: 6,
+    gap: 3,
+  },
+  errorCodigo: {
+    color: '#8b2f25',
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 0.4,
+  },
+  errorMensaje: {
+    color: '#a1322c',
+    lineHeight: 19,
   },
   cargando: {
     marginHorizontal: 16,
