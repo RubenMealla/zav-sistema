@@ -1,11 +1,16 @@
-name: APK móvil E3
+name: APK móvil ZAV
 
 on:
   pull_request:
     branches:
       - main
     paths:
-      - "apps/mobile/**"
+      - "apps/mobile/app/**"
+      - "apps/mobile/src/**"
+      - "apps/mobile/assets/**"
+      - "apps/mobile/app.json"
+      - "apps/mobile/package.json"
+      - "apps/mobile/tsconfig.json"
       - "package.json"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
@@ -14,7 +19,12 @@ on:
     branches:
       - main
     paths:
-      - "apps/mobile/**"
+      - "apps/mobile/app/**"
+      - "apps/mobile/src/**"
+      - "apps/mobile/assets/**"
+      - "apps/mobile/app.json"
+      - "apps/mobile/package.json"
+      - "apps/mobile/tsconfig.json"
       - "package.json"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
