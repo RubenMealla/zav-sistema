@@ -1,6 +1,13 @@
 name: Evidencias móviles QA
 
 on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "apps/mobile/scripts/capturar-evidencias-movil.py"
+      - "apps/mobile/scripts/ejecutar-evidencias-android.sh"
+      - ".github/workflows/evidencias-movil-qa.yml"
   push:
     branches:
       - pruebas/evidencias-qa-reales
