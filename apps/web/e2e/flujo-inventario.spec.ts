@@ -135,6 +135,11 @@ test('permite gestionar inventario desde módulos, modales y notificaciones', as
 
   await expect(page).toHaveURL(/\/panel\?vista=lotes&mensaje=lote$/);
   await expect(page.getByRole('status')).toContainText('Lote e ingreso inicial registrados correctamente');
+  // La mutación y la consulta de la tabla son solicitudes distintas. Se recarga
+  // la vista antes de validar la fila para evitar una carrera de refresco del RSC.
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Lotes', exact: true })).toBeVisible();
+  await expect(page.getByRole('status')).toContainText('Lote e ingreso inicial registrados correctamente');
   const filaLote = page.getByRole('row').filter({ has: page.getByRole('cell', { name: loteCodigo }) });
   await expect(filaLote).toBeVisible();
   await expect(filaLote).toContainText('RETENIDO');
