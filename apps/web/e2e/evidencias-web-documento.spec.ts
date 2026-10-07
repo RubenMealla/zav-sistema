@@ -308,3 +308,22 @@ test('muestra en la web un 409 al intentar liberar un lote ya liberado', async (
     fullPage: true,
   });
 });
+
+
+test('muestra 403 en la web cuando el Vendedor intenta entrar al panel administrativo', async ({ page }) => {
+  await mkdir(DIR, { recursive: true });
+
+  await page.goto('/acceso');
+  await page.getByLabel('Identificador', { exact: true }).fill(requerida('QA_VENDEDOR_IDENTIFICADOR'));
+  await page.getByLabel('Contraseña', { exact: true }).fill(requerida('QA_VENDEDOR_PASSWORD'));
+  await page.getByRole('button', { name: /Ingresar al sistema/ }).click();
+
+  await expect(page).toHaveURL(/\/acceso\?error=permisos&codigo=403/);
+  const alerta = page.getByRole('alert').filter({ hasText: /HTTP 403|permiso|Administrador/i }).first();
+  await expect(alerta).toBeVisible({ timeout: 10000 });
+  await expect(alerta).toContainText('HTTP 403');
+  await page.screenshot({
+    path: path.join(DIR, 'WEB-23-vendedor-web-403.png'),
+    fullPage: true,
+  });
+});
