@@ -209,14 +209,14 @@ def main():
 
     # Error real de autenticación.
     restart_clean()
-    fill_accessibility("Identificador", "invalido")
+    fill_accessibility("Identificador", "usuario.invalido@zav.test")
     fill_accessibility("Contraseña", "incorrecta")
     hide_keyboard()
     tap_node("Iniciar sesión", exact=True)
-    if wait_text("HTTP 401", seconds=15, exact=True):
-        shot("MOV-03-error-login-401.png")
-    else:
+    if not wait_text("HTTP 401", seconds=20, exact=True):
         shot("MOV-03-error-login-no-expuesto.png")
+        raise RuntimeError("Las credenciales inválidas no produjeron HTTP 401 visible.")
+    shot("MOV-03-error-login-401.png")
 
     # Login válido desde estado limpio.
     restart_clean()
