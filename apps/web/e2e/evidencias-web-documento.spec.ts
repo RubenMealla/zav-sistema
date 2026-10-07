@@ -206,7 +206,12 @@ test('muestra en la web un 400 al registrar un lote con fecha inválida', async 
   await page.getByRole('button', { name: 'Nuevo lote' }).click();
 
   const modal = page.getByRole('dialog', { name: 'Registrar lote e ingreso inicial' });
-  await modal.getByLabel('Producto').selectOption({ label: new RegExp(codigoProducto) });
+  const selectorProducto = modal.getByLabel('Producto');
+  const opcionProducto = selectorProducto.locator('option').filter({ hasText: codigoProducto }).first();
+  await expect(opcionProducto).toHaveCount(1);
+  const valorProducto = await opcionProducto.getAttribute('value');
+  expect(valorProducto).toBeTruthy();
+  await selectorProducto.selectOption(valorProducto!);
   const elaborado = modal.getByLabel('Fecha de elaboración');
   await elaborado.evaluate((elemento) => (elemento as HTMLInputElement).removeAttribute('max'));
   await elaborado.fill('2026-10-08');
