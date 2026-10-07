@@ -191,6 +191,31 @@ jobs:
       - name: Generar proyecto Android
         run: pnpm --filter @zav/mobile exec expo prebuild --platform android --no-install --clean
 
+      - name: Habilitar HTTP local en APK de evidencia
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          manifest = Path("apps/mobile/android/app/src/main/AndroidManifest.xml")
+          text = manifest.read_text(encoding="utf-8")
+          if 'android:usesCleartextTraffic=' not in text:
+              text = text.replace(
+                  '<application ',
+                  '<application android:usesCleartextTraffic="true" ',
+                  1,
+              )
+          else:
+              text = re.sub(
+                  r'android:usesCleartextTraffic="[^"]*"',
+                  'android:usesCleartextTraffic="true"',
+                  text,
+                  count=1,
+              )
+          manifest.write_text(text, encoding="utf-8")
+          print("HTTP local habilitado únicamente en el APK sintético de QA.")
+          PY
+
       - name: Compilar APK x86_64 para evidencia
         working-directory: apps/mobile/android
         env:
