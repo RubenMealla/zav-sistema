@@ -15,7 +15,6 @@ on:
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
       - ".github/workflows/qa-mobile-apk.yml"
-      - "apps/mobile/scripts/capturar-evidencias-movil.py"
   push:
     branches:
       - main
