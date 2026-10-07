@@ -47,6 +47,10 @@ test('captura un producto registrado sin datos de otras pruebas', async ({ page 
 
   const dialogo = page.getByRole('alertdialog');
   await expect(dialogo).toBeVisible();
+  await page.screenshot({
+    path: path.join(DIR, 'WEB-15-confirmacion-producto.png'),
+    fullPage: true,
+  });
   await dialogo.getByRole('button', { name: 'Sí, registrar producto', exact: true }).click();
 
   await expect(page.getByRole('status')).toContainText('Producto registrado correctamente');
@@ -117,6 +121,10 @@ test('captura el manejo visible de un traslado sin saldo suficiente', async ({ p
 
   const confirmar = page.getByRole('alertdialog');
   await expect(confirmar).toBeVisible();
+  await page.screenshot({
+    path: path.join(DIR, 'WEB-16-confirmacion-traslado.png'),
+    fullPage: true,
+  });
   await confirmar.getByRole('button', { name: 'Sí, registrar traslado', exact: true }).click();
 
   const alerta = page.locator('[role="alert"], [role="status"]').filter({ hasText: /409|saldo|existencia/i }).first();
