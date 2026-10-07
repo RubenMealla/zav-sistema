@@ -11,7 +11,7 @@ from pathlib import Path
 OUT = Path("apps/mobile/test-results/evidencias-movil")
 OUT.mkdir(parents=True, exist_ok=True)
 PKG = "bo.zav.gestion.vendedor"
-EVIDENCE_SCRIPT_VERSION = "2026-10-07.1"
+EVIDENCE_SCRIPT_VERSION = "2026-10-07.2"
 
 # Posiciones relativas usadas únicamente como respaldo cuando UIAutomator no
 # expone temporalmente el árbol de accesibilidad de React Native.
@@ -285,7 +285,7 @@ def main():
 
     # 3. Credenciales inválidas. La comprobación semántica es auxiliar; la
     # captura visual se conserva igualmente para revisión humana del artifact.
-    escribir_login("usuario.invalido@zav.test", "incorrecta")
+    escribir_login("invalido", "incorrecta")
     pulsar_login()
     if not wait_text("HTTP 401", seconds=15):
         raise RuntimeError("No apareció HTTP 401 con credenciales inválidas.")
