@@ -11,7 +11,7 @@ from pathlib import Path
 OUT = Path("apps/mobile/test-results/evidencias-movil")
 OUT.mkdir(parents=True, exist_ok=True)
 PKG = "bo.zav.gestion.vendedor"
-VERSION = "2026-10-07.4"
+VERSION = "2026-10-07.5"
 
 
 def run(args: list[str], check: bool = True, capture: bool = False, timeout: int = 30):
@@ -55,6 +55,21 @@ def dump_ui(nombre: str = "ui") -> ET.Element | None:
 
 def all_nodes():
     root = dump_ui("estado")
+    if root is None:
+        return []
+
+    # El emulador de GitHub Actions puede mostrar un ANR del proceso Android
+    # "system" aun cuando ZAV ya está renderizado detrás del diálogo. No es un
+    # error de la app. Si aparece el botón estándar "Wait", se pulsa y se
+    # vuelve a leer el árbol de accesibilidad antes de continuar.
+    for node in root.iter("node"):
+        if node.attrib.get("resource-id") == "android:id/aerr_wait" and node.attrib.get("bounds"):
+            x, y = center(node.attrib["bounds"])
+            run(["adb", "shell", "input", "tap", str(x), str(y)], check=False)
+            time.sleep(3)
+            root = dump_ui("estado-post-anr")
+            break
+
     return list(root.iter("node")) if root is not None else []
 
 
