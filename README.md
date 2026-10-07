@@ -196,9 +196,11 @@ GitHub Actions ejecuta QA con PostgreSQL aislado. Los reportes, logs y capturas 
 La documentación de QA de E3 incluye:
 
 - `docs/pruebas/matriz-qa-e3.md`;
+- `docs/pruebas/indice-evidencias-web-api.md`;
 - `docs/pruebas/registro-defectos-e3.md`;
 - evidencias Playwright de 400, 401, 403, 404, 409 y 503;
-- evidencia web de validación doble: la API devuelve 400 aun cuando se evita deliberadamente la validación HTML del navegador, y la interfaz muestra el error;
+- evidencia web de validación doble: la API devuelve 400 aun cuando se evita deliberadamente la validación del formulario del navegador, y la interfaz muestra el error;
+- evidencias web de error para fecha inválida de Lote (400), condición repetida (409) y acceso del Vendedor al panel administrativo (403);
 - cobertura E2E del 500 y rollback transaccional;
 - validación física de ZAV Vendedor 1.0.0;
 - build APK firmado y versionado.
@@ -234,7 +236,7 @@ Tablero: https://trello.com/b/Tn5elZCY/zav-2026-desarrollo-del-sistema-kanban
 - aplicación **ZAV Vendedor 1.0.0**, validada físicamente el 04/10/2026;
 - APK release firmado y pipeline de QA.
 
-**QA/documentación:** Issue #54 y la rama `pruebas/evidencias-qa-reales` reúnen las capturas verificables de Swagger UI y de la interfaz web utilizadas en el documento. La ejecución web de referencia es Playwright #761, asociada al commit `c41c7fd1183abbee361798881d6ec1541b0a936a`, con resultado satisfactorio.
+**QA/documentación:** Issue #54 y la rama `pruebas/evidencias-qa-reales` reúnen las capturas verificables de Swagger UI y de la interfaz web utilizadas en el documento. La ejecución web de referencia es Playwright #765, asociada al commit `e386dfa18207ef8b4f60d05a58a5f86821f6f184`, con resultado satisfactorio.
 
 **Interfaz web estable:** `main` contiene la landing, login, panel administrativo, tablas, filtros, confirmaciones, mensajes visibles de error, CRUD de Producto y módulo Distribución.
 
