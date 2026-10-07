@@ -169,9 +169,11 @@ jobs:
 
       - name: Compilar APK x86_64 para evidencia
         working-directory: apps/mobile/android
+        env:
+          GRADLE_OPTS: -Dorg.gradle.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8"
         run: |
           chmod +x gradlew
-          ./gradlew assembleRelease -PreactNativeArchitectures=x86_64 --no-daemon --build-cache -x lintVitalRelease -x lintVitalAnalyzeRelease
+          ./gradlew assembleRelease             -PreactNativeArchitectures=x86_64             --no-daemon             --build-cache             --max-workers=2             -x lintVitalRelease             -x lintVitalAnalyzeRelease
 
       - name: Verificar APK de evidencia antes del emulador
         shell: bash
