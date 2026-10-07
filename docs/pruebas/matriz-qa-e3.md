@@ -16,7 +16,7 @@ La matriz relaciona los requisitos funcionales y controles de seguridad con un c
 | CP-05 | RF-03 | API + web | Crear, editar y dar de baja Producto | Persistencia y baja lógica correctas | PASS | Suite CRUD web + WEB-17 / WEB-19 |
 | CP-06 | RF-03 | API | Código de Producto duplicado | HTTP 409, sin duplicidad | PASS | Swagger SW-07 |
 | CP-07 | RF-04 | API + web | Registrar Lote e ingreso inicial | HTTP 201 y movimiento inicial | PASS | Swagger SW-14 + evidencia web de lote |
-| CP-08 | RF-04 | API | Lote con cantidad inicial inválida | HTTP 400 | PASS | Swagger SW-20 |
+| CP-08 | RF-04 | API + web | Lote con cantidad o fecha inválida | HTTP 400 y mensaje visible | PASS | Swagger SW-20 + `WEB-21-error-lote-fecha-400.png` |
 | CP-09 | RF-05 | API + web | Traslado con saldo suficiente | HTTP 201; origen disminuye y destino aumenta | PASS | Swagger SW-15 + evidencia web de traslado |
 | CP-10 | RF-05 | API + web | Traslado superior al saldo | HTTP 409; operación no aplicada | PASS | Swagger SW-21 + WEB-14 |
 | CP-11 | RF-06 | API | Registrar Cliente georreferenciado | HTTP 201 con coordenadas confirmadas | PASS | Swagger SW-16 |
@@ -36,8 +36,8 @@ La matriz relaciona los requisitos funcionales y controles de seguridad con un c
 
 ## Ejecución reproducible de referencia
 
-- **QA web Playwright #761:** compilación de API y web, lint web, ejecución Playwright y conservación de capturas/reportes; resultado **success**.
-- **Commit:** `c41c7fd1183abbee361798881d6ec1541b0a936a`.
+- **QA web Playwright #765:** compilación de API y web, lint web, ejecución Playwright y conservación de capturas/reportes; resultado **success**.
+- **Commit:** `e386dfa18207ef8b4f60d05a58a5f86821f6f184`.
 - **Evidencia web específica:** `WEB-20-error-validacion-400.png` demuestra la validación doble: se evita deliberadamente la restricción HTML del navegador, el backend rechaza el dato con HTTP 400 y la interfaz presenta el error.
 - Las suites E2E del backend comprueban 401/403, CRUD, idempotencia, transacciones y rollback sobre PostgreSQL aislado.
 
