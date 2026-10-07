@@ -330,6 +330,151 @@ test.describe.serial('Evidencias verificables de Swagger UI', () => {
     await desautorizar(page);
   });
 
+  test('errores de negocio de los requisitos principales visibles en Swagger', async ({ page, request }) => {
+    const ahora = Date.now();
+    const admin = await token(request, 'admin');
+    const vendedor = await token(request, 'vendedor');
+
+    const post = async (ruta: string, jwt: string, data: unknown) => {
+      const respuesta = await request.post(`${API}${ruta}`, {
+        headers: { Authorization: `Bearer ${jwt}` },
+        data,
+      });
+      expect(respuesta.ok()).toBeTruthy();
+      return await respuesta.json();
+    };
+
+    const producto = await post('/api/v1/productos', admin, {
+      codigo: `SW-ERR-${ahora}`,
+      nombre: 'Producto Swagger errores Must',
+      familia: 'QA',
+      presentacion: 'Unidad',
+      pesoGramos: 250,
+      precioBob: 15,
+    });
+
+    await autorizar(page, admin);
+
+    const lote400 = await abrir(page, 'POST', '/api/v1/lotes');
+    await probar(lote400);
+    await lote400.locator('textarea').first().fill(JSON.stringify({
+      operacionClave: crypto.randomUUID(),
+      productoId: producto.id,
+      codigo: `LOTE-SW-ERR-${ahora}`,
+      elaboradoEl: '2026-10-01',
+      venceEl: '2026-12-31',
+      cantidadInicial: 0,
+      ubicacionCodigo: 'PRODUCCION_ALMACENAMIENTO',
+    }, null, 2));
+    await ejecutar(lote400);
+    await esperarCodigo(lote400, '400');
+    await capturar(lote400, 'SW-20-lote-400.png');
+
+    const lote = await post('/api/v1/lotes', admin, {
+      operacionClave: crypto.randomUUID(),
+      productoId: producto.id,
+      codigo: `LOTE-SW-SALDO-${ahora}`,
+      elaboradoEl: '2026-10-01',
+      venceEl: '2026-12-31',
+      cantidadInicial: 3,
+      ubicacionCodigo: 'PRODUCCION_ALMACENAMIENTO',
+    });
+    await post(`/api/v1/lotes/${lote.id}/liberar`, admin, {
+      operacionClave: crypto.randomUUID(),
+      motivo: 'QA visual de saldo insuficiente',
+    });
+
+    const traslado409 = await abrir(page, 'POST', '/api/v1/movimientos/traslado');
+    await probar(traslado409);
+    await traslado409.locator('textarea').first().fill(JSON.stringify({
+      operacionClave: crypto.randomUUID(),
+      loteId: lote.id,
+      origenCodigo: 'PRODUCCION_ALMACENAMIENTO',
+      destinoCodigo: 'VENTA_DESPACHO',
+      cantidad: 999,
+      referencia: 'SWAGGER-SALDO-INSUFICIENTE',
+    }, null, 2));
+    await ejecutar(traslado409);
+    await esperarCodigo(traslado409, '409');
+    await capturar(traslado409, 'SW-21-traslado-409.png');
+
+    await desautorizar(page);
+    await autorizar(page, vendedor);
+
+    const cliente400 = await abrir(page, 'POST', '/api/v1/clientes');
+    await probar(cliente400);
+    await cliente400.locator('textarea').first().fill(JSON.stringify({
+      nombre: 'Cliente sin georreferencia',
+      telefono: '70000000',
+      direccion: '',
+    }, null, 2));
+    await ejecutar(cliente400);
+    await esperarCodigo(cliente400, '400');
+    await capturar(cliente400, 'SW-22-cliente-400.png');
+
+    // Preparar stock comercial mediante API para probar sobreventa desde Swagger.
+    const lotePedido = await post('/api/v1/lotes', admin, {
+      operacionClave: crypto.randomUUID(),
+      productoId: producto.id,
+      codigo: `LOTE-SW-PEDIDO-${ahora}`,
+      elaboradoEl: '2026-10-01',
+      venceEl: '2026-12-31',
+      cantidadInicial: 5,
+      ubicacionCodigo: 'PRODUCCION_ALMACENAMIENTO',
+    });
+    await post(`/api/v1/lotes/${lotePedido.id}/liberar`, admin, {
+      operacionClave: crypto.randomUUID(),
+      motivo: 'QA visual de pedido',
+    });
+    await post('/api/v1/movimientos/traslado', admin, {
+      operacionClave: crypto.randomUUID(),
+      loteId: lotePedido.id,
+      origenCodigo: 'PRODUCCION_ALMACENAMIENTO',
+      destinoCodigo: 'VENTA_DESPACHO',
+      cantidad: 5,
+      referencia: 'SWAGGER-PEDIDO-ERROR',
+    });
+    const cliente = await post('/api/v1/clientes', vendedor, {
+      nombre: `Cliente Swagger Error ${ahora}`,
+      telefono: '70000002',
+      direccion: 'Tarija, Bolivia',
+      latitud: -21.535,
+      longitud: -64.73,
+    });
+
+    const pedido409 = await abrir(page, 'POST', '/api/v1/pedidos');
+    await probar(pedido409);
+    await pedido409.locator('textarea').first().fill(JSON.stringify({
+      clienteId: cliente.id,
+      observacion: 'Sobreventa de evidencia Swagger',
+      detalles: [{ productoId: producto.id, cantidad: 999 }],
+    }, null, 2));
+    await ejecutar(pedido409);
+    await esperarCodigo(pedido409, '409');
+    await capturar(pedido409, 'SW-23-pedido-409.png');
+
+    const pedidoValido = await post('/api/v1/pedidos', vendedor, {
+      clienteId: cliente.id,
+      observacion: 'Pedido para probar transición inválida de entrega',
+      detalles: [{ productoId: producto.id, cantidad: 1 }],
+    });
+
+    const entrega409 = await abrir(page, 'POST', '/api/v1/pedidos/{id}/entrega');
+    await probar(entrega409);
+    await entrega409.locator('input').first().fill(pedidoValido.id);
+    await entrega409.locator('textarea').first().fill(JSON.stringify({
+      operacionClave: crypto.randomUUID(),
+      latitud: -21.535,
+      longitud: -64.73,
+      precisionMetros: 8,
+    }, null, 2));
+    await ejecutar(entrega409);
+    await esperarCodigo(entrega409, '409');
+    await capturar(entrega409, 'SW-24-entrega-409.png');
+
+    await desautorizar(page);
+  });
+
   test('HTTP 400 y 401 visibles en Swagger', async ({ page }) => {
     const login400 = await abrir(page, 'POST', '/api/v1/auth/login');
     await probar(login400);
