@@ -31,15 +31,17 @@ La matriz relaciona los requisitos funcionales y controles de seguridad con un c
 | CP-20 | Integración externa | API | Geocodificación sin proveedor disponible en QA aislado | HTTP 503 genérico, sin exponer claves | PASS | Swagger SW-09 |
 | CP-21 | RF-05 | E2E / idempotencia | Repetir Traslado con la misma clave | No duplica movimiento ni descuenta saldo dos veces | PASS | `permisos-inventario.e2e-spec.ts` |
 | CP-22 | RF-04 | E2E / transacción | Fallo forzado durante ingreso | Rollback completo: sin lote ni movimiento parcial | PASS | `permisos-inventario.e2e-spec.ts` |
-| CP-23 | Seguridad / validación doble | Web + API | Evadir la validación del navegador y enviar un código inválido | API responde HTTP 400 y la web presenta el error al usuario | PASS | WEB-20 · Playwright #761 |
-| CP-24 | RNF web | UI web | 390, 768 y 1440 px | Sin desborde horizontal y navegación utilizable | PASS | Capturas responsive · Playwright #761 |
+| CP-23 | Seguridad / validación doble | Web + API | Evitar deliberadamente la validación del formulario del navegador y enviar un código inválido | API responde HTTP 400 y la web presenta el error al usuario | PASS | WEB-20 · Playwright #765 |
+| CP-24 | RNF web | UI web | 390, 768 y 1440 px | Sin desborde horizontal y navegación utilizable | PASS | Capturas en tres tamaños · Playwright #765 |
+| CP-25 | Condición de lote | Web + API | Intentar liberar un lote que ya está LIBERADO | HTTP 409 y mensaje visible | PASS | `WEB-22-error-condicion-409.png` · Playwright #765 |
+| CP-26 | Seguridad por rol | Web + API | Vendedor intenta ingresar al panel administrativo | HTTP 403 y retorno a la pantalla de acceso | PASS | `WEB-23-vendedor-web-403.png` · Playwright #765 |
 
 ## Ejecución reproducible de referencia
 
 - **QA web Playwright #765:** compilación de API y web, lint web, ejecución Playwright y conservación de capturas/reportes; resultado **success**.
 - **Commit:** `e386dfa18207ef8b4f60d05a58a5f86821f6f184`.
-- **Evidencia web específica:** `WEB-20-error-validacion-400.png` demuestra la validación doble: se evita deliberadamente la restricción HTML del navegador, el backend rechaza el dato con HTTP 400 y la interfaz presenta el error.
-- Las suites E2E del backend comprueban 401/403, CRUD, idempotencia, transacciones y rollback sobre PostgreSQL aislado.
+- **Evidencias web específicas:** `WEB-20-error-validacion-400.png` demuestra la validación doble en Producto; `WEB-21-error-lote-fecha-400.png` la validación de fechas de Lote; `WEB-22-error-condicion-409.png` un conflicto de estado visible; y `WEB-23-vendedor-web-403.png` el rechazo del Vendedor en el panel administrativo.
+- Las pruebas de extremo a extremo del servidor comprueban 401/403, creación-edición-baja de Producto, protección frente a reintentos, transacciones y reversión completa sobre una base PostgreSQL separada para pruebas.
 
 ## Criterio sobre HTTP 422
 
@@ -47,4 +49,4 @@ El contrato actual de ZAV utiliza HTTP 400 para datos de entrada inválidos y HT
 
 ## Trazabilidad
 
-Los reportes, logs y capturas de GitHub Actions permiten revisar la ejecución sin exponer contraseñas, JWT ni claves de servicio. Los intentos y correcciones permanecen en el historial para conservar la evolución real del proyecto.
+Los reportes, registros y capturas de las ejecuciones automatizadas en GitHub permiten revisar la ejecución sin exponer contraseñas, JWT ni claves de servicio. Los intentos y correcciones permanecen en el historial para conservar la evolución real del proyecto.
