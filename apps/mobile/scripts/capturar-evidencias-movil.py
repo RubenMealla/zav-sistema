@@ -302,8 +302,8 @@ def main():
     pulsar_login()
     if not wait_text("Pedidos", seconds=25):
         raise RuntimeError("El login válido no abrió la pantalla Pedidos.")
-    run(["adb", "shell", "input", "keyevent", "4"], check=False)
-    time.sleep(1)
+    # No se envía KEYCODE_BACK aquí: en la pantalla raíz puede sacar la app
+    # al launcher cuando el teclado ya fue ocultado por escribir_login().
     shot("MOV-04-pedidos.png")
 
     # 5. Formulario Nuevo pedido.
