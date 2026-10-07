@@ -70,6 +70,14 @@ async function capturar(op: Locator, nombre: string) {
       (elemento as HTMLElement).style.display = 'none';
     }
   });
+  // Swagger también muestra debajo la documentación estática de respuestas
+  // posibles. Para la evidencia académica se conserva únicamente la petición
+  // ejecutada y la respuesta REAL devuelta por el servidor.
+  await op.locator('.responses-table:not(.live-responses-table)').evaluateAll((elementos) => {
+    for (const elemento of elementos) {
+      (elemento as HTMLElement).style.display = 'none';
+    }
+  });
   await op.screenshot({ path: path.join(DIR, nombre) });
 }
 
