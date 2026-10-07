@@ -11,6 +11,9 @@ on:
       - "apps/mobile/app.json"
       - "apps/mobile/package.json"
       - "apps/mobile/tsconfig.json"
+      - "apps/mobile/scripts/capturar-evidencias-movil.py"
+      - "apps/mobile/scripts/ejecutar-evidencias-android.sh"
+      - ".github/workflows/qa-mobile-apk.yml"
       - "package.json"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
@@ -268,6 +271,16 @@ jobs:
       - name: Instalar dependencias
         run: pnpm install --frozen-lockfile
 
+      - name: Habilitar KVM para evidencia Android
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -e /dev/kvm
+          sudo chmod 666 /dev/kvm
+          test -r /dev/kvm
+          test -w /dev/kvm
+          ls -l /dev/kvm
+
       - name: Preparar PostgreSQL aislado
         run: NODE_ENV=test node -e "import('./apps/api/test/global-setup-e2e.mjs').then((m) => m.default())"
 
@@ -323,11 +336,10 @@ jobs:
           arch: x86_64
           profile: pixel_2
           disable-animations: true
+          disable-linux-hw-accel: false
+          emulator-boot-timeout: 300
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none -no-snapshot -memory 2048 -cores 2 -feature -Vulkan
-          script: |
-            adb install -r /tmp/zav-apk/ZAV-Vendedor-1.0.0-build10000-qa.apk
-            adb reverse tcp:3001 tcp:3001
-            python3 apps/mobile/scripts/capturar-evidencias-movil.py
+          script: APK_PATH=/tmp/zav-apk/ZAV-Vendedor-1.0.0-build10000-qa.apk bash apps/mobile/scripts/ejecutar-evidencias-android.sh
 
       - name: Guardar capturas Android
         if: always()
