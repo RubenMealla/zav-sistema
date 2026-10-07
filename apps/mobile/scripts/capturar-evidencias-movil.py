@@ -11,7 +11,7 @@ from pathlib import Path
 OUT = Path("apps/mobile/test-results/evidencias-movil")
 OUT.mkdir(parents=True, exist_ok=True)
 PKG = "bo.zav.gestion.vendedor"
-VERSION = "2026-10-07.6"
+VERSION = "2026-10-07.7"
 
 
 def run(args: list[str], check: bool = True, capture: bool = False, timeout: int = 30):
@@ -134,10 +134,62 @@ def hide_keyboard():
         time.sleep(0.8)
 
 
+def focused_accessibility(label: str) -> bool:
+    objetivo = label.strip().lower()
+    root = dump_ui("foco")
+    if root is None:
+        return False
+    for node in root.iter("node"):
+        if (
+            node.attrib.get("content-desc", "").strip().lower() == objetivo
+            and node.attrib.get("focused") == "true"
+        ):
+            return True
+    return False
+
+
+def focus_accessibility(label: str) -> bool:
+    # Al escribir el identificador el teclado modifica el viewport. En Android
+    # CI el segundo tap puede caer sobre el primer campo aunque UIAutomator
+    # conserve las coordenadas previas. Para Contraseña se intenta primero TAB,
+    # que mueve el foco entre TextInput sin depender de coordenadas.
+    if label.strip().lower() == "contraseña":
+        run(["adb", "shell", "input", "keyevent", "61"], check=False)
+        time.sleep(0.6)
+        if focused_accessibility(label):
+            return True
+
+    for _ in range(3):
+        if tap_node(label, exact=True, desc_only=True):
+            time.sleep(0.5)
+            if focused_accessibility(label):
+                return True
+        time.sleep(0.5)
+    return False
+
+
 def fill_accessibility(label: str, valor: str):
-    if not tap_node(label, exact=True, desc_only=True):
-        raise RuntimeError(f"No se encontró el campo accesible {label!r}.")
+    if not focus_accessibility(label):
+        shot(f"MOV-98-foco-{label.lower().replace(' ', '-')}.png")
+        raise RuntimeError(f"No se pudo enfocar el campo accesible {label!r}.")
     input_text(valor)
+
+    # El identificador no es secreto y se puede verificar en el árbol. Esto
+    # evita continuar con una evidencia falsa si el teclado escribió en otro
+    # control. Para Contraseña solo se comprueba el foco por seguridad.
+    if label.strip().lower() == "identificador":
+        end = time.time() + 5
+        esperado = valor.strip().lower()
+        while time.time() < end:
+            root = dump_ui("campo-identificador")
+            if root is not None:
+                for node in root.iter("node"):
+                    if node.attrib.get("content-desc", "").strip().lower() == "identificador":
+                        if node.attrib.get("text", "").strip().lower() == esperado:
+                            return
+            time.sleep(0.5)
+        shot("MOV-98-identificador-mal-escrito.png")
+        raise RuntimeError("El identificador no quedó escrito en el campo correcto.")
 
 
 def foreground_is_app() -> bool:
