@@ -300,13 +300,20 @@ test.describe.serial('Evidencias verificables de Swagger UI', () => {
     const pedidoRetiro = await crearPedido(clienteRetiro.id, stockPedido.producto.id, 1);
     const retiro = await abrir(page, 'POST', '/api/v1/pedidos/{id}/retiro');
     await probar(retiro);
+    const retiroClave = crypto.randomUUID();
     await retiro.locator('input').first().fill(pedidoRetiro.id);
     await retiro.locator('textarea').first().fill(JSON.stringify({
-      operacionClave: crypto.randomUUID(),
+      operacionClave: retiroClave,
     }, null, 2));
     await ejecutar(retiro);
     await esperarCodigo(retiro, '201');
     await capturar(retiro, 'SW-18-retiro-201.png');
+
+    // Repetición de la misma operación: debe devolver el mismo estado sin
+    // duplicar el movimiento ni descontar stock nuevamente.
+    await ejecutar(retiro);
+    await esperarCodigo(retiro, '201');
+    await capturar(retiro, 'SW-25-retiro-idempotente-201.png');
 
     // Entrega con georreferencia puntual.
     const clienteEntrega = await crearCliente('ENTREGA');
