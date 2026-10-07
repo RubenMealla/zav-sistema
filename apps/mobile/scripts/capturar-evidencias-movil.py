@@ -304,6 +304,18 @@ def main():
     if faltantes:
         raise RuntimeError(f"Faltan capturas móviles esenciales: {faltantes}")
 
+    manifiesto = OUT / "MANIFIESTO-EVIDENCIAS.txt"
+    manifiesto.write_text(
+        "ZAV Vendedor · evidencias visuales Android\n"
+        "Origen: captura directa ADB screencap sobre APK release ejecutado en emulador Android.\n"
+        f"Resolución: {ANCHO}x{ALTO}\n"
+        "Datos: sintéticos, sembrados en PostgreSQL aislado de QA.\n"
+        "Las capturas no son imágenes generadas ni recreaciones gráficas.\n\n"
+        + "\n".join(f"{img.name}\t{img.stat().st_size} bytes" for img in capturas)
+        + "\n",
+        encoding="utf-8",
+    )
+
     print(f"Pantalla del emulador: {ANCHO}x{ALTO}")
     print("Capturas móviles reales generadas:")
     for img in capturas:
