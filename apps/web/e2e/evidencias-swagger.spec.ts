@@ -78,7 +78,26 @@ async function capturar(op: Locator, nombre: string) {
       (elemento as HTMLElement).style.display = 'none';
     }
   });
-  await op.screenshot({ path: path.join(DIR, nombre) });
+
+  // La barra ZAV es sticky y, al capturar un elemento largo, puede quedar
+  // superpuesta en medio de la evidencia y ocultar parte del JSON enviado.
+  // Se vuelve invisible solo durante la captura; no se modifica la petición,
+  // la respuesta ni el contenido de Swagger UI.
+  const barraZav = op.page().locator('.zav-bar');
+  if (await barraZav.count()) {
+    await barraZav.evaluate((elemento) => {
+      (elemento as HTMLElement).style.visibility = 'hidden';
+    });
+  }
+  try {
+    await op.screenshot({ path: path.join(DIR, nombre) });
+  } finally {
+    if (await barraZav.count()) {
+      await barraZav.evaluate((elemento) => {
+        (elemento as HTMLElement).style.visibility = '';
+      });
+    }
+  }
 }
 
 async function autorizar(page: Page, jwt: string) {
