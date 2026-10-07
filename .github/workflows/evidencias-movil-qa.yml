@@ -208,12 +208,13 @@ jobs:
           emulator-boot-timeout: 300
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none -no-snapshot -memory 3072 -cores 2
           script: |
-            set -euo pipefail
+            set -eu
             APK="apps/mobile/android/app/build/outputs/apk/release/app-release.apk"
 
             adb wait-for-device
 
-            for intento in {1..60}; do
+            intento=1
+            while [ "$intento" -le 60 ]; do
               BOOT="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)"
               PM_READY="$(adb shell pm path android 2>/dev/null || true)"
               if [ "$BOOT" = "1" ] && [ -n "$PM_READY" ]; then
@@ -225,6 +226,7 @@ jobs:
                 adb shell getprop || true
                 exit 1
               fi
+              intento=$((intento + 1))
               sleep 2
             done
 
