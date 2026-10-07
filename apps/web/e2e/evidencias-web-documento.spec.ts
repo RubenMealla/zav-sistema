@@ -285,7 +285,7 @@ test('muestra en la web un 409 al intentar liberar un lote ya liberado', async (
   await modulos.getByRole('link', { name: 'Condiciones', exact: true }).click();
   await page.getByRole('button', { name: 'Gestionar condición' }).click();
 
-  const modal = page.getByRole('dialog', { name: 'Gestionar condición' });
+  const modal = page.getByRole('dialog', { name: 'Cambiar condición del lote' });
   const selectorLote = modal.locator('select[name="loteId"]');
   const opcionLote = selectorLote.locator('option').filter({ hasText: loteCodigo }).first();
   await expect(opcionLote).toHaveCount(1);
