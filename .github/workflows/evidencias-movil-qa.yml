@@ -5,8 +5,13 @@ on:
     branches:
       - pruebas/evidencias-qa-reales
     paths:
-      - "apps/mobile/**"
-      - "apps/api/**"
+      - "apps/mobile/scripts/capturar-evidencias-movil.py"
+      - ".github/workflows/evidencias-movil-qa.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "apps/mobile/scripts/capturar-evidencias-movil.py"
       - ".github/workflows/evidencias-movil-qa.yml"
   workflow_dispatch:
 
