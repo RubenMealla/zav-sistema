@@ -176,3 +176,130 @@ test('muestra en la web un 400 devuelto por la API para datos inválidos', async
     fullPage: true,
   });
 });
+
+
+test('muestra en la web un 400 al registrar un lote con fecha inválida', async ({ page, request }) => {
+  await mkdir(DIR, { recursive: true });
+  const admin = await tokenAdmin(request);
+  const codigoProducto = `QA-LOTE-ERR-${Date.now()}`;
+
+  const producto = await request.post(`${API}/api/v1/productos`, {
+    headers: { Authorization: `Bearer ${admin}` },
+    data: {
+      codigo: codigoProducto,
+      nombre: 'Producto para validación de lote',
+      familia: 'QA',
+      presentacion: 'Unidad',
+      pesoGramos: 250,
+      precioBob: 12,
+    },
+  });
+  expect(producto.status()).toBe(201);
+
+  await page.goto('/acceso');
+  await page.getByLabel('Identificador', { exact: true }).fill(requerida('QA_ADMIN_IDENTIFICADOR'));
+  await page.getByLabel('Contraseña', { exact: true }).fill(requerida('QA_ADMIN_PASSWORD'));
+  await page.getByRole('button', { name: /Ingresar al sistema/ }).click();
+
+  const modulos = page.getByRole('navigation', { name: 'Módulos del sistema', exact: true });
+  await modulos.getByRole('link', { name: 'Lotes', exact: true }).click();
+  await page.getByRole('button', { name: 'Nuevo lote' }).click();
+
+  const modal = page.getByRole('dialog', { name: 'Registrar lote e ingreso inicial' });
+  await modal.getByLabel('Producto').selectOption({ label: new RegExp(codigoProducto) });
+  const elaborado = modal.getByLabel('Fecha de elaboración');
+  await elaborado.evaluate((elemento) => (elemento as HTMLInputElement).removeAttribute('max'));
+  await elaborado.fill('2026-10-08');
+  await modal.getByLabel('Fecha de vencimiento').fill('2026-12-31');
+  await modal.getByLabel('Cantidad inicial').fill('2');
+
+  await modal.getByRole('button', { name: 'Guardar lote e ingreso' }).click();
+  const confirmacion = page.getByRole('alertdialog');
+  await expect(confirmacion).toBeVisible();
+  await confirmacion.getByRole('button', { name: 'Sí, registrar lote', exact: true }).click();
+
+  const alerta = page.getByRole('alert').filter({ hasText: /HTTP 400|fecha|inválidos|elaboradoEl/i }).first();
+  await expect(alerta).toBeVisible({ timeout: 10000 });
+  await expect(alerta).toContainText('HTTP 400');
+  await page.screenshot({
+    path: path.join(DIR, 'WEB-21-error-lote-fecha-400.png'),
+    fullPage: true,
+  });
+});
+
+test('muestra en la web un 409 al intentar liberar un lote ya liberado', async ({ page, request }) => {
+  await mkdir(DIR, { recursive: true });
+  const admin = await tokenAdmin(request);
+  const codigoProducto = `QA-COND-${Date.now()}`;
+
+  const producto = await request.post(`${API}/api/v1/productos`, {
+    headers: { Authorization: `Bearer ${admin}` },
+    data: {
+      codigo: codigoProducto,
+      nombre: 'Producto para condición repetida',
+      familia: 'QA',
+      presentacion: 'Unidad',
+      pesoGramos: 250,
+      precioBob: 12,
+    },
+  });
+  expect(producto.status()).toBe(201);
+  const productoBody = await producto.json();
+
+  const loteCodigo = `LOTE-${codigoProducto}`;
+  const lote = await request.post(`${API}/api/v1/lotes`, {
+    headers: { Authorization: `Bearer ${admin}` },
+    data: {
+      operacionClave: crypto.randomUUID(),
+      productoId: productoBody.id,
+      codigo: loteCodigo,
+      elaboradoEl: '2026-10-01',
+      venceEl: '2026-12-31',
+      cantidadInicial: 5,
+      ubicacionCodigo: 'PRODUCCION_ALMACENAMIENTO',
+    },
+  });
+  expect(lote.status()).toBe(201);
+  const loteBody = await lote.json();
+
+  const liberacion = await request.post(`${API}/api/v1/lotes/${loteBody.id}/liberar`, {
+    headers: { Authorization: `Bearer ${admin}` },
+    data: {
+      operacionClave: crypto.randomUUID(),
+      motivo: 'Liberación inicial para prueba',
+    },
+  });
+  expect(liberacion.status()).toBe(201);
+
+  await page.goto('/acceso');
+  await page.getByLabel('Identificador', { exact: true }).fill(requerida('QA_ADMIN_IDENTIFICADOR'));
+  await page.getByLabel('Contraseña', { exact: true }).fill(requerida('QA_ADMIN_PASSWORD'));
+  await page.getByRole('button', { name: /Ingresar al sistema/ }).click();
+
+  const modulos = page.getByRole('navigation', { name: 'Módulos del sistema', exact: true });
+  await modulos.getByRole('link', { name: 'Condiciones', exact: true }).click();
+  await page.getByRole('button', { name: 'Gestionar condición' }).click();
+
+  const modal = page.getByRole('dialog', { name: 'Gestionar condición' });
+  const selectorLote = modal.locator('select[name="loteId"]');
+  const opcionLote = selectorLote.locator('option').filter({ hasText: loteCodigo }).first();
+  await expect(opcionLote).toHaveCount(1);
+  const valor = await opcionLote.getAttribute('value');
+  expect(valor).toBeTruthy();
+  await selectorLote.selectOption(valor!);
+  await modal.locator('select[name="accion"]').selectOption('liberar');
+  await modal.locator('input[name="motivo"]').fill('Intento repetido de liberación');
+
+  await modal.getByRole('button', { name: 'Guardar condición' }).click();
+  const confirmacion = page.getByRole('alertdialog');
+  await expect(confirmacion).toBeVisible();
+  await confirmacion.getByRole('button', { name: 'Sí, guardar condición', exact: true }).click();
+
+  const alerta = page.getByRole('alert').filter({ hasText: /HTTP 409|ya se encuentra liberado|condición/i }).first();
+  await expect(alerta).toBeVisible({ timeout: 10000 });
+  await expect(alerta).toContainText('HTTP 409');
+  await page.screenshot({
+    path: path.join(DIR, 'WEB-22-error-condicion-409.png'),
+    fullPage: true,
+  });
+});
