@@ -11,6 +11,7 @@ from pathlib import Path
 OUT = Path("apps/mobile/test-results/evidencias-movil")
 OUT.mkdir(parents=True, exist_ok=True)
 PKG = "bo.zav.gestion.vendedor"
+EVIDENCE_SCRIPT_VERSION = "2026-10-07.1"
 
 # Posiciones relativas usadas únicamente como respaldo cuando UIAutomator no
 # expone temporalmente el árbol de accesibilidad de React Native.
@@ -370,6 +371,7 @@ def main():
         "Origen: captura directa ADB screencap sobre APK release ejecutado en emulador Android.\n"
         f"Resolución: {ANCHO}x{ALTO}\n"
         "Datos: sintéticos, sembrados en PostgreSQL aislado de QA.\n"
+        f"Script de captura: {EVIDENCE_SCRIPT_VERSION}\n"
         "Las capturas no son imágenes generadas ni recreaciones gráficas.\n\n"
         + "\n".join(f"{img.name}\t{img.stat().st_size} bytes" for img in capturas)
         + "\n",
