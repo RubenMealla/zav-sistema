@@ -6,6 +6,7 @@ on:
       - pruebas/evidencias-qa-reales
     paths:
       - "apps/mobile/scripts/capturar-evidencias-movil.py"
+      - "apps/mobile/scripts/ejecutar-evidencias-android.sh"
       - ".github/workflows/evidencias-movil-qa.yml"
   workflow_dispatch:
 
@@ -69,6 +70,8 @@ jobs:
 
       - name: Restaurar caché Gradle
         uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: false
 
       - name: Instalar dependencias
         run: pnpm install --frozen-lockfile
@@ -207,53 +210,7 @@ jobs:
           disable-linux-hw-accel: false
           emulator-boot-timeout: 300
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none -no-snapshot -memory 3072 -cores 2
-          script: |
-            set -eu
-            APK="apps/mobile/android/app/build/outputs/apk/release/app-release.apk"
-
-            adb wait-for-device
-
-            intento=1
-            while [ "$intento" -le 60 ]; do
-              BOOT="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)"
-              PM_READY="$(adb shell pm path android 2>/dev/null || true)"
-              if [ "$BOOT" = "1" ] && [ -n "$PM_READY" ]; then
-                echo "Android y Package Manager listos."
-                break
-              fi
-              if [ "$intento" -eq 60 ]; then
-                echo "El emulador arrancó, pero Package Manager no quedó estable."
-                adb shell getprop || true
-                exit 1
-              fi
-              intento=$((intento + 1))
-              sleep 2
-            done
-
-            adb shell settings put global verifier_verify_adb_installs 0 || true
-            adb shell settings put global package_verifier_enable 0 || true
-
-            adb push "$APK" /data/local/tmp/zav-evidencia.apk
-
-            INSTALADO=0
-            for intento in 1 2 3; do
-              if adb shell pm install -r /data/local/tmp/zav-evidencia.apk; then
-                INSTALADO=1
-                break
-              fi
-              echo "Reintento de instalación $intento/3..."
-              adb wait-for-device
-              sleep 5
-            done
-
-            if [ "$INSTALADO" -ne 1 ]; then
-              echo "No se pudo instalar el APK después de 3 intentos."
-              adb shell dumpsys package | tail -n 120 || true
-              exit 1
-            fi
-
-            adb shell pm path bo.zav.gestion.vendedor
-            python3 apps/mobile/scripts/capturar-evidencias-movil.py
+          script: bash apps/mobile/scripts/ejecutar-evidencias-android.sh
 
       - name: Guardar evidencias
         if: always()
