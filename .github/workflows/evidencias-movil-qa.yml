@@ -73,6 +73,20 @@ jobs:
       - name: Instalar dependencias
         run: pnpm install --frozen-lockfile
 
+      - name: Habilitar aceleración KVM del emulador
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ ! -e /dev/kvm ]; then
+            echo "No existe /dev/kvm en el runner."
+            exit 1
+          fi
+          sudo chmod 666 /dev/kvm
+          ls -l /dev/kvm
+          test -r /dev/kvm
+          test -w /dev/kvm
+          echo "KVM accesible para el runner."
+
       - name: Preparar PostgreSQL aislado
         run: NODE_ENV=test node -e "import('./apps/api/test/global-setup-e2e.mjs').then((m) => m.default())"
 
@@ -190,9 +204,53 @@ jobs:
           arch: x86_64
           profile: pixel_2
           disable-animations: true
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none -no-snapshot -memory 2048 -cores 2 -feature -Vulkan
+          disable-linux-hw-accel: false
+          emulator-boot-timeout: 300
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none -no-snapshot -memory 3072 -cores 2
           script: |
-            adb install -r apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+            set -euo pipefail
+            APK="apps/mobile/android/app/build/outputs/apk/release/app-release.apk"
+
+            adb wait-for-device
+
+            for intento in {1..60}; do
+              BOOT="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)"
+              PM_READY="$(adb shell pm path android 2>/dev/null || true)"
+              if [ "$BOOT" = "1" ] && [ -n "$PM_READY" ]; then
+                echo "Android y Package Manager listos."
+                break
+              fi
+              if [ "$intento" -eq 60 ]; then
+                echo "El emulador arrancó, pero Package Manager no quedó estable."
+                adb shell getprop || true
+                exit 1
+              fi
+              sleep 2
+            done
+
+            adb shell settings put global verifier_verify_adb_installs 0 || true
+            adb shell settings put global package_verifier_enable 0 || true
+
+            adb push "$APK" /data/local/tmp/zav-evidencia.apk
+
+            INSTALADO=0
+            for intento in 1 2 3; do
+              if adb shell pm install -r /data/local/tmp/zav-evidencia.apk; then
+                INSTALADO=1
+                break
+              fi
+              echo "Reintento de instalación $intento/3..."
+              adb wait-for-device
+              sleep 5
+            done
+
+            if [ "$INSTALADO" -ne 1 ]; then
+              echo "No se pudo instalar el APK después de 3 intentos."
+              adb shell dumpsys package | tail -n 120 || true
+              exit 1
+            fi
+
+            adb shell pm path bo.zav.gestion.vendedor
             python3 apps/mobile/scripts/capturar-evidencias-movil.py
 
       - name: Guardar evidencias
