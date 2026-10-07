@@ -14,9 +14,9 @@ PKG = "bo.zav.gestion.vendedor"
 
 # Posiciones relativas usadas únicamente como respaldo cuando UIAutomator no
 # expone temporalmente el árbol de accesibilidad de React Native.
-LOGIN_IDENTIFICADOR = (0.50, 0.433)
-LOGIN_PASSWORD = (0.50, 0.538)
-LOGIN_BOTON = (0.50, 0.669)
+LOGIN_IDENTIFICADOR = (0.50, 0.405)
+LOGIN_PASSWORD = (0.50, 0.490)
+LOGIN_BOTON = (0.50, 0.660)
 TAB_PEDIDOS = (0.17, 0.105)
 TAB_NUEVO = (0.50, 0.105)
 TAB_CLIENTES = (0.83, 0.105)
@@ -188,9 +188,20 @@ def iniciar_limpio():
         time.sleep(3)
         run(["adb", "shell", "am", "start", "-n", f"{PKG}/.MainActivity"], check=False)
 
+    # Algunos runners muestran un ANR del proceso System UI aun cuando ZAV ya
+    # está en primer plano. Se pulsa "Wait" en la posición del diálogo estándar
+    # Pixel y se exige después que la pantalla de acceso sea visible.
+    for _ in range(3):
+        if wait_text("Acceso del Vendedor", seconds=4):
+            break
+        tap_xy(round(ANCHO * 0.28), round(ALTO * 0.55))
+        time.sleep(3)
+
     shot("MOV-00-arranque-diagnostico.png")
     if not foreground_is_app():
         raise RuntimeError("ZAV Vendedor no quedó en primer plano en el emulador.")
+    if not wait_text("Acceso del Vendedor", seconds=15):
+        raise RuntimeError("La pantalla real de acceso de ZAV Vendedor no quedó disponible.")
 
 
 def borrar_campo(relativo: tuple[float, float], repeticiones: int = 50):
@@ -202,11 +213,29 @@ def borrar_campo(relativo: tuple[float, float], repeticiones: int = 50):
 
 
 def escribir_login(identificador: str, password: str):
-    borrar_campo(LOGIN_IDENTIFICADOR)
+    if tap_text("Identificador"):
+        run(["adb", "shell", "input", "keyevent", "123"], check=False)
+        for _ in range(50):
+            run(["adb", "shell", "input", "keyevent", "67"], check=False, timeout=4)
+    else:
+        borrar_campo(LOGIN_IDENTIFICADOR)
     texto(identificador)
-    borrar_campo(LOGIN_PASSWORD)
+
+    if tap_text("Contraseña"):
+        run(["adb", "shell", "input", "keyevent", "123"], check=False)
+        for _ in range(50):
+            run(["adb", "shell", "input", "keyevent", "67"], check=False, timeout=4)
+    else:
+        borrar_campo(LOGIN_PASSWORD)
     texto(password)
+
     run(["adb", "shell", "input", "keyevent", "4"], check=False)
+    time.sleep(1)
+
+
+def pulsar_login():
+    if not tap_text("Iniciar sesión", contains=True):
+        tap_rel(LOGIN_BOTON)
     time.sleep(1)
 
 
@@ -227,26 +256,32 @@ def main():
     shot("MOV-01-acceso-vendedor.png")
 
     # 2. Validación del cliente con campos vacíos.
-    tap_rel(LOGIN_BOTON)
-    time.sleep(1.5)
+    pulsar_login()
+    if not wait_text("VALIDACIÓN", seconds=8):
+        raise RuntimeError("No apareció la validación de campos vacíos en Login.")
     shot("MOV-02-validacion-login.png")
 
     # 3. Credenciales inválidas. La comprobación semántica es auxiliar; la
     # captura visual se conserva igualmente para revisión humana del artifact.
     escribir_login("usuario.invalido@zav.test", "incorrecta")
-    tap_rel(LOGIN_BOTON)
-    time.sleep(6)
+    pulsar_login()
+    if not wait_text("HTTP 401", seconds=15):
+        raise RuntimeError("No apareció HTTP 401 con credenciales inválidas.")
     shot("MOV-03-error-login-401.png")
-    print("401 visible por accesibilidad:", wait_text("401", seconds=5))
 
     # 4. Login válido y listado de Pedidos.
     escribir_login(vendedor, password)
-    tap_rel(LOGIN_BOTON)
-    time.sleep(12)
+    pulsar_login()
+    if not wait_text("Pedidos", seconds=25):
+        raise RuntimeError("El login válido no abrió la pantalla Pedidos.")
+    run(["adb", "shell", "input", "keyevent", "4"], check=False)
+    time.sleep(1)
     shot("MOV-04-pedidos.png")
 
     # 5. Formulario Nuevo pedido.
     abrir_tab("Nuevo pedido", TAB_NUEVO)
+    if not wait_text("Nuevo pedido", seconds=12):
+        raise RuntimeError("No se abrió el formulario Nuevo pedido.")
     shot("MOV-05-nuevo-pedido.png")
 
     # 6. Validación visible de Pedido incompleto, si el árbol permite localizar
@@ -261,6 +296,8 @@ def main():
 
     # 7. Directorio/formulario Clientes.
     abrir_tab("Clientes", TAB_CLIENTES)
+    if not wait_text("Clientes", seconds=12):
+        raise RuntimeError("No se abrió la pantalla Clientes.")
     shot("MOV-07-clientes.png")
 
     # 8. Validación de Cliente, si la acción es localizable.
@@ -285,6 +322,8 @@ def main():
 
     # 10. Pedidos con acciones visibles.
     abrir_tab("Pedidos", TAB_PEDIDOS)
+    if not wait_text("Pedidos", seconds=12):
+        raise RuntimeError("No fue posible volver al listado de Pedidos.")
     shot("MOV-10-pedidos-acciones.png")
 
     dump_ui("arbol-final")
