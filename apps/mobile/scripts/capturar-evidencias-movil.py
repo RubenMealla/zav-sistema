@@ -195,7 +195,7 @@ def iniciar_limpio():
     for _ in range(3):
         if wait_text("Acceso del Vendedor", seconds=4):
             break
-        tap_xy(round(ANCHO * 0.28), round(ALTO * 0.55))
+        tap_xy(round(ANCHO * 0.76), round(ALTO * 0.55))
         time.sleep(3)
 
     shot("MOV-00-arranque-diagnostico.png")
