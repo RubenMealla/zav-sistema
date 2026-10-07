@@ -205,6 +205,9 @@ def iniciar_limpio():
 
 
 def borrar_campo(relativo: tuple[float, float], repeticiones: int = 50):
+    # En React Native, UIAutomator puede exponer la etiqueta pero no siempre el
+    # TextInput editable. Por eso los campos de login usan coordenadas relativas
+    # estables verificadas contra la captura real del emulador.
     tap_rel(relativo)
     run(["adb", "shell", "input", "keyevent", "123"], check=False)
     for _ in range(repeticiones):
@@ -212,25 +215,43 @@ def borrar_campo(relativo: tuple[float, float], repeticiones: int = 50):
     time.sleep(0.4)
 
 
+def teclado_visible() -> bool:
+    resultado = run(
+        ["adb", "shell", "dumpsys", "input_method"],
+        check=False,
+        capture=True,
+        timeout=10,
+    )
+    salida = (resultado.stdout if resultado and resultado.stdout else "").lower()
+    return any(
+        marca in salida
+        for marca in (
+            "minputshown=true",
+            "misinputviewshown=true",
+            "isinputviewshown=true",
+            "mshowrequested=true",
+        )
+    )
+
+
+def ocultar_teclado_si_corresponde():
+    # KEYCODE_BACK cierra el teclado, pero si el teclado no está visible puede
+    # sacar la aplicación al launcher. Se envía solo cuando dumpsys confirma IME.
+    if teclado_visible():
+        run(["adb", "shell", "input", "keyevent", "4"], check=False)
+        time.sleep(1)
+
+
 def escribir_login(identificador: str, password: str):
-    if tap_text("Identificador"):
-        run(["adb", "shell", "input", "keyevent", "123"], check=False)
-        for _ in range(50):
-            run(["adb", "shell", "input", "keyevent", "67"], check=False, timeout=4)
-    else:
-        borrar_campo(LOGIN_IDENTIFICADOR)
+    borrar_campo(LOGIN_IDENTIFICADOR)
     texto(identificador)
 
-    if tap_text("Contraseña"):
-        run(["adb", "shell", "input", "keyevent", "123"], check=False)
-        for _ in range(50):
-            run(["adb", "shell", "input", "keyevent", "67"], check=False, timeout=4)
-    else:
-        borrar_campo(LOGIN_PASSWORD)
+    borrar_campo(LOGIN_PASSWORD)
     texto(password)
 
-    run(["adb", "shell", "input", "keyevent", "4"], check=False)
-    time.sleep(1)
+    ocultar_teclado_si_corresponde()
+    if not foreground_is_app():
+        raise RuntimeError("La aplicación perdió el primer plano al completar el formulario de acceso.")
 
 
 def pulsar_login():
