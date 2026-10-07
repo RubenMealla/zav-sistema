@@ -116,7 +116,8 @@ test('permite gestionar inventario desde módulos, modales y notificaciones', as
   await modalLote.getByLabel('Producto').selectOption({ label: `${productoCodigo} · Producto QA UI` });
   const codigoLoteCampo = modalLote.getByLabel('Código de lote');
   await expect(codigoLoteCampo).toHaveValue(new RegExp(`^TJ-ZAV-${productoCodigo}-${hoy.replaceAll('-', '')}-\\d{2,}$`));
-  await codigoLoteCampo.fill(loteCodigo);
+  // Las fechas pueden recalcular el código sugerido; se fija el código QA al
+  // final de la preparación del formulario para validar exactamente esa fila.
   await expect(modalLote.getByLabel('Fecha de elaboración')).toHaveValue(hoy);
   await expect(modalLote.getByLabel('Fecha de elaboración')).toHaveAttribute('max', hoy);
   await expect(modalLote.getByLabel('Fecha de registro')).toHaveValue(hoy);
@@ -130,6 +131,8 @@ test('permite gestionar inventario desde módulos, modales y notificaciones', as
   await modalLote.getByLabel('Fecha de elaboración').fill(hoy);
   await modalLote.getByLabel('Fecha de vencimiento').fill(fechaBolivia(90));
   await modalLote.getByLabel('Cantidad inicial').fill('12');
+  await codigoLoteCampo.fill(loteCodigo);
+  await expect(codigoLoteCampo).toHaveValue(loteCodigo);
   await modalLote.getByRole('button', { name: 'Guardar lote e ingreso' }).click();
   await confirmar(page, 'Sí, registrar lote');
 
