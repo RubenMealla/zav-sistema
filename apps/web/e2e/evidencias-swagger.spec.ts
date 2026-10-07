@@ -79,6 +79,18 @@ async function capturar(op: Locator, nombre: string) {
     }
   });
 
+  // Redactar únicamente JWT visibles en la respuesta. La ejecución y el código
+  // HTTP siguen siendo reales; solo se oculta el valor sensible del token en la
+  // evidencia académica.
+  await respuestaReal.locator('pre').evaluateAll((elementos) => {
+    for (const elemento of elementos) {
+      const texto = elemento.textContent ?? '';
+      if (texto.includes('accessToken')) {
+        elemento.textContent = texto.replace(/eyJ[A-Za-z0-9._-]+/g, '[OMITIDO EN EVIDENCIA]');
+      }
+    }
+  });
+
   // La barra ZAV es sticky y, al capturar un elemento largo, puede quedar
   // superpuesta en medio de la evidencia y ocultar parte del JSON enviado.
   // Se vuelve invisible solo durante la captura; no se modifica la petición,
