@@ -11,7 +11,7 @@ from pathlib import Path
 OUT = Path("apps/mobile/test-results/evidencias-movil")
 OUT.mkdir(parents=True, exist_ok=True)
 PKG = "bo.zav.gestion.vendedor"
-VERSION = "2026-10-07.5"
+VERSION = "2026-10-07.6"
 
 
 def run(args: list[str], check: bool = True, capture: bool = False, timeout: int = 30):
@@ -147,6 +147,9 @@ def foreground_is_app() -> bool:
 
 def prepare_device():
     run(["adb", "wait-for-device"], check=False, timeout=60)
+    paquete = run(["adb", "shell", "pm", "path", PKG], check=False, capture=True, timeout=20)
+    if paquete is None or paquete.returncode != 0 or "package:" not in (paquete.stdout or ""):
+        raise RuntimeError("El APK no quedó instalado antes de iniciar las capturas.")
     run(["adb", "shell", "settings", "put", "global", "hide_error_dialogs", "1"], check=False)
     for key in ("window_animation_scale", "transition_animation_scale", "animator_duration_scale"):
         run(["adb", "shell", "settings", "put", "global", key, "0"], check=False)
