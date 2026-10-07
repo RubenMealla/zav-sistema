@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-APK="apps/mobile/android/app/build/outputs/apk/release/app-release.apk"
+APK="${APK_PATH:-apps/mobile/android/app/build/outputs/apk/release/app-release.apk}"
 REMOTE_APK="/data/local/tmp/zav-evidencia.apk"
 PACKAGE="bo.zav.gestion.vendedor"
 
