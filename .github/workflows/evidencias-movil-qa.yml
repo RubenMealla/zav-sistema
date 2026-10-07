@@ -186,11 +186,11 @@ jobs:
       - name: Ejecutar app y capturar pantallas
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 33
+          api-level: 30
           arch: x86_64
-          profile: Nexus 5X
+          profile: pixel_2
           disable-animations: true
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none -no-snapshot -memory 3072 -cores 2
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none -no-snapshot -memory 2048 -cores 2 -feature -Vulkan
           script: |
             adb install -r apps/mobile/android/app/build/outputs/apk/release/app-release.apk
             python3 apps/mobile/scripts/capturar-evidencias-movil.py
