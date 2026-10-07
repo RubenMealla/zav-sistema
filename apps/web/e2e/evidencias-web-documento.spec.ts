@@ -134,3 +134,45 @@ test('captura el manejo visible de un traslado sin saldo suficiente', async ({ p
     fullPage: true,
   });
 });
+
+
+test('muestra en la web un 400 devuelto por la API para datos inválidos', async ({ page }) => {
+  await mkdir(DIR, { recursive: true });
+
+  await page.goto('/acceso');
+  await page.getByLabel('Identificador', { exact: true }).fill(requerida('QA_ADMIN_IDENTIFICADOR'));
+  await page.getByLabel('Contraseña', { exact: true }).fill(requerida('QA_ADMIN_PASSWORD'));
+  await page.getByRole('button', { name: /Ingresar al sistema/ }).click();
+  await expect(page).toHaveURL(/\/panel/);
+
+  const modulos = page.getByRole('navigation', { name: 'Módulos del sistema', exact: true });
+  await modulos.getByRole('link', { name: 'Productos', exact: true }).click();
+  await page.getByRole('button', { name: 'Nuevo producto' }).click();
+
+  const modal = page.getByRole('dialog', { name: 'Registrar producto' });
+  await modal.getByLabel('Familia').fill('QA validación');
+  const codigo = modal.getByLabel('Código');
+  await codigo.evaluate((elemento) => {
+    const input = elemento as HTMLInputElement;
+    input.removeAttribute('pattern');
+    input.removeAttribute('minlength');
+  });
+  await codigo.fill('!');
+  await modal.getByLabel('Nombre comercial').fill('Producto inválido QA');
+  await modal.getByLabel('Presentación').fill('Unidad de prueba');
+  await modal.getByLabel('Peso (gramos)').fill('250');
+  await modal.getByLabel('Precio (Bs)').fill('10.00');
+
+  await modal.getByRole('button', { name: 'Guardar producto' }).click();
+  const confirmacion = page.getByRole('alertdialog');
+  await expect(confirmacion).toBeVisible();
+  await confirmacion.getByRole('button', { name: 'Sí, registrar producto', exact: true }).click();
+
+  const alerta = page.getByRole('alert').filter({ hasText: /HTTP 400|datos incompletos|inválidos|codigo debe/i }).first();
+  await expect(alerta).toBeVisible({ timeout: 10000 });
+  await expect(alerta).toContainText('HTTP 400');
+  await page.screenshot({
+    path: path.join(DIR, 'WEB-20-error-validacion-400.png'),
+    fullPage: true,
+  });
+});
