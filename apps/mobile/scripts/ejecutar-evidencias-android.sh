@@ -57,3 +57,14 @@ fi
 echo "$INSTALLED_PATH"
 echo "== Capturas funcionales =="
 python3 apps/mobile/scripts/capturar-evidencias-movil.py
+
+# Flujo integral: tras las capturas básicas, ejecutar las operaciones
+# ya comprobadas individualmente. El workflow ejecuta GPS a continuación.
+# Los reportes JSON por escenario quedan preservados en el artifact.
+echo "== QA operativo Android: registro, retiro, validación, anulación y reparto =="
+python3 apps/mobile/scripts/qa-registro-pedido-android.py
+python3 apps/mobile/scripts/qa-retiro-android.py
+python3 apps/mobile/scripts/qa-validacion-cliente-android.py
+python3 apps/mobile/scripts/qa-cancelacion-pedido-android.py
+python3 apps/mobile/scripts/qa-organizacion-reparto-android.py
+echo "seis grupos anteriores completados; sigue entrega GPS."
