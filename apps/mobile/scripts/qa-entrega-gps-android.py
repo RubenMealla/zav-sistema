@@ -99,7 +99,20 @@ def ejecutar():
         qa.swipe_up()
     else:
         raise RuntimeError("No apareció una acción Confirmar entrega")
-    if not qa.wait_text("Comprobar entrega", seconds=40):
+    # En el emulador de CI la primera fijación GPS puede llegar antes de que
+    # Expo Location empiece a escuchar. Reenviar posiciones durante la espera
+    # (sin volver a pulsar el botón ni alterar la aplicación).
+    dialogo = False
+    for intento_gps in range(12):
+        if qa.text_exists("Comprobar entrega"):
+            dialogo = True
+            break
+        qa.run(["adb", "emu", "geo", "fix",
+                str(LONGITUD_QA), str(LATITUD_QA)], check=False)
+        time.sleep(3)
+    if not dialogo:
+        dialogo = qa.wait_text("Comprobar entrega", seconds=8)
+    if not dialogo:
         # Desplazarse al inicio para descubrir un posible error local visible,
         # que quedaría fuera de pantalla tras tocar el botón de la tarjeta.
         for _ in range(3):
@@ -120,7 +133,7 @@ def ejecutar():
             encoding="utf-8",
         )
         raise RuntimeError(
-            "No se mostró Comprobar entrega con GPS simulado. "
+            "No se mostró Comprobar entrega tras reinyectar GPS durante la espera. "
             "Mensajes accesibles visibles: " + repr(visibles[-35:])
         )
     verificar(
