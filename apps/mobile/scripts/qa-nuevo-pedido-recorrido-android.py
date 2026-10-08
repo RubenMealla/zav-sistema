@@ -32,6 +32,25 @@ def bajar_hasta_inicio():
         qa.run(["adb", "shell", "input", "swipe", "540", "400", "540", "1510", "430"], check=False)
         time.sleep(0.4)
 
+def desplazar_en_lista() -> None:
+    # La vista previa MapLibre ocupa el centro y absorbe algunos gestos
+    # inyectados por ADB. Desplazar por el borde derecho del ScrollView,
+    # fuera de la superficie del mapa.
+    qa.run(["adb", "shell", "input", "swipe",
+            "1033", "1710", "1033", "680", "490"], check=False)
+    time.sleep(0.9)
+
+
+def esperar_nuevos_en_recorrido(intentos: int = 9) -> bool:
+    for indice in range(intentos):
+        if qa.text_exists("pedido(s) fuera del recorrido"):
+            qa.dump_ui("nuevos-pedidos-detectados")
+            return True
+        qa.dump_ui(f"nuevos-pedidos-viewport-{indice}")
+        desplazar_en_lista()
+    return qa.text_exists("pedido(s) fuera del recorrido")
+
+
 def ejecutar():
     vendedor = org.sesion("VENDEDOR")
     activos = []
@@ -53,20 +72,23 @@ def ejecutar():
     # El pull-to-refresh conserva el recorrido ya iniciado y carga nuevos pedidos.
     bajar_hasta_inicio()
     qa.run(["adb", "shell", "input", "swipe", "540", "530", "540", "1460", "620"], check=False)
-    asegurar(qa.wait_text("pedido(s) fuera del recorrido", seconds=25),
-            "La UI no detectó pedidos incorporables después de actualizar")
+    asegurar(esperar_nuevos_en_recorrido(),
+            "No se encontró el control para nuevos pedidos tras actualizar y desplazar; "
+            "verificar capturas y jerarquías de cada viewport")
+    qa.shot("MOV-35A-pedido-nuevo-detectado-fuera-de-ruta.png")
 
     for permiso in ("ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"):
         qa.run(["adb", "shell", "pm", "grant", gps.PKG, "android.permission."+permiso], check=True)
     gps.configurar_proveedor_simulado()
     pulsado = False
-    for _ in range(6):
+    for _ in range(8):
         if qa.tap_node("Añadir", exact=True):
             pulsado=True
             break
-        qa.swipe_up()
+        desplazar_en_lista()
     asegurar(pulsado, "La interfaz no mostró Añadir al recorrido")
     cantidad = len(iniciales) + 1
+    bajar_hasta_inicio()
     asegurar(qa.wait_text(f"Recorrido activo · {cantidad} parada(s)", seconds=55),
             "La UI no recalculó un recorrido incluyendo el pedido recién registrado")
     qa.shot("MOV-35-nuevo-pedido-incorporado-al-recorrido.png")
