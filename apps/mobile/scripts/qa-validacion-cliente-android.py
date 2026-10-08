@@ -84,20 +84,37 @@ def ejecutar() -> dict:
     if not qa.foreground_is_app():
         qa.shot("MOV-97-cliente-app-fuera-de-foco.png")
         raise RuntimeError("ZAV perdió el primer plano al escribir el nombre")
-    # En CI, pulsar Back para ocultar teclado no siempre es inocuo.
-    # Utilizar primero el árbol, y desplazar antes de tocar Guardar.
+
+    # Diagnóstico #102: el árbol accesible exponía «Guardar cliente»,
+    # pero el teclado ocupaba su coordenada y el tap insertaba una «v»
+    # en el campo Nombre, en vez de activar el botón.
+    arbol = qa.dump_ui("cliente-nombre-escrito")
+    if arbol is None or not any(
+        n.attrib.get("class", "").endswith("EditText")
+        and n.attrib.get("text", "") == identificador
+        for n in arbol.iter("node")
+    ):
+        qa.shot("MOV-97-cliente-nombre-distinto.png")
+        raise RuntimeError("El nombre no quedó escrito íntegramente en el formulario")
+
+    # Cerrar explícitamente la IME desde el campo con foco; no pulsar
+    # coordenadas tomadas de una vista cubierta por el teclado.
+    qa.run(["adb", "shell", "input", "keyevent", "KEYCODE_BACK"], check=True)
+    import time
+    time.sleep(1.6)
+    if not qa.foreground_is_app() or not qa.wait_tab_selected("Clientes", seconds=5):
+        qa.shot("MOV-97-cliente-foco-tras-teclado.png")
+        raise RuntimeError("La vista Clientes dejó de estar activa al cerrar el teclado")
+
     encontrado = False
-    for _ in range(5):
+    for _ in range(4):
         if qa.tap_node("Guardar cliente", exact=True):
             encontrado = True
             break
-        if not qa.foreground_is_app():
-            qa.shot("MOV-97-cliente-app-fuera-de-foco.png")
-            raise RuntimeError("ZAV dejó de estar en primer plano")
         qa.swipe_up()
     if not encontrado:
         qa.shot("MOV-97-cliente-boton-no-visible.png")
-        raise RuntimeError("No se encontró Guardar cliente después de desplazar")
+        raise RuntimeError("No se encontró Guardar cliente con el teclado cerrado")
     if not qa.wait_text("VALIDACIÓN", seconds=12, exact=False):
         qa.shot("MOV-97-cliente-sin-validacion-diagnostico.png")
         raise RuntimeError("No se mostró el error de validación")
