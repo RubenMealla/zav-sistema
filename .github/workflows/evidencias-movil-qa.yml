@@ -1,4 +1,4 @@
-name: Evidencias móviles QA (diagnóstico Android 13 GPS)
+name: Evidencias móviles QA
 
 on:
   workflow_dispatch:
@@ -7,6 +7,7 @@ on:
       - pruebas/evidencias-qa-reales
     paths:
       - "apps/mobile/scripts/capturar-evidencias-movil.py"
+      - "apps/mobile/scripts/qa-*-android.py"
       - "apps/mobile/scripts/ejecutar-evidencias-android.sh"
       - "apps/mobile/scripts/qa-registro-pedido-android.py"
       - "apps/mobile/scripts/qa-retiro-android.py"
@@ -78,6 +79,9 @@ jobs:
 
       - name: Instalar dependencias
         run: pnpm install --frozen-lockfile
+
+      - name: Verificar sintaxis de las pruebas Android antes de arrancar emulador
+        run: python3 -m compileall -q apps/mobile/scripts
 
       - name: Habilitar aceleración KVM del emulador
         shell: bash
