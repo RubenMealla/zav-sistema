@@ -75,7 +75,7 @@ def ejecutar():
     verificar(len(positivos) == 1, "Botón de confirmación Android no inequívoco")
     x,y = qa.center(positivos[0].attrib["bounds"])
     qa.run(["adb", "shell", "input", "tap", str(x), str(y)], check=True)
-    verificar(qa.wait_text("retirado", seconds=25) or qa.wait_text("retiro", seconds=10),
+    verificar(qa.wait_text("pedido(s) pasaron a reparto.", seconds=25),
               "No apareció notificación de resultado del retiro")
     registrados_despues = api("/api/v1/pedidos?estado=REGISTRADO&page=1&limit=100", token)["total"]
     dist_despues = api("/api/v1/pedidos?estado=EN_DISTRIBUCION&page=1&limit=100", token)["total"]
