@@ -77,4 +77,6 @@ echo "== QA ampliada: incorporar un nuevo pedido a un recorrido activo =="
 python3 apps/mobile/scripts/qa-nuevo-pedido-recorrido-android.py
 echo "== QA ampliada: retiro múltiple con confirmación Android =="
 python3 apps/mobile/scripts/qa-retiro-multiple-android.py
-echo "todos los escenarios previos completados; sigue entrega GPS."
+echo "== QA negativa: no registrar entrega si se deniega permiso GPS =="
+python3 apps/mobile/scripts/qa-gps-denegado-android.py
+echo "escenarios previos completados; sigue entrega GPS autorizada."
