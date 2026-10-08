@@ -54,3 +54,13 @@ La suite aún no aporta evidencias automatizadas completas del registro positivo
 - Evitar recompilar la aplicación cuando cambien exclusivamente los scripts de captura; el APK reutilizado debe identificarse por SHA y variables de entorno.
 - Mantener separados QA con API local aislada y validación de APK de producción: una prueba local no acredita por sí sola la URL pública.
 - No borrar ramas, commits, artefactos ni antecedentes de fallos.
+
+
+## Seguimiento de planificación y GPS (8 de octubre de 2026)
+- [Android #106](https://github.com/RubenMealla/zav-sistema/actions/runs/37734370711): los cinco casos existentes fueron correctos; el caso nuevo de organización falló por una comparación exacta de coordenadas en el propio script. El reporte y las capturas se conservaron.
+- Corrección: comparar latitud y longitud numéricas con tolerancia pequeña y volver a consultar el despacho guardado en PostgreSQL de QA. No se cambiaron coordenadas reales ni la aplicación.
+- [Android #107](https://github.com/RubenMealla/zav-sistema/actions/runs/37735143684): **seis casos correctos, ninguno fallido**; `evidencias-movil-qa-107` contiene `MOV-20-recorrido-organizado.png` y `MOV-21-mapa-recorrido-android.png`, además de `REPORTE-ORGANIZACION-REPARTO.json`. Se verificaron dos paradas y el algoritmo `VECINO_MAS_CERCANO_HAVERSINE` en API aislada.
+- La prueba de entrega con GPS simulado está añadida como séptimo caso para la ejecución #108. Sus resultados y capturas no se declaran aprobados hasta inspeccionar el archivo emitido por el runner.
+
+### Alcance y limitaciones del nuevo caso
+La planificación registrada utiliza un origen referencial de Tarija exclusivamente en la base temporal y dos pedidos sintéticos. Prueba la capacidad de organizar desde el APK, abrir el mapa y obtener una secuencia, pero no supone validación vial real ni uso físico en la empresa.
