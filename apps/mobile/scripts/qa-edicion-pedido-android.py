@@ -78,13 +78,19 @@ def ejecutar() -> dict:
     for _ in range(9):
         arbol = qa.dump_ui("edicion-pedido-formulario")
         verificar(arbol is not None, "Sin árbol accesible del editor")
+        observacion_visible = any(
+            "3. observación" in n.attrib.get("text", "").lower()
+            for n in arbol.iter("node")
+        )
         cajas = [n for n in arbol.iter("node")
                  if n.attrib.get("class", "").endswith("EditText") and n.attrib.get("bounds")]
-        if cajas:
+        if observacion_visible and len(cajas) == 1:
             break
         qa.swipe_up()
-    verificar(len(cajas) == 1,
-              f"No se encontró el campo Observación tras recorrer el formulario; encontrados={len(cajas)}")
+    verificar(observacion_visible and len(cajas) == 1,
+              "No se encontró Observación y su TextInput juntos tras recorrer el formulario; "
+              f"cajas={len(cajas)}")
+    qa.shot("MOV-24A-campo-observacion-en-pantalla.png")
     campo = cajas[0]
     texto_inicial = campo.attrib.get("text", "")
     x, y = qa.center(campo.attrib["bounds"])
