@@ -11,7 +11,7 @@ from pathlib import Path
 OUT = Path("apps/mobile/test-results/evidencias-movil")
 OUT.mkdir(parents=True, exist_ok=True)
 PKG = "bo.zav.gestion.vendedor"
-VERSION = "2026-10-07.7"
+VERSION = "2026-10-07.8"
 
 
 def run(args: list[str], check: bool = True, capture: bool = False, timeout: int = 30):
@@ -233,10 +233,29 @@ def login(identificador: str, password: str) -> bool:
     return wait_text("ZAV · VENDEDOR", seconds=25, exact=True)
 
 
+def wait_tab_selected(nombre: str, seconds: int = 12) -> bool:
+    """Verifica el estado real de la pestaña en Android."""
+    end = time.time() + seconds
+    objetivo = nombre.strip().lower()
+    while time.time() < end:
+        root = dump_ui("pestana-seleccionada")
+        if root is not None:
+            for node in root.iter("node"):
+                if (
+                    node.attrib.get("content-desc", "").strip().lower() == objetivo
+                    and node.attrib.get("selected") == "true"
+                ):
+                    return True
+        time.sleep(0.75)
+    return False
+
+
 def tap_tab(nombre: str):
     if not tap_node(nombre, exact=True):
         raise RuntimeError(f"No se encontró la pestaña {nombre!r}.")
-    time.sleep(1)
+    if not wait_tab_selected(nombre):
+        shot(f"MOV-97-pestana-{nombre.lower().replace(' ', '-')}-fallo.png")
+        raise RuntimeError(f"La pestaña {nombre!r} no quedó seleccionada.")
 
 
 def swipe_up():
@@ -313,8 +332,9 @@ def main():
 
     # Clientes.
     tap_tab("Clientes")
-    if not wait_text("Nuevo cliente", seconds=10, exact=True):
-        raise RuntimeError("No se abrió Clientes.")
+    if not wait_text("Directorio de clientes", seconds=15, exact=True):
+        shot("MOV-97-clientes-sin-directorio.png")
+        raise RuntimeError("Clientes quedó seleccionado, pero no se mostró el directorio.")
     shot("MOV-09-clientes.png")
 
     # Validación de cliente sin datos.
@@ -341,9 +361,14 @@ def main():
     esenciales = {
         "MOV-01-acceso-vendedor.png",
         "MOV-02-validacion-login.png",
+        "MOV-03-error-login-401.png",
         "MOV-04-pedidos.png",
         "MOV-05-nuevo-pedido.png",
+        "MOV-06-selector-clientes.png",
+        "MOV-07-selector-productos.png",
+        "MOV-08-validacion-pedido.png",
         "MOV-09-clientes.png",
+        "MOV-10-validacion-cliente.png",
         "MOV-12-pedidos-acciones.png",
     }
     presentes = {p.name for p in capturas}
@@ -369,9 +394,13 @@ def main():
 
 
 if __name__ == "__main__":
+    estado = "FALLIDO"
+    detalle_error = None
     try:
         main()
-    except Exception:
+        estado = "CORRECTO"
+    except Exception as exc:
+        detalle_error = f"{type(exc).__name__}: {exc}"
         try:
             shot("MOV-99-fallo-diagnostico.png")
         except Exception:
@@ -383,3 +412,24 @@ if __name__ == "__main__":
         except Exception:
             pass
         raise
+    finally:
+        from datetime import datetime, timezone
+        import json
+
+        capturas = sorted(p.name for p in OUT.glob("MOV-*.png"))
+        reporte = {
+            "suite": "ZAV Vendedor - QA Android",
+            "resultado_global": estado,
+            "error": detalle_error,
+            "version_script": VERSION,
+            "run_id": os.environ.get("GITHUB_RUN_ID"),
+            "commit": os.environ.get("GITHUB_SHA"),
+            "apk_origen": os.environ.get("APK_BUILD_SHA"),
+            "fecha_utc": datetime.now(timezone.utc).isoformat(),
+            "capturas": capturas,
+            "nota": "Las capturas parciales no implican que todos los casos hayan aprobado.",
+        }
+        (OUT / "REPORTE-EJECUCION.json").write_text(
+            json.dumps(reporte, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
