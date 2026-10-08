@@ -33,3 +33,13 @@
 **Evidencias todavía requeridas para cobertura integral:** confirmación de entrega con GPS en Android (RF-10), cliente registrado con punto confirmado (RF-06), edición de pedido (RF-07), retiro múltiple y rechazos de estados incompatibles (RF-09) e incorporación de pedidos al reparto (RF-12). No declarar estos casos como probados antes de ejecución y reporte verificables.
 
 Para la monografía, cada caso se relacionará con **resultado esperado, resultado obtenido, imagen y ejecución verificable**. Mantener dos imágenes por hoja solo cuando su legibilidad lo permita. No presentar una captura de un formulario como prueba de que se guardaron datos.
+
+
+## Actualización de ejecución #112 (8 de octubre de 2026)
+
+- [Evidencias móviles #112](https://github.com/RubenMealla/zav-sistema/actions/runs/37747697686): seis grupos correctos y séptimo grupo `confirmar_entrega_gps` FALLIDO. La suite global debe considerarse FALLIDA; no confundir capturas parciales con ejecución integral aprobada.
+- Archivo original `evidencias-movil-qa-112`: 21 imágenes `MOV-01` a `MOV-21`, dos capturas diagnósticas `MOV-97`, reportes JSON y volcados de accesibilidad. Conservar el artifact como evidencia de evolución, sin insertar los diagnósticos como imágenes de éxito.
+- Análisis Android: ubicación habilitada en Settings, pero `dumpsys location` sin última posición en proveedores GPS/fused y sin solicitud de GPS activa. No se mostró `Comprobar entrega`; no se registró `ENTREGADO` mediante el APK.
+- [Corrección de diagnóstico GPS](https://github.com/RubenMealla/zav-sistema/commit/669884dabb70777361e5366d4baa19f5be9ad912): prueba con proveedor mock del sistema y captura antes de la espera. El resultado de la ejecución #113 se encuentra pendiente de comprobar; no declarar RF-10 aprobado.
+
+**Pendiente para pasar al documento E3:** además de RF-10, alta efectiva de Cliente con punto confirmado, edición de Pedido y casos negativos representativos de estado/autorización/saldo desde la interfaz móvil. Una prueba API/Swagger no sustituye una captura Android del mismo escenario.
