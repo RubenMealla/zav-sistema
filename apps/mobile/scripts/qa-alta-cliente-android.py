@@ -81,7 +81,7 @@ def ejecutar() -> dict:
     if cajas_mapa and not cajas_mapa[0].attrib.get("text", "").strip():
         x, y = qa.center(cajas_mapa[0].attrib["bounds"])
         qa.run(["adb", "shell", "input", "tap", str(x), str(y)])
-        qa.input_text("Zona%starija") if False else qa.input_text("Zona Centro Tarija")
+        qa.input_text("Zona Centro Tarija")
         qa.hide_keyboard()
     qa.shot("MOV-28-cliente-punto-gps-seleccionado.png")
     pulsar("Confirmar ubicación", intentos=1)
