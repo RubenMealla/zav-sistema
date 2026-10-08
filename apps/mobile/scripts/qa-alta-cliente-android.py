@@ -122,6 +122,19 @@ def ejecutar() -> dict:
     pulsar("Confirmar ubicación", intentos=1)
     verificar(qa.wait_text("Ubicación confirmada", seconds=25),
               "El mapa no confirmó una dirección para el punto de QA")
+    # La captura #126 demostró un toque sobre la IME: añadió una "v" al
+    # nombre porque el botón Guardar estaba detrás del teclado visible.
+    # KEYCODE_BACK cierra la IME antes de localizar coordenadas del botón.
+    qa.run(["adb", "shell", "input", "keyevent", "KEYCODE_BACK"], check=True)
+    time.sleep(1.6)
+    verificar(qa.wait_tab_selected("Clientes", seconds=8),
+              "Se perdió Clientes al ocultar el teclado")
+    arbol_previo = qa.dump_ui("alta-cliente-antes-de-guardar")
+    verificar(arbol_previo is not None, "Sin jerarquía de cliente antes de guardar")
+    verificar(any(n.attrib.get("class", "").endswith("EditText")
+                  and n.attrib.get("text", "") == NOMBRE
+                  for n in arbol_previo.iter("node")),
+              "Nombre QA alterado al volver del mapa o al ocultar teclado")
     qa.shot("MOV-29-cliente-ubicacion-confirmada.png")
     pulsar("Guardar cliente")
     verificar(qa.wait_text("Cliente registrado", seconds=25),
