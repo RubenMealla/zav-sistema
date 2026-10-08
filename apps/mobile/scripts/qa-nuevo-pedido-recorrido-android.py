@@ -10,6 +10,7 @@ import importlib.util
 import json
 import os
 import time
+import threading
 from pathlib import Path
 
 def cargar(nombre: str, ruta: str):
@@ -80,17 +81,48 @@ def ejecutar():
     for permiso in ("ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"):
         qa.run(["adb", "shell", "pm", "grant", gps.PKG, "android.permission."+permiso], check=True)
     gps.configurar_proveedor_simulado()
-    pulsado = False
-    for _ in range(8):
-        if qa.tap_node("Añadir", exact=True):
-            pulsado=True
-            break
-        desplazar_en_lista()
-    asegurar(pulsado, "La interfaz no mostró Añadir al recorrido")
-    cantidad = len(iniciales) + 1
-    bajar_hasta_inicio()
-    asegurar(qa.wait_text(f"Recorrido activo · {cantidad} parada(s)", seconds=55),
-            "La UI no recalculó un recorrido incluyendo el pedido recién registrado")
+    gps.refrescar_gps_simulado()
+    qa.run(["adb", "emu", "geo", "fix",
+            str(gps.LONGITUD_QA), str(gps.LATITUD_QA)], check=False)
+
+    # La incorporacion solicita GPS NUEVAMENTE. Mantener posiciones sintéticas
+    # recientes mientras Expo Location espera; misma estrategia que el caso
+    # confirmado de entrega GPS en Android API 33/google_apis.
+    detener_gps = threading.Event()
+    def alimentar_gps():
+        while not detener_gps.wait(1.5):
+            gps.refrescar_gps_simulado()
+            qa.run(["adb", "emu", "geo", "fix",
+                    str(gps.LONGITUD_QA), str(gps.LATITUD_QA)], check=False)
+
+    alimentador = threading.Thread(target=alimentar_gps, daemon=True)
+    alimentador.start()
+    try:
+        pulsado = False
+        for _ in range(8):
+            if qa.tap_node("Añadir", exact=True):
+                pulsado = True
+                break
+            desplazar_en_lista()
+        asegurar(pulsado, "La interfaz no mostró Añadir al recorrido")
+        qa.shot("MOV-95-accion-anadir-ruta-activada.png")
+        cantidad = len(iniciales) + 1
+        bajar_hasta_inicio()
+        actualizado = qa.wait_text(f"Recorrido activo · {cantidad} parada(s)", seconds=55)
+    finally:
+        detener_gps.set()
+        alimentador.join(timeout=6)
+    if not actualizado:
+        qa.shot("MOV-97-recalculo-ruta-fallo.png")
+        qa.dump_ui("ruta-despues-recalculo-fallido")
+        localizacion = qa.run(["adb", "shell", "dumpsys", "location"],
+                              check=False, capture=True, timeout=20)
+        (qa.OUT / "DIAGNOSTICO-GPS-ANADIR-RUTA.txt").write_text(
+            (localizacion.stdout or "") if localizacion else "sin respuesta",
+            encoding="utf-8",
+        )
+    asegurar(actualizado,
+            "La UI no recalculó el recorrido al añadir un pedido; ver GPS y jerarquía")
     qa.shot("MOV-35-nuevo-pedido-incorporado-al-recorrido.png")
     # Contraste independiente de planificación sobre los mismos IDs.
     respuesta = org.api("/api/v1/pedidos/planificacion", token=vendedor,

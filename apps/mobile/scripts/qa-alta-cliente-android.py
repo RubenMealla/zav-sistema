@@ -10,6 +10,7 @@ import importlib.util
 import json
 import os
 import time
+import threading
 import urllib.request
 from pathlib import Path
 
@@ -82,8 +83,32 @@ def ejecutar() -> dict:
         qa.shot("MOV-27A-solicitud-permiso-ubicacion-cliente.png")
         verificar(qa.tap_node("Mientras se usa la aplicación", exact=True),
                   "No se pudo conceder el permiso nativo foreground")
-    verificar(qa.wait_text("Punto seleccionado", seconds=45),
-              "Android no fijó el punto GPS; revisar el permiso o el servicio de ubicacion")
+    # En el primer uso Android puede conceder el permiso pero el proveedor
+    # fused todavía no tener un fix reciente. No suponer un GPS real fallido:
+    # reinyectar la coordenada ficticia, repetir la acción desde la interfaz
+    # y conservar la captura del primer intento para diagnóstico.
+    if not qa.wait_text("Punto seleccionado", seconds=14):
+        qa.shot("MOV-97-alta-cliente-primer-intento-gps.png")
+        gps.refrescar_gps_simulado()
+        qa.run(["adb", "emu", "geo", "fix",
+                str(gps.LONGITUD_QA), str(gps.LATITUD_QA)], check=False)
+        detener = threading.Event()
+
+        def renovar_ubicacion():
+            while not detener.wait(1.5):
+                gps.refrescar_gps_simulado()
+                qa.run(["adb", "emu", "geo", "fix",
+                        str(gps.LONGITUD_QA), str(gps.LATITUD_QA)], check=False)
+
+        alimentador = threading.Thread(target=renovar_ubicacion, daemon=True)
+        alimentador.start()
+        try:
+            pulsar("Mi ubicación", intentos=1)
+            verificar(qa.wait_text("Punto seleccionado", seconds=45),
+                      "No se obtuvo punto simulado incluso tras renovar GPS; revisar diagnóstico")
+        finally:
+            detener.set()
+            alimentador.join(timeout=6)
     # Dirección visible controlada, para no confundir coordenadas con geocodificación real.
     arbol_mapa = qa.dump_ui("alta-cliente-punto-elegido")
     verificar(arbol_mapa is not None, "Falta jerarquía del mapa")
