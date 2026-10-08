@@ -71,12 +71,20 @@ def ejecutar() -> dict:
     qa.shot("MOV-24-pedido-modo-edicion.png")
 
     # En el formulario de edición, la única caja TextInput es Observación.
-    arbol = qa.dump_ui("edicion-pedido-formulario")
-    verificar(arbol is not None, "Sin árbol accesible del editor")
-    cajas = [n for n in arbol.iter("node")
-             if n.attrib.get("class", "").endswith("EditText") and n.attrib.get("bounds")]
+    # La observación queda por debajo de los selectores Cliente/Productos:
+    # UIAutomator expone solo los controles renderizados en el viewport.
+    cajas = []
+    arbol = None
+    for _ in range(9):
+        arbol = qa.dump_ui("edicion-pedido-formulario")
+        verificar(arbol is not None, "Sin árbol accesible del editor")
+        cajas = [n for n in arbol.iter("node")
+                 if n.attrib.get("class", "").endswith("EditText") and n.attrib.get("bounds")]
+        if cajas:
+            break
+        qa.swipe_up()
     verificar(len(cajas) == 1,
-              f"Se esperaba un campo editable Observación, encontrados={len(cajas)}")
+              f"No se encontró el campo Observación tras recorrer el formulario; encontrados={len(cajas)}")
     campo = cajas[0]
     texto_inicial = campo.attrib.get("text", "")
     x, y = qa.center(campo.attrib["bounds"])
