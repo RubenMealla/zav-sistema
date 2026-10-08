@@ -58,3 +58,14 @@ Se prepararon scripts de interfaz que se ejecutarán sobre el APK de QA, con Pos
 | M-NUEVO-RUTA | `qa-nuevo-pedido-recorrido-android.py` | Añadir pedido nuevo sin cancelar ruta | Recorrido conserva paradas y aumenta exactamente una | PENDIENTE DE EJECUCIÓN |
 
 Los scripts simulan precondiciones mediante API de QA cuando se declara expresamente; esto **no equivale a registrar esas precondiciones desde la pantalla**. Las operaciones centrales bajo prueba sí deben ejecutarse mediante el APK. Conservar capturas diagnósticas `MOV-97` separadas de la evidencia aprobada. No alterar el documento E3 hasta revisar los resultados y las imágenes.
+
+
+## Regresión integral Android #117 — verificada
+
+- [Ejecución #117](https://github.com/RubenMealla/zav-sistema/actions/runs/37753774876) **SUCCESS**; artifact `evidencias-movil-qa-117` (ID `11539567625`).
+- El ZIP contiene 23 capturas funcionales `MOV-01`–`MOV-23`, una captura intermedia `MOV-95` y 7 reportes JSON. Se verificaron resultados `CORRECTO` en registro, retiro, validación de cliente sin ubicación, anulación, organización y confirmación de entrega GPS. La captura `MOV-95` no se incorpora como prueba funcional positiva.
+- La entrega GPS se ejecutó sobre Android API 33 `google_apis` con coordenadas ficticias. No constituye evidencia de entrega física.
+- Los casos ampliados de edición, alta positiva de cliente, anulación concurrente HTTP 409, retiro múltiple, incorporación a ruta y denegación del permiso GPS **siguen PENDIENTES** de ejecución y revisión de artifacts. Ninguna figura `MOV-24`–`MOV-37` se declara aprobada todavía.
+
+
+| M-GPS-DENEGADO | `qa-gps-denegado-android.py` | Denegar permiso nativo al solicitar entrega | La UI muestra rechazo y ningún pedido cambia a ENTREGADO | PENDIENTE DE EJECUCIÓN |
