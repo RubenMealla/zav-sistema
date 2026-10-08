@@ -28,6 +28,38 @@ LATITUD_QA = -21.5355
 LONGITUD_QA = -64.7296
 PKG = "bo.zav.gestion.vendedor"
 
+def configurar_proveedor_simulado() -> None:
+    """Inyecta GPS de QA usando el proveedor de pruebas del sistema Android.
+    No modifica los permisos ni la localizacion de una instalacion real.
+    """
+    comandos = [
+        ["adb", "shell", "cmd", "location", "set-location-enabled", "true"],
+        ["adb", "shell", "appops", "set", "2000", "android:mock_location", "allow"],
+        ["adb", "shell", "cmd", "location", "providers", "add-test-provider", "gps"],
+        ["adb", "shell", "cmd", "location", "providers", "set-test-provider-enabled", "gps", "true"],
+        ["adb", "shell", "cmd", "location", "providers", "set-test-provider-location", "gps",
+         "--location", f"{LATITUD_QA},{LONGITUD_QA}"],
+    ]
+    registros = []
+    for comando in comandos:
+        proceso = qa.run(comando, check=False, capture=True, timeout=15)
+        salida = (proceso.stdout or "").strip() if proceso is not None else "TIMEOUT"
+        codigo = proceso.returncode if proceso is not None else -1
+        registros.append(f"{' '.join(comando)} => rc={codigo} {salida[:500]}")
+    (qa.OUT / "DIAGNOSTICO-PROVEEDOR-GPS.txt").write_text(
+        "\\n".join(registros) + "\\n", encoding="utf-8"
+    )
+    print("QA GPS: " + "; ".join(x[-180:] for x in registros))
+    if any("=> rc=0 " not in linea for linea in registros):
+        raise RuntimeError("Android no acepto la preparacion GPS de QA; revisar DIAGNOSTICO-PROVEEDOR-GPS.txt")
+
+
+def refrescar_gps_simulado() -> None:
+    qa.run(["adb", "shell", "cmd", "location", "providers",
+            "set-test-provider-location", "gps",
+            "--location", f"{LATITUD_QA},{LONGITUD_QA}"],
+           check=False)
+
 
 def verificar(condicion: bool, descripcion: str):
     if not condicion:
@@ -81,6 +113,7 @@ def ejecutar():
     for permiso in ("ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"):
         qa.run(["adb", "shell", "pm", "grant", PKG,
                 f"android.permission.{permiso}"], check=True)
+    configurar_proveedor_simulado()
     qa.run(["adb", "emu", "geo", "fix", str(LONGITUD_QA), str(LATITUD_QA)],
            check=True)
     time.sleep(5)
@@ -89,6 +122,7 @@ def ejecutar():
     # Reinyectar coordenadas con la aplicación ya iniciada: el emulador
     # puede perder la primera actualización al iniciar el proveedor GPS.
     for _ in range(3):
+        refrescar_gps_simulado()
         qa.run(["adb", "emu", "geo", "fix",
                 str(LONGITUD_QA), str(LATITUD_QA)], check=True)
         time.sleep(2)
@@ -100,11 +134,14 @@ def ejecutar():
         qa.swipe_up()
     else:
         raise RuntimeError("No apareció una acción Confirmar entrega")
+    qa.shot("MOV-95-despues-tocar-confirmar-entrega.png")
+    qa.dump_ui("entrega-inmediatamente-despues-tap")
     # Mantener actualizaciones GPS concurrentes con la espera nativa.
     # El emulador puede perder fixes previos a la solicitud de Expo Location.
     detener_gps = threading.Event()
     def alimentar_gps():
         while not detener_gps.wait(1.5):
+            refrescar_gps_simulado()
             qa.run(["adb", "emu", "geo", "fix",
                     str(LONGITUD_QA), str(LATITUD_QA)], check=False)
     alimentador = threading.Thread(target=alimentar_gps, daemon=True)
