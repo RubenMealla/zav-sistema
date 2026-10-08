@@ -11,6 +11,7 @@ import importlib.util
 import json
 import os
 import time
+import threading
 import urllib.request
 from pathlib import Path
 
@@ -99,17 +100,20 @@ def ejecutar():
         qa.swipe_up()
     else:
         raise RuntimeError("No apareció una acción Confirmar entrega")
-    # En el emulador de CI la primera fijación GPS puede llegar antes de que
-    # Expo Location empiece a escuchar. Reenviar posiciones durante la espera
-    # (sin volver a pulsar el botón ni alterar la aplicación).
-    dialogo = False
-    for intento_gps in range(12):
-        if qa.text_exists("Comprobar entrega"):
-            dialogo = True
-            break
-        qa.run(["adb", "emu", "geo", "fix",
-                str(LONGITUD_QA), str(LATITUD_QA)], check=False)
-        time.sleep(3)
+    # Mantener actualizaciones GPS concurrentes con la espera nativa.
+    # El emulador puede perder fixes previos a la solicitud de Expo Location.
+    detener_gps = threading.Event()
+    def alimentar_gps():
+        while not detener_gps.wait(1.5):
+            qa.run(["adb", "emu", "geo", "fix",
+                    str(LONGITUD_QA), str(LATITUD_QA)], check=False)
+    alimentador = threading.Thread(target=alimentar_gps, daemon=True)
+    alimentador.start()
+    try:
+        dialogo = qa.wait_text("Comprobar entrega", seconds=55)
+    finally:
+        detener_gps.set()
+        alimentador.join(timeout=5)
     if not dialogo:
         dialogo = qa.wait_text("Comprobar entrega", seconds=8)
     if not dialogo:
