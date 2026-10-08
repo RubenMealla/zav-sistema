@@ -67,6 +67,8 @@ python3 apps/mobile/scripts/qa-retiro-android.py
 python3 apps/mobile/scripts/qa-validacion-cliente-android.py
 python3 apps/mobile/scripts/qa-cancelacion-pedido-android.py
 python3 apps/mobile/scripts/qa-organizacion-reparto-android.py
+echo "== QA negativa: conflicto HTTP 409 en anulación tardía =="
+python3 apps/mobile/scripts/qa-conflicto-anulacion-android.py
 echo "== QA ampliada: corrección de pedido desde la UI Android =="
 python3 apps/mobile/scripts/qa-edicion-pedido-android.py
 echo "== QA ampliada: alta de cliente con mapa desde la UI Android =="
