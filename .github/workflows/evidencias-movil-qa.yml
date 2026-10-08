@@ -13,6 +13,7 @@ on:
       - "apps/mobile/scripts/qa-validacion-cliente-android.py"
       - "apps/mobile/scripts/qa-cancelacion-pedido-android.py"
       - "apps/mobile/scripts/qa-organizacion-reparto-android.py"
+      - "apps/mobile/scripts/qa-entrega-gps-android.py"
       - "apps/mobile/scripts/ejecutar-suite-android.sh"
       - ".github/workflows/evidencias-movil-qa.yml"
 
