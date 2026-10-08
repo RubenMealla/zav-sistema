@@ -65,6 +65,15 @@ def ejecutar():
     qa.restart_clean()
     qa.run(["adb", "shell", "cmd", "location", "set-location-enabled", "true"],
            check=False)
+    qa.run(["adb", "shell", "settings", "put", "secure", "location_mode", "3"],
+           check=False)
+    estado = qa.run(["adb", "shell", "cmd", "location", "is-location-enabled"],
+                    check=False, capture=True, timeout=15)
+    if not estado or "true" not in (estado.stdout or "").lower():
+        raise RuntimeError(
+            "El emulador no confirmó que el servicio de ubicación estuviera activo: "
+            + repr(estado.stdout if estado else "sin respuesta")
+        )
     for permiso in ("ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"):
         qa.run(["adb", "shell", "pm", "grant", PKG,
                 f"android.permission.{permiso}"], check=True)
@@ -73,6 +82,12 @@ def ejecutar():
     time.sleep(5)
     verificar(qa.login(usuario, clave), "El Vendedor no inició sesión en Android")
     qa.tap_tab("Pedidos")
+    # Reinyectar coordenadas con la aplicación ya iniciada: el emulador
+    # puede perder la primera actualización al iniciar el proveedor GPS.
+    for _ in range(3):
+        qa.run(["adb", "emu", "geo", "fix",
+                str(LONGITUD_QA), str(LATITUD_QA)], check=True)
+        time.sleep(2)
     # Si no corresponde al día de QA, presentar todos los pedidos activos.
     qa.tap_node("Todos activos", exact=True)
     for _ in range(8):
@@ -81,10 +96,30 @@ def ejecutar():
         qa.swipe_up()
     else:
         raise RuntimeError("No apareció una acción Confirmar entrega")
-    verificar(
-        qa.wait_text("Comprobar entrega", seconds=40),
-        "Android no obtuvo GPS o no abrió la confirmación de entrega",
-    )
+    if not qa.wait_text("Comprobar entrega", seconds=40):
+        # Desplazarse al inicio para descubrir un posible error local visible,
+        # que quedaría fuera de pantalla tras tocar el botón de la tarjeta.
+        for _ in range(3):
+            qa.run(["adb", "shell", "input", "swipe",
+                    "540", "550", "540", "1500", "450"], check=False)
+            time.sleep(0.6)
+        qa.shot("MOV-97-error-gps-visible-android.png")
+        arbol_error = qa.dump_ui("entrega-gps-error-visible")
+        visibles = []
+        if arbol_error is not None:
+            visibles = [n.attrib.get("text", "") for n in arbol_error.iter("node")
+                        if n.attrib.get("text", "").strip()]
+        ubicacion = qa.run(["adb", "shell", "dumpsys", "location"],
+                           check=False, capture=True, timeout=20)
+        (qa.OUT / "DIAGNOSTICO-UBICACION-EMULADOR.txt").write_text(
+            (ubicacion.stdout or "Sin respuesta de dumpsys location")
+            if ubicacion is not None else "dumpsys location expiró",
+            encoding="utf-8",
+        )
+        raise RuntimeError(
+            "No se mostró Comprobar entrega con GPS simulado. "
+            "Mensajes accesibles visibles: " + repr(visibles[-35:])
+        )
     verificar(
         qa.wait_text("La ubicación se capturó solo para esta confirmación", seconds=8),
         "No se observó el aviso de ubicación puntual en el diálogo",
