@@ -50,6 +50,9 @@ ejecutar_caso validacion_cliente_sin_ubicacion \
 ejecutar_caso anulacion_pedido \
   python3 apps/mobile/scripts/qa-cancelacion-pedido-android.py
 
+ejecutar_caso organizacion_reparto \
+  python3 apps/mobile/scripts/qa-organizacion-reparto-android.py
+
 {
   echo "ejecutados=$EJECUTADOS"
   echo "fallidos=$FALLOS"
