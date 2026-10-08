@@ -53,6 +53,9 @@ ejecutar_caso anulacion_pedido \
 ejecutar_caso organizacion_reparto \
   python3 apps/mobile/scripts/qa-organizacion-reparto-android.py
 
+ejecutar_caso confirmar_entrega_gps \
+  python3 apps/mobile/scripts/qa-entrega-gps-android.py
+
 {
   echo "ejecutados=$EJECUTADOS"
   echo "fallidos=$FALLOS"
