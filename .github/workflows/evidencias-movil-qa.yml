@@ -1,4 +1,4 @@
-name: Evidencias móviles QA
+name: Evidencias móviles QA (diagnóstico Android 13 GPS)
 
 on:
   workflow_dispatch:
@@ -222,14 +222,14 @@ jobs:
       - name: Ejecutar app y capturar pantallas
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 30
+          api-level: 33
           arch: x86_64
           profile: pixel_2
           disable-animations: true
           disable-linux-hw-accel: false
           emulator-boot-timeout: 300
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none -no-snapshot -memory 3072 -cores 2
-          script: bash apps/mobile/scripts/ejecutar-suite-android.sh
+          script: APK_PATH=/tmp/zav-apk/ZAV-Vendedor-1.0.0-build10000-qa.apk bash apps/mobile/scripts/ejecutar-evidencias-android.sh && python3 apps/mobile/scripts/qa-entrega-gps-android.py
 
       - name: Guardar evidencias
         if: always()
