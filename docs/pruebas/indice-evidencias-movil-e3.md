@@ -69,3 +69,12 @@ Los scripts simulan precondiciones mediante API de QA cuando se declara expresam
 
 
 | M-GPS-DENEGADO | `qa-gps-denegado-android.py` | Denegar permiso nativo al solicitar entrega | La UI muestra rechazo y ningún pedido cambia a ENTREGADO | PENDIENTE DE EJECUCIÓN |
+
+
+## Diagnóstico de ejecución ampliada #124 (8 de octubre de 2026)
+
+- [Android #124](https://github.com/RubenMealla/zav-sistema/actions/runs/37755910478) **FALLIDA**. Artifact `evidencias-movil-qa-124`, ID `11541371759`. Resultado: 11 casos operativos, 8 correctos y 3 fallidos; la entrega GPS autorizada se completó, pero no cambia la calificación global de FALLIDA.
+- Correctos: registro, retiro individual, validación de cliente sin GPS, anulación, organización, anulación concurrente con HTTP 409, retiro múltiple y entrega denegada por permisos. Sus reportes son verificables por separado. En ningún caso el estado global del workflow acredita automáticamente los casos que fallaron.
+- Pendientes: (1) edición de pedido: campo Observación fuera del viewport; (2) alta positiva de cliente: la ventana nativa de permiso de ubicación estaba abierta y el script no la atendía; (3) adición de pedido a ruta: el nuevo pedido sí aparecía entre los activos, pero el control de adición estaba debajo de la vista previa del mapa y fuera de la jerarquía visible.
+- Se corrigieron scripts de pruebas y se agregó disparador `qa-*-android.py` y verificación de sintaxis en el workflow. Verificar en [Android #125](https://github.com/RubenMealla/zav-sistema/actions/runs/37759391766); **pendiente de resultado**.
+- Estas pruebas usan APK y PostgreSQL aislados, GPS simulado. No son evidencia de entregas físicas ni del despliegue de producción. Se conserva todo el historial de fallos.
