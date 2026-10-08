@@ -10,6 +10,7 @@ on:
       - "apps/mobile/scripts/ejecutar-evidencias-android.sh"
       - "apps/mobile/scripts/qa-registro-pedido-android.py"
       - "apps/mobile/scripts/qa-retiro-android.py"
+      - "apps/mobile/scripts/qa-validacion-cliente-android.py"
       - ".github/workflows/evidencias-movil-qa.yml"
 
 concurrency:
@@ -224,7 +225,7 @@ jobs:
           disable-linux-hw-accel: false
           emulator-boot-timeout: 300
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none -no-snapshot -memory 3072 -cores 2
-          script: APK_PATH=/tmp/zav-apk/ZAV-Vendedor-1.0.0-build10000-qa.apk bash apps/mobile/scripts/ejecutar-evidencias-android.sh && python3 apps/mobile/scripts/qa-registro-pedido-android.py && python3 apps/mobile/scripts/qa-retiro-android.py
+          script: APK_PATH=/tmp/zav-apk/ZAV-Vendedor-1.0.0-build10000-qa.apk bash apps/mobile/scripts/ejecutar-evidencias-android.sh && python3 apps/mobile/scripts/qa-registro-pedido-android.py && python3 apps/mobile/scripts/qa-retiro-android.py && python3 apps/mobile/scripts/qa-validacion-cliente-android.py
 
       - name: Guardar evidencias
         if: always()
