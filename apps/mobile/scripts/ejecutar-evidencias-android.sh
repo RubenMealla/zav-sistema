@@ -67,4 +67,8 @@ python3 apps/mobile/scripts/qa-retiro-android.py
 python3 apps/mobile/scripts/qa-validacion-cliente-android.py
 python3 apps/mobile/scripts/qa-cancelacion-pedido-android.py
 python3 apps/mobile/scripts/qa-organizacion-reparto-android.py
-echo "seis grupos anteriores completados; sigue entrega GPS."
+echo "== QA ampliada: corrección de pedido desde la UI Android =="
+python3 apps/mobile/scripts/qa-edicion-pedido-android.py
+echo "== QA ampliada: alta de cliente con mapa desde la UI Android =="
+python3 apps/mobile/scripts/qa-alta-cliente-android.py
+echo "ocho grupos previos completados; sigue entrega GPS."
