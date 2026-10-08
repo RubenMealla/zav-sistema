@@ -61,22 +61,41 @@ python3 apps/mobile/scripts/capturar-evidencias-movil.py
 # Flujo integral: tras las capturas básicas, ejecutar las operaciones
 # ya comprobadas individualmente. El workflow ejecuta GPS a continuación.
 # Los reportes JSON por escenario quedan preservados en el artifact.
-echo "== QA operativo Android: registro, retiro, validación, anulación y reparto =="
-python3 apps/mobile/scripts/qa-registro-pedido-android.py
-python3 apps/mobile/scripts/qa-retiro-android.py
-python3 apps/mobile/scripts/qa-validacion-cliente-android.py
-python3 apps/mobile/scripts/qa-cancelacion-pedido-android.py
-python3 apps/mobile/scripts/qa-organizacion-reparto-android.py
-echo "== QA negativa: conflicto HTTP 409 en anulación tardía =="
-python3 apps/mobile/scripts/qa-conflicto-anulacion-android.py
-echo "== QA ampliada: corrección de pedido desde la UI Android =="
-python3 apps/mobile/scripts/qa-edicion-pedido-android.py
-echo "== QA ampliada: alta de cliente con mapa desde la UI Android =="
-python3 apps/mobile/scripts/qa-alta-cliente-android.py
-echo "== QA ampliada: incorporar un nuevo pedido a un recorrido activo =="
-python3 apps/mobile/scripts/qa-nuevo-pedido-recorrido-android.py
-echo "== QA ampliada: retiro múltiple con confirmación Android =="
-python3 apps/mobile/scripts/qa-retiro-multiple-android.py
-echo "== QA negativa: no registrar entrega si se deniega permiso GPS =="
-python3 apps/mobile/scripts/qa-gps-denegado-android.py
-echo "escenarios previos completados; sigue entrega GPS autorizada."
+# Los fallos no interrumpen la captura de los siguientes escenarios.
+# Se conservan resultados individuales y el script final GPS devolverá
+# código != 0 cuando algún caso funcional haya fallado.
+SALIDA="apps/mobile/test-results/evidencias-movil"
+ESTADO="$SALIDA/RESULTADOS-SUITE-AMPLIADA.txt"
+echo "run_id=${GITHUB_RUN_ID:-local}" > "$ESTADO"
+echo "commit=${GITHUB_SHA:-local}" >> "$ESTADO"
+FALLOS=0
+TOTAL=0
+
+ejecutar_qa() {
+  local caso="$1"
+  shift
+  echo "== QA Android: $caso =="
+  TOTAL=$((TOTAL + 1))
+  if "$@"; then
+    echo "$caso=CORRECTO" | tee -a "$ESTADO"
+  else
+    rc=$?
+    echo "$caso=FALLIDO (código $rc)" | tee -a "$ESTADO"
+    FALLOS=$((FALLOS + 1))
+  fi
+}
+
+ejecutar_qa registro_pedido python3 apps/mobile/scripts/qa-registro-pedido-android.py
+ejecutar_qa retiro_pedido python3 apps/mobile/scripts/qa-retiro-android.py
+ejecutar_qa validacion_cliente_sin_gps python3 apps/mobile/scripts/qa-validacion-cliente-android.py
+ejecutar_qa anulacion_pedido python3 apps/mobile/scripts/qa-cancelacion-pedido-android.py
+ejecutar_qa organizacion_reparto python3 apps/mobile/scripts/qa-organizacion-reparto-android.py
+ejecutar_qa conflicto_http_409 python3 apps/mobile/scripts/qa-conflicto-anulacion-android.py
+ejecutar_qa edicion_pedido python3 apps/mobile/scripts/qa-edicion-pedido-android.py
+ejecutar_qa alta_cliente_gps python3 apps/mobile/scripts/qa-alta-cliente-android.py
+ejecutar_qa nuevo_pedido_en_ruta python3 apps/mobile/scripts/qa-nuevo-pedido-recorrido-android.py
+ejecutar_qa retiro_multiple python3 apps/mobile/scripts/qa-retiro-multiple-android.py
+ejecutar_qa permiso_gps_denegado python3 apps/mobile/scripts/qa-gps-denegado-android.py
+echo "ejecutados=$TOTAL" | tee -a "$ESTADO"
+echo "fallidos=$FALLOS" | tee -a "$ESTADO"
+echo "Se ejecutaron $TOTAL casos operativos; $FALLOS fallidos. Sigue entrega GPS autorizada."
