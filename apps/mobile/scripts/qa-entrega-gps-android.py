@@ -62,6 +62,7 @@ def ejecutar():
     verificar(distribucion_antes, "No hay pedido en distribución para entregar")
 
     # Habilitar geolocalización sin depender de un GPS físico.
+    qa.restart_clean()
     qa.run(["adb", "shell", "cmd", "location", "set-location-enabled", "true"],
            check=False)
     for permiso in ("ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"):
@@ -70,7 +71,6 @@ def ejecutar():
     qa.run(["adb", "emu", "geo", "fix", str(LONGITUD_QA), str(LATITUD_QA)],
            check=True)
     time.sleep(5)
-    qa.restart_clean()
     verificar(qa.login(usuario, clave), "El Vendedor no inició sesión en Android")
     qa.tap_tab("Pedidos")
     # Si no corresponde al día de QA, presentar todos los pedidos activos.
