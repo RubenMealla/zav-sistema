@@ -72,8 +72,18 @@ def ejecutar() -> dict:
     verificar(qa.wait_text("Confirmar punto en mapa", seconds=20), "No abrió selector de mapa")
     qa.shot("MOV-27-alta-cliente-mapa-abierto.png")
     pulsar("Mi ubicación")
-    verificar(qa.wait_text("Punto seleccionado", seconds=35),
-              "Android no fijó un punto GPS simulado en el mapa")
+    # En el primer uso el emulador presenta un dialogo NATIVO de Android.
+    # Sin concederlo el script no debe esperar a que exista un punto GPS.
+    if qa.wait_text("While using the app", seconds=8):
+        qa.shot("MOV-27A-solicitud-permiso-ubicacion-cliente.png")
+        verificar(qa.tap_node("While using the app", exact=True),
+                  "No se pudo conceder el permiso nativo foreground")
+    elif qa.wait_text("Mientras se usa la aplicación", seconds=2):
+        qa.shot("MOV-27A-solicitud-permiso-ubicacion-cliente.png")
+        verificar(qa.tap_node("Mientras se usa la aplicación", exact=True),
+                  "No se pudo conceder el permiso nativo foreground")
+    verificar(qa.wait_text("Punto seleccionado", seconds=45),
+              "Android no fijó el punto GPS; revisar el permiso o el servicio de ubicacion")
     # Dirección visible controlada, para no confundir coordenadas con geocodificación real.
     arbol_mapa = qa.dump_ui("alta-cliente-punto-elegido")
     verificar(arbol_mapa is not None, "Falta jerarquía del mapa")
