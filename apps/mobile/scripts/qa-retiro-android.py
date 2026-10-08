@@ -50,8 +50,19 @@ def main():
     assert_true(qa.wait_text("¿Confirmas que ya recibiste", seconds=12),
                 "No apareció la confirmación de custodia")
     qa.shot("MOV-15-confirmacion-retiro.png")
-    assert_true(qa.tap_node("Retirar para reparto", exact=True),
-                "No se pudo confirmar el retiro")
+    # En Alert.alert Android, el título no es un botón: seleccionar button1.
+    arbol = qa.dump_ui("dialogo-confirmacion-retiro")
+    assert_true(arbol is not None, "No se obtuvo el diálogo Android de retiro")
+    confirmado = False
+    for nodo in arbol.iter("node"):
+        atributos = nodo.attrib
+        if (atributos.get("resource-id") == "android:id/button1"
+                and atributos.get("clickable") == "true"):
+            x, y = qa.center(atributos["bounds"])
+            qa.run(["adb", "shell", "input", "tap", str(x), str(y)], check=True)
+            confirmado = True
+            break
+    assert_true(confirmado, "No apareció el botón positivo del diálogo de retiro")
     assert_true(qa.wait_text("Pedido retirado.", seconds=25),
                 "El retiro no mostró confirmación de éxito")
     despues = api(ruta, token)["total"]
