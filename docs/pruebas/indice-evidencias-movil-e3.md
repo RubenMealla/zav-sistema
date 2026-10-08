@@ -43,3 +43,18 @@ Para la monografía, cada caso se relacionará con **resultado esperado, resulta
 - [Corrección de diagnóstico GPS](https://github.com/RubenMealla/zav-sistema/commit/669884dabb70777361e5366d4baa19f5be9ad912): prueba con proveedor mock del sistema y captura antes de la espera. El resultado de la ejecución #113 se encuentra pendiente de comprobar; no declarar RF-10 aprobado.
 
 **Pendiente para pasar al documento E3:** además de RF-10, alta efectiva de Cliente con punto confirmado, edición de Pedido y casos negativos representativos de estado/autorización/saldo desde la interfaz móvil. Una prueba API/Swagger no sustituye una captura Android del mismo escenario.
+
+
+## Casos Android ampliados en desarrollo — NO APROBADOS
+
+Se prepararon scripts de interfaz que se ejecutarán sobre el APK de QA, con PostgreSQL temporal y reportes individualizados. Sus capturas `MOV-24` a `MOV-35` son **nombres reservados**, no imágenes aprobadas todavía.
+
+| Caso | Script | Escenario observable | Verificación obligatoria | Estado |
+| --- | --- | --- | --- | --- |
+| M-EDICION | `qa-edicion-pedido-android.py` | Corregir observación del pedido registrado | Persistencia de nuevo contenido y estado REGISTRADO | PENDIENTE DE EJECUCIÓN |
+| M-CLIENTE | `qa-alta-cliente-android.py` | Registrar cliente desde mapa con GPS ficticio | Cliente nuevo con ubicación confirmada en API aislada | PENDIENTE DE EJECUCIÓN |
+| M-CONFLICTO | `qa-conflicto-anulacion-android.py` | Anulación tardía rechazada con HTTP 409 visible | Servidor conserva EN_DISTRIBUCION | PENDIENTE DE EJECUCIÓN |
+| M-RETIRO-MULT | `qa-retiro-multiple-android.py` | Selección y retiro de varios pedidos | Cada pedido pasa a EN_DISTRIBUCION y los conteos coinciden | PENDIENTE DE EJECUCIÓN |
+| M-NUEVO-RUTA | `qa-nuevo-pedido-recorrido-android.py` | Añadir pedido nuevo sin cancelar ruta | Recorrido conserva paradas y aumenta exactamente una | PENDIENTE DE EJECUCIÓN |
+
+Los scripts simulan precondiciones mediante API de QA cuando se declara expresamente; esto **no equivale a registrar esas precondiciones desde la pantalla**. Las operaciones centrales bajo prueba sí deben ejecutarse mediante el APK. Conservar capturas diagnósticas `MOV-97` separadas de la evidencia aprobada. No alterar el documento E3 hasta revisar los resultados y las imágenes.
