@@ -39,6 +39,10 @@ def configurar_proveedor_simulado() -> None:
         ["adb", "shell", "cmd", "location", "providers", "set-test-provider-enabled", "gps", "true"],
         ["adb", "shell", "cmd", "location", "providers", "set-test-provider-location", "gps",
          "--location", f"{LATITUD_QA},{LONGITUD_QA}"],
+        ["adb", "shell", "cmd", "location", "providers", "add-test-provider", "fused"],
+        ["adb", "shell", "cmd", "location", "providers", "set-test-provider-enabled", "fused", "true"],
+        ["adb", "shell", "cmd", "location", "providers", "set-test-provider-location", "fused",
+         "--location", f"{LATITUD_QA},{LONGITUD_QA}"],
     ]
     registros = []
     for comando in comandos:
@@ -55,10 +59,11 @@ def configurar_proveedor_simulado() -> None:
 
 
 def refrescar_gps_simulado() -> None:
-    qa.run(["adb", "shell", "cmd", "location", "providers",
-            "set-test-provider-location", "gps",
-            "--location", f"{LATITUD_QA},{LONGITUD_QA}"],
-           check=False)
+    for proveedor in ("gps", "fused"):
+        qa.run(["adb", "shell", "cmd", "location", "providers",
+                "set-test-provider-location", proveedor,
+                "--location", f"{LATITUD_QA},{LONGITUD_QA}"],
+               check=False)
 
 
 def verificar(condicion: bool, descripcion: str):
