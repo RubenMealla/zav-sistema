@@ -73,4 +73,6 @@ echo "== QA ampliada: corrección de pedido desde la UI Android =="
 python3 apps/mobile/scripts/qa-edicion-pedido-android.py
 echo "== QA ampliada: alta de cliente con mapa desde la UI Android =="
 python3 apps/mobile/scripts/qa-alta-cliente-android.py
-echo "ocho grupos previos completados; sigue entrega GPS."
+echo "== QA ampliada: retiro múltiple con confirmación Android =="
+python3 apps/mobile/scripts/qa-retiro-multiple-android.py
+echo "todos los escenarios previos completados; sigue entrega GPS."
