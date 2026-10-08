@@ -78,3 +78,11 @@ Los scripts simulan precondiciones mediante API de QA cuando se declara expresam
 - Pendientes: (1) edición de pedido: campo Observación fuera del viewport; (2) alta positiva de cliente: la ventana nativa de permiso de ubicación estaba abierta y el script no la atendía; (3) adición de pedido a ruta: el nuevo pedido sí aparecía entre los activos, pero el control de adición estaba debajo de la vista previa del mapa y fuera de la jerarquía visible.
 - Se corrigieron scripts de pruebas y se agregó disparador `qa-*-android.py` y verificación de sintaxis en el workflow. Verificar en [Android #125](https://github.com/RubenMealla/zav-sistema/actions/runs/37759391766); **pendiente de resultado**.
 - Estas pruebas usan APK y PostgreSQL aislados, GPS simulado. No son evidencia de entregas físicas ni del despliegue de producción. Se conserva todo el historial de fallos.
+
+
+## QA Android #125 — edición aprobada y dos casos GPS aún pendientes
+
+- [Run #125](https://github.com/RubenMealla/zav-sistema/actions/runs/37759391766): **FALLIDA**, 9 de 11 casos operativos correctos y dos fallidos. Se registró `REPORTE-EDICION-PEDIDO.json` con resultado CORRECTO y persistencia de observación modificada en estado REGISTRADO. Capturas `MOV-24`, `MOV-24A`, `MOV-25`, `MOV-26` son auténticas del emulador QA.
+- **Alta cliente con mapa:** se atendió el permiso nativo (captura `MOV-27A`), pero Expo Location mostró ERROR LOCAL «No se pudo obtener la ubicación actual». No existe alta exitosa de cliente acreditada en ese run.
+- **Añadir pedido a ruta:** se observó «1 pedido(s) fuera del recorrido» y botón «Añadir» (captura `MOV-35A`); no se acreditó cambio de cuatro a cinco paradas. La creación del nuevo pedido fue precondición sintética por API y no equivale a su alta mediante UI.
+- [PR #57](https://github.com/RubenMealla/zav-sistema/pull/57) fusionado solo a rama QA, recupera la estrategia de alimentación concurrente GPS comprobada en la entrega y agrega diagnósticos de nuevos intentos. [Run #126](https://github.com/RubenMealla/zav-sistema/actions/runs/37761904178): pendiente de revisión. No trasladar al E3 como exitosas las figuras de los dos casos fallidos.
