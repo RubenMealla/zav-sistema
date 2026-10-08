@@ -83,8 +83,26 @@ def ejecutar() -> dict:
         f"/api/v1/ubicaciones/{despacho['id']}/georreferencia",
         token=admin, metodo="PATCH", datos=ORIGEN_QA,
     )
-    comprobar(configurado.get("ubicacion") == ORIGEN_QA,
-              "El despacho sintético no quedó configurado en la API QA")
+    # TypeORM/PostgreSQL pueden normalizar la precisión decimal.
+    # Leer de vuelta y comparar coordenadas numéricas, no objetos JSON.
+    guardado = api("/api/v1/ubicaciones/venta-despacho", token=admin)
+    punto = guardado.get("ubicacion") or configurado.get("ubicacion") or {}
+    try:
+        diferencias = {
+            eje: abs(float(punto[eje]) - valor)
+            for eje, valor in ORIGEN_QA.items()
+        }
+    except (ValueError, TypeError, KeyError) as exc:
+        raise RuntimeError(
+            f"La georreferencia de QA no devolvió latitud/longitud: "
+            f"PATCH={configurado!r}; GET={guardado!r}"
+        ) from exc
+    comprobar(
+        guardado.get("codigo") == "VENTA_DESPACHO"
+        and all(delta < 0.00001 for delta in diferencias.values()),
+        f"Origen de QA inconsistente. Solicitado={ORIGEN_QA!r}; "
+        f"PATCH={configurado!r}; GET={guardado!r}",
+    )
 
     activos = []
     for estado in ("REGISTRADO", "EN_DISTRIBUCION"):
