@@ -261,3 +261,17 @@ if __name__ == "__main__":
             json.dumps(reporte, ensure_ascii=False, indent=2) + "\n",
             encoding="utf-8",
         )
+
+    # El workflow llega aquí incluso si fallan otros casos: evitar falsos verdes.
+    resumen = qa.OUT / "RESULTADOS-SUITE-AMPLIADA.txt"
+    if resumen.exists():
+        registros = resumen.read_text(encoding="utf-8").splitlines()
+        fallidos = [x for x in registros if x.startswith("fallidos=")]
+        if len(fallidos) != 1:
+            raise RuntimeError("Suite ampliada sin total inequívoco de fallos")
+        numero = int(fallidos[0].split("=", 1)[1])
+        if numero:
+            raise RuntimeError(
+                f"QA Android incompleto: {numero} caso(s) fallaron; "
+                "revisar reportes y capturas antes de dar por aprobada la suite"
+            )
