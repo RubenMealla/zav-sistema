@@ -64,3 +64,10 @@ La suite aún no aporta evidencias automatizadas completas del registro positivo
 
 ### Alcance y limitaciones del nuevo caso
 La planificación registrada utiliza un origen referencial de Tarija exclusivamente en la base temporal y dos pedidos sintéticos. Prueba la capacidad de organizar desde el APK, abrir el mapa y obtener una secuencia, pero no supone validación vial real ni uso físico en la empresa.
+
+
+## Diagnóstico de confirmación de entrega georreferenciada (simulada)
+- [Android #108](https://github.com/RubenMealla/zav-sistema/actions/runs/37736104773): 6 casos previos correctos; la confirmación no mostró el diálogo tras intentar obtener la posición del emulador. Se conservaron captura diagnóstica y reporte de error; no se registró entrega.
+- [Android #109](https://github.com/RubenMealla/zav-sistema/actions/runs/37737249743): 6 casos previos correctos; el séptimo se detuvo antes de interactuar con la entrega porque el emulador Android 11/API 30 devuelve `Unknown command: is-location-enabled`. El problema corresponde al comando de diagnóstico, no demuestra un fallo de la API.
+- Corrección `9777ab6b`: consultar `settings get secure location_mode` en vez del subcomando Android no compatible. Prueba #110 iniciada; no declarar aprobada hasta inspeccionar su reporte.
+- La coordenada del emulador es sintética. No se debe afirmar que se realizó una entrega real ni extrapolar el resultado a dispositivos físicos o a producción.
