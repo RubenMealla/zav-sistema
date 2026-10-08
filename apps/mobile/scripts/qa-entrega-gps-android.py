@@ -67,12 +67,15 @@ def ejecutar():
            check=False)
     qa.run(["adb", "shell", "settings", "put", "secure", "location_mode", "3"],
            check=False)
-    estado = qa.run(["adb", "shell", "cmd", "location", "is-location-enabled"],
+    # En la imagen Android 11/API 30 no existe el subcomando
+    # 'cmd location is-location-enabled'. Comprobar location_mode en Settings.
+    estado = qa.run(["adb", "shell", "settings", "get", "secure", "location_mode"],
                     check=False, capture=True, timeout=15)
-    if not estado or "true" not in (estado.stdout or "").lower():
+    modo = (estado.stdout or "").strip() if estado is not None else ""
+    if modo not in ("1", "2", "3"):
         raise RuntimeError(
-            "El emulador no confirmó que el servicio de ubicación estuviera activo: "
-            + repr(estado.stdout if estado else "sin respuesta")
+            "Los ajustes Android no confirmaron ubicación habilitada; "
+            f"location_mode={modo!r}"
         )
     for permiso in ("ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"):
         qa.run(["adb", "shell", "pm", "grant", PKG,
