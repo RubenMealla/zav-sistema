@@ -8,13 +8,7 @@ on:
       - "pruebas/**"
       - "mejora/**"
     paths:
-      - "apps/mobile/app/**"
-      - "apps/mobile/src/**"
-      - "apps/mobile/assets/**"
-      - "apps/mobile/app.json"
-      - "apps/mobile/package.json"
-      - "apps/mobile/tsconfig.json"
-      - "apps/mobile/eslint.config.js"
+      - "apps/mobile/**"
       - "package.json"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
@@ -23,16 +17,11 @@ on:
     branches:
       - main
     paths:
-      - "apps/mobile/app/**"
-      - "apps/mobile/src/**"
-      - "apps/mobile/assets/**"
-      - "apps/mobile/app.json"
-      - "apps/mobile/package.json"
-      - "apps/mobile/tsconfig.json"
-      - "apps/mobile/eslint.config.js"
+      - "apps/mobile/**"
       - "package.json"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
+      - ".github/workflows/qa-mobile.yml"
 
 concurrency:
   group: qa-mobile-${{ github.ref }}
