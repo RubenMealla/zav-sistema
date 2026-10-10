@@ -214,8 +214,12 @@ test('muestra en la web un 400 al registrar un lote con fecha inválida', async 
   await selectorProducto.selectOption(valorProducto!);
   const elaborado = modal.getByLabel('Fecha de elaboración');
   await elaborado.evaluate((elemento) => (elemento as HTMLInputElement).removeAttribute('max'));
-  await elaborado.fill('2026-10-08');
-  await modal.getByLabel('Fecha de vencimiento').fill('2026-12-31');
+  // Mantener una fecha de elaboración futura: una fecha fija dejó de ser
+  // inválida al avanzar el calendario, aunque el escenario exigía HTTP 400.
+  const fechaDentroDeDias = (dias: number) =>
+    new Date(Date.now() + dias * 86_400_000).toISOString().slice(0, 10);
+  await elaborado.fill(fechaDentroDeDias(14));
+  await modal.getByLabel('Fecha de vencimiento').fill(fechaDentroDeDias(120));
   await modal.getByLabel('Cantidad inicial').fill('2');
 
   await modal.getByRole('button', { name: 'Guardar lote e ingreso' }).click();
