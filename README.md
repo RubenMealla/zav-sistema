@@ -32,7 +32,7 @@ React Native / Expo (Vendedor)
 
 La API concentra autenticación, autorización y reglas de negocio. Los permisos no dependen de ocultar botones en los clientes.
 
-La aplicación móvil utiliza MapLibre React Native con OpenFreeMap y `expo-location`. La búsqueda y geocodificación de direcciones se realizan a través del backend, que integra Geoapify cuando la clave está configurada. La mejora web en PR #40 incorpora el mapa administrativo de Distribución como trabajo aún no fusionado.
+La aplicación móvil utiliza MapLibre React Native con OpenFreeMap y `expo-location`. La búsqueda y geocodificación de direcciones se realizan a través del backend, que integra Geoapify cuando la clave está configurada. La aplicación web estable incluye el mapa administrativo de Distribución para configurar el punto de salida de Venta y Despacho.
 
 ## Modelo de inventario
 
@@ -191,13 +191,16 @@ pnpm --filter @zav/mobile lint
 pnpm --filter @zav/mobile exec tsc --noEmit
 ```
 
-GitHub Actions ejecuta QA con PostgreSQL aislado. Los reportes y artifacts se conservan como evidencia. Los errores y runs fallidos reales también se conservan; una ejecución final verde no borra el historial de incidencias.
+GitHub Actions ejecuta QA con PostgreSQL aislado. Los reportes, logs y capturas se conservan como evidencia. Los errores y ejecuciones fallidas reales también se conservan; una ejecución satisfactoria posterior no borra el historial de incidencias.
 
 La documentación de QA de E3 incluye:
 
 - `docs/pruebas/matriz-qa-e3.md`;
+- `docs/pruebas/indice-evidencias-web-api.md`;
 - `docs/pruebas/registro-defectos-e3.md`;
 - evidencias Playwright de 400, 401, 403, 404, 409 y 503;
+- evidencia web de validación doble: la API devuelve 400 aun cuando se evita deliberadamente la validación del formulario del navegador, y la interfaz muestra el error;
+- evidencias web de error para fecha inválida de Lote (400), condición repetida (409) y acceso del Vendedor al panel administrativo (403);
 - cobertura E2E del 500 y rollback transaccional;
 - validación física de ZAV Vendedor 1.0.0;
 - build APK firmado y versionado.
@@ -233,9 +236,9 @@ Tablero: https://trello.com/b/Tn5elZCY/zav-2026-desarrollo-del-sistema-kanban
 - aplicación **ZAV Vendedor 1.0.0**, validada físicamente el 04/10/2026;
 - APK release firmado y pipeline de QA.
 
-**QA/documentación de cierre E3:** PR #42 incorpora contrato OpenAPI, matriz de QA, registro de defectos y evidencias HTTP. Se conserva su rama después del merge.
+**QA/documentación:** Issue #54 y la rama `pruebas/evidencias-qa-reales` reúnen las capturas verificables de Swagger UI y de la interfaz web utilizadas en el documento. La ejecución web de referencia es Playwright #765, asociada al commit `e386dfa18207ef8b4f60d05a58a5f86821f6f184`, con resultado satisfactorio.
 
-**Línea activa después del documento E3:** Issue #39 / PR #40 / rama `mejora/ui-web-consolidada`. Contiene la interfaz web recuperada y mejorada: landing, login, panel, tablas, filtros, marca transparente y módulo Distribución. Su QA técnico está verde, pero **no se fusiona hasta aprobación visual explícita**.
+**Interfaz web estable:** `main` contiene la landing, login, panel administrativo, tablas, filtros, confirmaciones, mensajes visibles de error, CRUD de Producto y módulo Distribución.
 
 **Capturas Android automatizadas:** Issue #43 queda separado de la aplicación estable. Los intentos fallidos del workflow se conservan como evidencia de QA y se retomarán después de ordenar la línea web.
 

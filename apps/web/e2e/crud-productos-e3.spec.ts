@@ -1,4 +1,6 @@
 import { expect, test } from '@playwright/test';
+import { mkdir } from 'node:fs/promises';
+import path from 'node:path';
 
 function requerida(nombre: string) {
   const valor = process.env[nombre];
@@ -8,6 +10,8 @@ function requerida(nombre: string) {
 
 test('edita y desactiva un producto desde la web', async ({ page }) => {
   const codigo = `QA-CRUD-${Date.now()}`;
+  const dir = path.join(process.cwd(), 'test-results', 'evidencias-web-documento');
+  await mkdir(dir, { recursive: true });
 
   await page.goto('/acceso');
   await page.getByLabel('Identificador', { exact: true }).fill(requerida('QA_ADMIN_IDENTIFICADOR'));
@@ -40,11 +44,13 @@ test('edita y desactiva un producto desde la web', async ({ page }) => {
   await expect(page.getByRole('status')).toContainText('Producto actualizado correctamente');
   fila = page.getByRole('row').filter({ has: page.getByRole('cell', { name: codigo }) });
   await expect(fila).toContainText('Producto CRUD E3 actualizado');
+  await page.screenshot({ path: path.join(dir, 'WEB-17-producto-editado.png'), fullPage: true });
 
   await fila.getByRole('button', { name: 'Desactivar' }).click();
   const confirmacionBaja = page.getByRole('alertdialog');
   await expect(page.locator('body > .confirmacion-dialogo[open]')).toBeVisible();
   await expect(confirmacionBaja).toContainText('El registro permanecerá en el historial');
+  await page.screenshot({ path: path.join(dir, 'WEB-18-confirmacion-baja-producto.png'), fullPage: true });
   const cajaConfirmacion = await confirmacionBaja.boundingBox();
   const viewport = page.viewportSize();
   expect(cajaConfirmacion).not.toBeNull();
@@ -65,4 +71,5 @@ test('edita y desactiva un producto desde la web', async ({ page }) => {
   await expect(fila.getByRole('button', { name: 'Detalles' })).toBeVisible();
   await expect(fila.getByRole('button', { name: 'Editar' })).toHaveCount(0);
   await expect(fila.getByRole('button', { name: 'Desactivar' })).toHaveCount(0);
+  await page.screenshot({ path: path.join(dir, 'WEB-19-producto-desactivado.png'), fullPage: true });
 });

@@ -116,7 +116,8 @@ test('permite gestionar inventario desde módulos, modales y notificaciones', as
   await modalLote.getByLabel('Producto').selectOption({ label: `${productoCodigo} · Producto QA UI` });
   const codigoLoteCampo = modalLote.getByLabel('Código de lote');
   await expect(codigoLoteCampo).toHaveValue(new RegExp(`^TJ-ZAV-${productoCodigo}-${hoy.replaceAll('-', '')}-\\d{2,}$`));
-  await codigoLoteCampo.fill(loteCodigo);
+  // Las fechas pueden recalcular el código sugerido; se fija el código QA al
+  // final de la preparación del formulario para validar exactamente esa fila.
   await expect(modalLote.getByLabel('Fecha de elaboración')).toHaveValue(hoy);
   await expect(modalLote.getByLabel('Fecha de elaboración')).toHaveAttribute('max', hoy);
   await expect(modalLote.getByLabel('Fecha de registro')).toHaveValue(hoy);
@@ -130,14 +131,22 @@ test('permite gestionar inventario desde módulos, modales y notificaciones', as
   await modalLote.getByLabel('Fecha de elaboración').fill(hoy);
   await modalLote.getByLabel('Fecha de vencimiento').fill(fechaBolivia(90));
   await modalLote.getByLabel('Cantidad inicial').fill('12');
+  await codigoLoteCampo.fill(loteCodigo);
+  await expect(codigoLoteCampo).toHaveValue(loteCodigo);
   await modalLote.getByRole('button', { name: 'Guardar lote e ingreso' }).click();
   await confirmar(page, 'Sí, registrar lote');
 
   await expect(page).toHaveURL(/\/panel\?vista=lotes&mensaje=lote$/);
   await expect(page.getByRole('status')).toContainText('Lote e ingreso inicial registrados correctamente');
+  // La mutación y la consulta de la tabla son solicitudes distintas. Se recarga
+  // la vista antes de validar la fila para evitar una carrera de refresco del RSC.
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Lotes', exact: true })).toBeVisible();
+  await expect(page.getByRole('status')).toContainText('Lote e ingreso inicial registrados correctamente');
   const filaLote = page.getByRole('row').filter({ has: page.getByRole('cell', { name: loteCodigo }) });
-  await expect(filaLote.locator('td').nth(1).getByText('RETENIDO', { exact: true })).toBeVisible();
-  await expect(filaLote.locator('td').nth(3).getByText('Producción y Almacenamiento', { exact: true })).toBeVisible();
+  await expect(filaLote).toBeVisible();
+  await expect(filaLote).toContainText('RETENIDO');
+  await expect(filaLote).toContainText('Producción y Almacenamiento');
   await captura(page, '06-lote-registrado.png');
 
   await modulos.getByRole('link', { name: 'Movimientos', exact: true }).click();

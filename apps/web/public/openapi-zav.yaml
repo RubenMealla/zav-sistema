@@ -1,12 +1,13 @@
 openapi: 3.0.3
 info:
-  title: ZAV API E3
+  title: ZAV API
   version: 1.0.0
   description: >
-    Contrato interactivo de la API REST de ZAV para demostración y revisión.
+    Contrato interactivo de la API REST de ZAV para comprobación manual y automatizada.
     Usa "Authorize" con un JWT obtenido desde POST /api/v1/auth/login.
-    El visor muestra respuestas reales de la API y los errores documentados.
-    Los conflictos de negocio se representan actualmente con HTTP 409 y no con 422.
+    Los cuerpos y parámetros incluyen ejemplos editables para acelerar la ejecución desde Swagger UI.
+    En operaciones con identificadores UUID se debe reemplazar el valor de ejemplo por el ID retornado en el paso anterior.
+    El visor muestra respuestas reales de la API; los conflictos de negocio se representan con HTTP 409.
 servers:
   - url: /api/swagger/proxy
     description: Proxy seguro del visor Swagger hacia la API ZAV
@@ -51,8 +52,18 @@ paths:
               type: object
               required: [identificador, contrasena]
               properties:
-                identificador: { type: string }
-                contrasena: { type: string, format: password }
+                identificador: { type: string, example: admin@saf.ts }
+                contrasena: { type: string, format: password, example: "12345678" }
+            examples:
+              administrador:
+                summary: Cuenta de demostración · Administrador
+                value: { identificador: admin@saf.ts, contrasena: "12345678" }
+              vendedor:
+                summary: Cuenta de demostración · Vendedor
+                value: { identificador: vendedor@saf.ts, contrasena: "12345678" }
+              credenciales_invalidas:
+                summary: Caso de error 401
+                value: { identificador: usuario.invalido@zav.test, contrasena: incorrecta }
       responses:
         '200':
           description: Sesión iniciada
@@ -74,10 +85,10 @@ paths:
       tags: [Productos]
       summary: Listar productos
       parameters:
-        - { in: query, name: q, schema: { type: string } }
-        - { in: query, name: activo, schema: { type: boolean } }
-        - { in: query, name: page, schema: { type: integer, minimum: 1 } }
-        - { in: query, name: limit, schema: { type: integer, minimum: 1 } }
+        - { in: query, name: q, example: jamon, schema: { type: string } }
+        - { in: query, name: activo, example: true, schema: { type: boolean } }
+        - { in: query, name: page, example: 1, schema: { type: integer, minimum: 1 } }
+        - { in: query, name: limit, example: 20, schema: { type: integer, minimum: 1 } }
       responses:
         '200': { description: Lista paginada }
         '400': { $ref: '#/components/responses/Error400' }
@@ -93,6 +104,25 @@ paths:
         content:
           application/json:
             schema: { $ref: '#/components/schemas/ProductoEntrada' }
+            examples:
+              registro:
+                summary: Registro válido
+                value:
+                  codigo: SWAGGER-PROD-001
+                  nombre: Producto de demostración Swagger
+                  familia: Fiambres
+                  presentacion: Unidad de 250 g
+                  pesoGramos: 250
+                  precioBob: 19.5
+              validacion_400:
+                summary: Caso de error 400
+                value:
+                  codigo: ""
+                  nombre: ""
+                  familia: QA
+                  presentacion: Unidad
+                  pesoGramos: 0
+                  precioBob: -1
       responses:
         '201': { description: Producto creado }
         '400': { $ref: '#/components/responses/Error400' }
@@ -159,7 +189,33 @@ paths:
     post:
       tags: [Lotes]
       summary: Registrar lote e ingreso inicial
-      description: Requiere rol ADMINISTRADOR.
+      description: Requiere rol ADMINISTRADOR. Reemplazar productoId por un ID obtenido desde GET /api/v1/productos.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoteEntrada' }
+            examples:
+              ingreso_valido:
+                summary: Ingreso inicial
+                value:
+                  operacionClave: 11111111-1111-4111-8111-111111111111
+                  productoId: 22222222-2222-4222-8222-222222222222
+                  codigo: SWAGGER-LOTE-001
+                  elaboradoEl: "2026-10-01"
+                  venceEl: "2026-12-31"
+                  cantidadInicial: 10
+                  ubicacionCodigo: PRODUCCION_ALMACENAMIENTO
+              cantidad_invalida_400:
+                summary: Caso de error 400
+                value:
+                  operacionClave: 11111111-1111-4111-8111-111111111112
+                  productoId: 22222222-2222-4222-8222-222222222222
+                  codigo: SWAGGER-LOTE-INVALIDO
+                  elaboradoEl: "2026-10-01"
+                  venceEl: "2026-12-31"
+                  cantidadInicial: 0
+                  ubicacionCodigo: PRODUCCION_ALMACENAMIENTO
       responses:
         '201': { description: Lote creado }
         '400': { $ref: '#/components/responses/Error400' }
@@ -189,6 +245,14 @@ paths:
       summary: Liberar lote
       description: Requiere rol ADMINISTRADOR.
       parameters: [ { $ref: '#/components/parameters/Id' } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CondicionLoteEntrada' }
+            example:
+              operacionClave: 33333333-3333-4333-8333-333333333333
+              motivo: Verificación manual desde Swagger
       responses:
         '201': { description: Condición actualizada }
         '400': { $ref: '#/components/responses/Error400' }
@@ -204,6 +268,14 @@ paths:
       summary: Bloquear lote
       description: Requiere rol ADMINISTRADOR.
       parameters: [ { $ref: '#/components/parameters/Id' } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CondicionLoteEntrada' }
+            example:
+              operacionClave: 33333333-3333-4333-8333-333333333334
+              motivo: Bloqueo de prueba desde Swagger
       responses:
         '201': { description: Condición actualizada }
         '400': { $ref: '#/components/responses/Error400' }
@@ -236,9 +308,9 @@ paths:
       summary: Listar movimientos de un lote
       description: Requiere rol ADMINISTRADOR.
       parameters:
-        - { in: query, name: loteId, required: true, schema: { type: string, format: uuid } }
-        - { in: query, name: page, schema: { type: integer, minimum: 1 } }
-        - { in: query, name: limit, schema: { type: integer, minimum: 1 } }
+        - { in: query, name: loteId, required: true, example: 22222222-2222-4222-8222-222222222222, schema: { type: string, format: uuid } }
+        - { in: query, name: page, example: 1, schema: { type: integer, minimum: 1 } }
+        - { in: query, name: limit, example: 20, schema: { type: integer, minimum: 1 } }
       responses:
         '200': { description: Movimientos paginados }
         '400': { $ref: '#/components/responses/Error400' }
@@ -251,7 +323,31 @@ paths:
     post:
       tags: [Movimientos]
       summary: Registrar traslado de inventario
-      description: Requiere rol ADMINISTRADOR.
+      description: Requiere rol ADMINISTRADOR. Reemplazar loteId por un lote real.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TrasladoEntrada' }
+            examples:
+              traslado_valido:
+                summary: Traslado válido
+                value:
+                  operacionClave: 44444444-4444-4444-8444-444444444444
+                  loteId: 22222222-2222-4222-8222-222222222222
+                  origenCodigo: PRODUCCION_ALMACENAMIENTO
+                  destinoCodigo: VENTA_DESPACHO
+                  cantidad: 2
+                  referencia: SWAGGER-TRASLADO
+              saldo_insuficiente_409:
+                summary: Caso de error 409
+                value:
+                  operacionClave: 44444444-4444-4444-8444-444444444445
+                  loteId: 22222222-2222-4222-8222-222222222222
+                  origenCodigo: PRODUCCION_ALMACENAMIENTO
+                  destinoCodigo: VENTA_DESPACHO
+                  cantidad: 999999
+                  referencia: SWAGGER-SALDO-INSUFICIENTE
       responses:
         '201': { description: Traslado creado }
         '400': { $ref: '#/components/responses/Error400' }
@@ -276,6 +372,26 @@ paths:
       tags: [Clientes]
       summary: Registrar cliente georreferenciado
       description: Requiere rol VENDEDOR.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ClienteEntrada' }
+            examples:
+              cliente_valido:
+                summary: Registro válido
+                value:
+                  nombre: Cliente Swagger Tarija
+                  telefono: "70000000"
+                  direccion: Zona central, Tarija
+                  latitud: -21.535
+                  longitud: -64.73
+              cliente_invalido_400:
+                summary: Caso de error 400
+                value:
+                  nombre: Cliente sin ubicación
+                  telefono: "70000000"
+                  direccion: ""
       responses:
         '201': { description: Cliente creado }
         '400': { $ref: '#/components/responses/Error400' }
@@ -354,7 +470,29 @@ paths:
     post:
       tags: [Pedidos]
       summary: Registrar pedido
-      description: Requiere rol VENDEDOR.
+      description: Requiere rol VENDEDOR. Reemplazar clienteId y productoId por IDs obtenidos previamente.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PedidoEntrada' }
+            examples:
+              pedido_valido:
+                summary: Pedido válido
+                value:
+                  clienteId: 55555555-5555-4555-8555-555555555555
+                  observacion: Pedido de prueba desde Swagger
+                  detalles:
+                    - productoId: 66666666-6666-4666-8666-666666666666
+                      cantidad: 1
+              sobreventa_409:
+                summary: Caso de error 409
+                value:
+                  clienteId: 55555555-5555-4555-8555-555555555555
+                  observacion: Prueba de stock insuficiente
+                  detalles:
+                    - productoId: 66666666-6666-4666-8666-666666666666
+                      cantidad: 999999
       responses:
         '201': { description: Pedido REGISTRADO }
         '400': { $ref: '#/components/responses/Error400' }
@@ -396,6 +534,15 @@ paths:
       summary: Anular pedido antes del retiro
       description: Requiere rol VENDEDOR.
       parameters: [ { $ref: '#/components/parameters/Id' } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [motivo]
+              properties:
+                motivo: { type: string, example: Registro incorrecto detectado antes del retiro }
       responses:
         '201': { description: Pedido CANCELADO }
         '401': { $ref: '#/components/responses/Error401' }
@@ -410,6 +557,12 @@ paths:
       summary: Retirar pedido para reparto
       description: Requiere rol VENDEDOR.
       parameters: [ { $ref: '#/components/parameters/Id' } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OperacionIdempotente' }
+            example: { operacionClave: 77777777-7777-4777-8777-777777777777 }
       responses:
         '201': { description: Pedido EN_DISTRIBUCION }
         '400': { $ref: '#/components/responses/Error400' }
@@ -424,6 +577,17 @@ paths:
       tags: [Pedidos]
       summary: Retirar varios pedidos
       description: Requiere rol VENDEDOR.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RetirosEntrada' }
+            example:
+              retiros:
+                - pedidoId: 88888888-8888-4888-8888-888888888881
+                  operacionClave: 99999999-9999-4999-8999-999999999991
+                - pedidoId: 88888888-8888-4888-8888-888888888882
+                  operacionClave: 99999999-9999-4999-8999-999999999992
       responses:
         '201': { description: Resultado completo, parcial o sin cambios }
         '400': { $ref: '#/components/responses/Error400' }
@@ -437,6 +601,25 @@ paths:
       summary: Confirmar entrega con GPS puntual
       description: Requiere rol VENDEDOR.
       parameters: [ { $ref: '#/components/parameters/Id' } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EntregaEntrada' }
+            examples:
+              entrega_valida:
+                summary: Entrega GPS válida
+                value:
+                  operacionClave: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa
+                  latitud: -21.53549
+                  longitud: -64.72956
+                  precisionMetros: 8.5
+              coordenada_invalida_400:
+                summary: Caso de error 400
+                value:
+                  operacionClave: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaab
+                  latitud: 120
+                  longitud: -64.73
       responses:
         '201': { description: Pedido ENTREGADO }
         '400': { $ref: '#/components/responses/Error400' }
@@ -450,7 +633,17 @@ paths:
     post:
       tags: [Pedidos]
       summary: Sugerir secuencia geográfica de reparto
-      description: Requiere rol VENDEDOR. No es optimización vial.
+      description: Requiere rol VENDEDOR. No es optimización vial. Reemplazar pedidoIds por pedidos REGISTRADOS con destino GPS.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PlanificacionEntrada' }
+            example:
+              pedidoIds:
+                - 88888888-8888-4888-8888-888888888881
+                - 88888888-8888-4888-8888-888888888882
+              origenTipo: DESPACHO
       responses:
         '201': { description: Secuencia sugerida }
         '400': { $ref: '#/components/responses/Error400' }
@@ -489,7 +682,7 @@ paths:
       summary: Buscar direcciones en Tarija mediante Geoapify
       description: Requiere rol VENDEDOR. La clave del proveedor permanece en backend.
       parameters:
-        - { in: query, name: q, required: true, schema: { type: string, minLength: 2, maxLength: 200 } }
+        - { in: query, name: q, required: true, example: Plaza Luis de Fuentes Tarija, schema: { type: string, minLength: 2, maxLength: 200 } }
       responses:
         '200': { description: Coincidencias }
         '400': { $ref: '#/components/responses/Error400' }
@@ -504,7 +697,7 @@ paths:
       summary: Autocompletar direcciones en Tarija
       description: Requiere rol VENDEDOR.
       parameters:
-        - { in: query, name: q, required: true, schema: { type: string, minLength: 2, maxLength: 200 } }
+        - { in: query, name: q, required: true, example: Plaza Luis de Fuentes Tarija, schema: { type: string, minLength: 2, maxLength: 200 } }
       responses:
         '200': { description: Coincidencias }
         '400': { $ref: '#/components/responses/Error400' }
@@ -519,8 +712,8 @@ paths:
       summary: Obtener dirección desde coordenadas
       description: Requiere rol VENDEDOR.
       parameters:
-        - { in: query, name: latitud, required: true, schema: { type: number } }
-        - { in: query, name: longitud, required: true, schema: { type: number } }
+        - { in: query, name: latitud, required: true, example: -21.535, schema: { type: number } }
+        - { in: query, name: longitud, required: true, example: -64.73, schema: { type: number } }
       responses:
         '200': { description: Dirección normalizada }
         '400': { $ref: '#/components/responses/Error400' }
@@ -546,6 +739,12 @@ paths:
       summary: Configurar georreferencia física de Venta y Despacho
       description: Requiere rol ADMINISTRADOR.
       parameters: [ { $ref: '#/components/parameters/Id' } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/GeorreferenciaEntrada' }
+            example: { latitud: -21.535, longitud: -64.73 }
       responses:
         '200': { description: Ubicación actualizada }
         '400': { $ref: '#/components/responses/Error400' }
@@ -566,17 +765,117 @@ components:
       in: path
       name: id
       required: true
+      description: Sustituir por un UUID real devuelto por el endpoint de creación correspondiente. El valor de ejemplo sirve para probar 404.
+      example: 00000000-0000-4000-8000-000000000404
       schema: { type: string, format: uuid }
   schemas:
     ProductoEntrada:
       type: object
+      required: [codigo, nombre, familia, presentacion, pesoGramos, precioBob]
       properties:
-        codigo: { type: string }
-        nombre: { type: string }
-        familia: { type: string }
-        presentacion: { type: string }
-        pesoGramos: { type: integer, minimum: 1 }
-        precioBob: { type: number, minimum: 0 }
+        codigo: { type: string, example: SWAGGER-PROD-001 }
+        nombre: { type: string, example: Producto de demostración Swagger }
+        familia: { type: string, example: Fiambres }
+        presentacion: { type: string, example: Unidad de 250 g }
+        pesoGramos: { type: integer, minimum: 1, example: 250 }
+        precioBob: { type: number, minimum: 0, example: 19.5 }
+    LoteEntrada:
+      type: object
+      required: [operacionClave, productoId, codigo, elaboradoEl, venceEl, cantidadInicial, ubicacionCodigo]
+      properties:
+        operacionClave: { type: string, format: uuid, example: 11111111-1111-4111-8111-111111111111 }
+        productoId: { type: string, format: uuid, example: 22222222-2222-4222-8222-222222222222 }
+        codigo: { type: string, example: LOTE-SWAGGER-001 }
+        elaboradoEl: { type: string, format: date, example: 2026-10-01 }
+        venceEl: { type: string, format: date, example: 2026-12-31 }
+        cantidadInicial: { type: integer, minimum: 1, example: 10 }
+        ubicacionCodigo: { type: string, enum: [PRODUCCION_ALMACENAMIENTO, VENTA_DESPACHO], example: PRODUCCION_ALMACENAMIENTO }
+    CondicionLoteEntrada:
+      type: object
+      required: [operacionClave, motivo]
+      properties:
+        operacionClave: { type: string, format: uuid, example: 33333333-3333-4333-8333-333333333333 }
+        motivo: { type: string, example: Liberación para venta }
+    TrasladoEntrada:
+      type: object
+      required: [operacionClave, loteId, origenCodigo, destinoCodigo, cantidad]
+      properties:
+        operacionClave: { type: string, format: uuid, example: 44444444-4444-4444-8444-444444444444 }
+        loteId: { type: string, format: uuid, example: 55555555-5555-4555-8555-555555555555 }
+        origenCodigo: { type: string, example: PRODUCCION_ALMACENAMIENTO }
+        destinoCodigo: { type: string, example: VENTA_DESPACHO }
+        cantidad: { type: integer, minimum: 1, example: 2 }
+        referencia: { type: string, example: Prueba manual Swagger }
+    ClienteEntrada:
+      type: object
+      required: [nombre, direccion, latitud, longitud]
+      properties:
+        nombre: { type: string, example: Cliente Swagger Tarija }
+        telefono: { type: string, example: "70000000" }
+        direccion: { type: string, example: Zona central, Tarija }
+        latitud: { type: number, example: -21.535 }
+        longitud: { type: number, example: -64.73 }
+    PedidoEntrada:
+      type: object
+      required: [clienteId, detalles]
+      properties:
+        clienteId: { type: string, format: uuid, example: 66666666-6666-4666-8666-666666666666 }
+        observacion: { type: string, example: Pedido de demostración Swagger }
+        detalles:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [productoId, cantidad]
+            properties:
+              productoId: { type: string, format: uuid, example: 77777777-7777-4777-8777-777777777777 }
+              cantidad: { type: integer, minimum: 1, example: 2 }
+    OperacionIdempotente:
+      type: object
+      required: [operacionClave]
+      properties:
+        operacionClave: { type: string, format: uuid, example: 88888888-8888-4888-8888-888888888888 }
+    RetirosEntrada:
+      type: object
+      required: [retiros]
+      properties:
+        retiros:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [pedidoId, operacionClave]
+            properties:
+              pedidoId: { type: string, format: uuid, example: 99999999-9999-4999-8999-999999999999 }
+              operacionClave: { type: string, format: uuid, example: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa }
+    EntregaEntrada:
+      type: object
+      required: [operacionClave, latitud, longitud]
+      properties:
+        operacionClave: { type: string, format: uuid, example: bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb }
+        latitud: { type: number, minimum: -90, maximum: 90, example: -21.535 }
+        longitud: { type: number, minimum: -180, maximum: 180, example: -64.73 }
+        precisionMetros: { type: number, minimum: 0, example: 8.5 }
+    PlanificacionEntrada:
+      type: object
+      required: [pedidoIds, origenTipo]
+      properties:
+        pedidoIds:
+          type: array
+          minItems: 2
+          items: { type: string, format: uuid, example: cccccccc-cccc-4ccc-8ccc-cccccccccccc }
+        origenTipo: { type: string, enum: [DESPACHO, ACTUAL], example: DESPACHO }
+        origenActual:
+          type: object
+          properties:
+            latitud: { type: number, example: -21.535 }
+            longitud: { type: number, example: -64.73 }
+    GeorreferenciaEntrada:
+      type: object
+      required: [latitud, longitud]
+      properties:
+        latitud: { type: number, example: -21.535 }
+        longitud: { type: number, example: -64.73 }
     ApiError:
       type: object
       required: [statusCode, error, message, path, timestamp]

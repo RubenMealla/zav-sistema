@@ -27,14 +27,21 @@ const html = `<!doctype html>
   </div>
   <div class="zav-aviso">
     <b>Uso rápido</b>
-    1) Ejecuta <code>POST /api/v1/auth/login</code>. 2) Copia el <code>accessToken</code>. 3) Pulsa <b>Authorize</b> y pega solo el token. 4) Prueba los endpoints con <b>Try it out</b>.<br/>
-    Los códigos 400, 401, 403, 404, 409, 500 y 503 están documentados abajo. No muestres contraseñas ni JWT en capturas de evidencia.
+    1) Ejecuta <code>POST /api/v1/auth/login</code> con el ejemplo del rol que quieras probar. 2) Copia el <code>accessToken</code>. 3) Pulsa <b>Authorize</b> y pega solo el token. 4) Abre un endpoint y pulsa <b>Try it out</b>: los cuerpos y parámetros ya quedan precargados con ejemplos editables. 5) Pulsa <b>Execute</b> y revisa <b>Server response</b>.<br/><br/>
+    <b>Casos rápidos preparados</b>
+    <code>400</code>: Login - ejemplo <i>credenciales/datos inválidos</i>. 
+    <code>401</code>: ejecuta Productos sin Authorize. 
+    <code>403</code>: autoriza como Administrador y ejecuta POST Clientes. 
+    <code>404</code>: GET Cliente con el UUID de ejemplo inexistente. 
+    <code>409</code>: crea una vez el Producto de ejemplo y repite exactamente el mismo POST. 
+    <code>503</code>: Geografía - geocodificar con <code>Tarija</code> en el entorno aislado sin proveedor. 
+    Los UUID de operaciones encadenadas se sustituyen por los IDs retornados en el paso anterior. El 500 transaccional se comprueba en la suite E2E para no provocar fallos artificiales desde la interfaz.
   </div>
   <div id="swagger-ui"></div>
   <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
   <script>
     window.addEventListener('load', () => {
-      SwaggerUIBundle({
+      window.ui = SwaggerUIBundle({
         url: '/openapi-zav.yaml',
         dom_id: '#swagger-ui',
         deepLinking: true,
