@@ -348,28 +348,28 @@ export class PedidosService {
 
     if (consulta.vendedorId !== undefined) {
       parametros.push(uuid(consulta.vendedorId, 'vendedorId'));
-      filtros.push(`pe.vendedor_id = ${parametros.length}::uuid`);
+      filtros.push(`pe.vendedor_id = $${parametros.length}::uuid`);
     }
 
     if (consulta.q !== undefined) {
       const q = texto(consulta.q, 'q', 120);
       parametros.push(`%${q}%`);
       filtros.push(
-        `(c.nombre ILIKE ${parametros.length} OR u.nombre ILIKE ${parametros.length} OR u.identificador ILIKE ${parametros.length} OR pe.direccion_entrega ILIKE ${parametros.length})`,
+        `(c.nombre ILIKE $${parametros.length} OR u.nombre ILIKE $${parametros.length} OR u.identificador ILIKE $${parametros.length} OR pe.direccion_entrega ILIKE $${parametros.length})`,
       );
     }
 
     if (consulta.desde !== undefined) {
       const desde = texto(consulta.desde, 'desde', 10);
       parametros.push(desde);
-      filtros.push(`pe.creado_en >= ${parametros.length}::date`);
+      filtros.push(`pe.creado_en >= $${parametros.length}::date`);
     }
 
     if (consulta.hasta !== undefined) {
       const hasta = texto(consulta.hasta, 'hasta', 10);
       parametros.push(hasta);
       filtros.push(
-        `pe.creado_en < (${parametros.length}::date + interval '1 day')`,
+        `pe.creado_en < ($${parametros.length}::date + interval '1 day')`,
       );
     }
 
