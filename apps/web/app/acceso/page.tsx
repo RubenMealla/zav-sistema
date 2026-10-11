@@ -3,6 +3,7 @@ import { iniciarSesion } from '../acciones';
 import { BotonEnviar, CampoContrasena, Notificacion } from '../componentes/interacciones';
 import { Icono } from '../componentes/icono';
 import { Marca } from '../componentes/marca';
+import { VERSION_WEB } from '../lib/version';
 
 const errores:Record<string,string>={datos:'Completa el identificador y la contraseña.',credenciales:'No fue posible iniciar sesión. Verifica los datos de acceso.',permisos:'Esta pantalla está disponible para el Administrador.',conexion:'No se pudo conectar con el servicio de ZAV.',sesion:'La sesión terminó o ya no es válida. Vuelve a ingresar.',servicio:'El servicio de ZAV no pudo completar el inicio de sesión. Inténtalo nuevamente; si persiste, revisa el estado de la API.'};
 
@@ -30,7 +31,7 @@ export default async function Acceso({searchParams}:{searchParams:Promise<{error
     <form action={iniciarSesion} className="formulario acceso-formulario"><label className="campo" htmlFor="identificador"><span>Identificador</span><input id="identificador" name="identificador" autoComplete="username" autoCapitalize="none" spellCheck={false} minLength={3} maxLength={120} required placeholder="Correo o identificador"/></label><CampoContrasena/><BotonEnviar className="boton boton-primario boton-completo" pendiente="Ingresando…">Ingresar al sistema <Icono nombre="flecha" tamano={16}/></BotonEnviar></form>
     <div className="acceso-seguridad"><Icono nombre="escudo" tamano={18}/><div><strong>Acceso restringido</strong><p>Las operaciones quedan asociadas al usuario autenticado.</p></div></div>
    </div>
-   <p className="acceso-panel-pie">ZAV · Sistema de gestión · 2026</p>
+   <p className="acceso-panel-pie">ZAV · Sistema de gestión · 2026 · Versión web {VERSION_WEB}</p>
   </section>
  </main>;
 }
