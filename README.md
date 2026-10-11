@@ -60,6 +60,15 @@ El modelo principal se limita a ocho entidades de negocio:
 
 Las versiones efectivas de dependencias se encuentran en los archivos `package.json` y `pnpm-lock.yaml`.
 
+## Versiones estables de las aplicaciones
+
+- **ZAV Web 1.0.0:** primera versión estable del sitio público, acceso y sistema administrativo. El valor se define en `apps/web/package.json` y aparece en las tres interfaces sin repetirse en el código.
+- **ZAV Vendedor 1.0.0:** primera versión estable de la aplicación Android, identificada también por `android.versionCode: 10000` en `apps/mobile/app.json`. Su número no cambia cuando solo se actualiza la web.
+- **API:** se versiona separadamente; el prefijo `/api/v1` corresponde al contrato HTTP, no al número de versión de la web.
+- El paquete privado raíz del monorepositorio no representa una versión distribuida al usuario.
+
+La política SemVer, el procedimiento de publicación y el historial funcional están en [Versionado de las aplicaciones](docs/gestion/versionado-aplicaciones.md) y [Historial de versiones](docs/gestion/historial-versiones.md). Cada nueva versión requiere pruebas, registro de cambios y verificación del despliegue.
+
 ## Entornos y URLs de revisión
 
 - Web estable: https://zav-sistema.vercel.app
