@@ -69,11 +69,26 @@ Las versiones efectivas de dependencias se encuentran en los archivos `package.j
 
 La política SemVer, el procedimiento de publicación y el historial funcional están en [Versionado de las aplicaciones](docs/gestion/versionado-aplicaciones.md) y [Historial de versiones](docs/gestion/historial-versiones.md). Cada nueva versión requiere pruebas, registro de cambios y verificación del despliegue.
 
+## Versionamiento de los componentes
+
+La primera línea estable identifica por separado tres componentes:
+
+| Componente | Versión | Origen |
+|---|---|---|
+| ZAV Web | **1.0.0** | `apps/web/package.json` |
+| ZAV Vendedor (Android) | **1.0.0**, compilación **10000** | `apps/mobile/package.json` y `apps/mobile/app.json` |
+| ZAV API (NestJS) | **1.0.0** | `apps/api/package.json` |
+
+La API expone `GET /api/v1/version`, que devuelve el nombre del servicio, la versión de publicación y el identificador del contrato `v1`. La versión `1.0.0` del backend y el prefijo de contrato `/api/v1` no se sustituyen entre sí.
+
+Las versiones evolucionan de forma independiente, utilizando numeración `MAYOR.MENOR.PARCHE`. Se documentan la convención y las publicaciones en [versionado de aplicaciones](docs/gestion/versionado-aplicaciones.md) e [historial de versiones](docs/gestion/historial-versiones.md).
+
 ## Entornos y URLs de revisión
 
 - Web estable: https://zav-sistema.vercel.app
 - API estable: https://zav-api-2026.onrender.com
 - Salud: https://zav-api-2026.onrender.com/api/v1/salud
+- Versión pública de la API: https://zav-api-2026.onrender.com/api/v1/version
 - Repositorio: https://github.com/RubenMealla/zav-sistema
 - Base Neon verificada directamente: `neondb`, rama `production`; el esquema y las migraciones están consultados. La conexión exacta configurada en Render debe comprobarse en las variables del servicio, sin divulgar secretos.
 
@@ -150,6 +165,7 @@ El contrato completo y versionado se encuentra en `docs/api/openapi-e3.yaml`. Re
 | Método | Ruta | Rol |
 |---|---|---|
 | GET | `/api/v1/salud` | Público |
+| GET | `/api/v1/version` | Público |
 | POST | `/api/v1/auth/login` | Público |
 | GET | `/api/v1/auth/me` | Autenticado |
 | GET | `/api/v1/productos` | Administrador / Vendedor |
