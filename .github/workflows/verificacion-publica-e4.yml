@@ -1,0 +1,88 @@
+name: Verificación pública E4
+
+on:
+  workflow_dispatch:
+  schedule:
+    # GitHub Actions: periodicidad aproximada; no garantiza ejecución exacta.
+    - cron: "17 * * * *"
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: monitoreo-publico-e4
+  cancel-in-progress: false
+
+jobs:
+  disponibilidad:
+    name: API y web disponibles
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    env:
+      API_SALUD: https://zav-api-2026.onrender.com/api/v1/salud
+      WEB_URL: https://zav-sistema.vercel.app/acceso
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Consultar la API, PostgreSQL y la web pública
+        id: verificar
+        shell: bash
+        run: |
+          set -euo pipefail
+          for intento in 1 2 3; do
+            if curl --fail-with-body --silent --show-error --max-time 50 "$API_SALUD" > "$RUNNER_TEMP/salud.json" &&
+              python3 -c "import json,sys; assert json.load(open(sys.argv[1],encoding='utf-8')).get('estado') == 'ok'" "$RUNNER_TEMP/salud.json" &&
+              curl --fail-with-body --silent --show-error --max-time 50 --output /dev/null "$WEB_URL"; then
+              echo "Disponibilidad: API + consulta SQL + web accesibles."
+              exit 0
+            fi
+            echo "Intento $intento sin respuesta satisfactoria."
+            sleep 20
+          done
+          exit 1
+
+      - name: Registrar resultado en el resumen
+        if: always()
+        shell: bash
+        env:
+          ESTADO: ${{ steps.verificar.outcome }}
+        run: |
+          echo "## Disponibilidad pública E4" >> "$GITHUB_STEP_SUMMARY"
+          echo "Fecha UTC: $(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_STEP_SUMMARY"
+          echo "Resultado: $ESTADO" >> "$GITHUB_STEP_SUMMARY"
+          echo "API: $API_SALUD" >> "$GITHUB_STEP_SUMMARY"
+          echo "Web: $WEB_URL" >> "$GITHUB_STEP_SUMMARY"
+          echo "La ruta de salud debe consultar PostgreSQL (SELECT 1)." >> "$GITHUB_STEP_SUMMARY"
+          echo "Comprobación aproximada horaria: no constituye SLA ni porcentaje continuo certificado." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Abrir una incidencia cuando falle la disponibilidad
+        if: failure()
+        continue-on-error: true
+        shell: bash
+        env:
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          titulo="Alerta de disponibilidad E4: API o web"
+          numero="$(gh issue list -R "$GH_REPO" --state open --search "$titulo in:title" --json number,title -q '.[] | select(.title == "Alerta de disponibilidad E4: API o web") | .number' | head -n1)"
+          if [ -z "$numero" ]; then
+            gh issue create -R "$GH_REPO" --title "$titulo" --body "La comprobación pública no superó los reintentos. Revisar Render, Neon y Vercel. Ejecución: $RUN_URL"
+          else
+            gh issue comment "$numero" -R "$GH_REPO" --body "Nueva comprobación no satisfactoria: $RUN_URL"
+          fi
+
+      - name: Registrar recuperación y cerrar alerta abierta
+        if: success()
+        continue-on-error: true
+        shell: bash
+        env:
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          numero="$(gh issue list -R "$GH_REPO" --state open --search "Alerta de disponibilidad E4: API o web in:title" --json number,title -q '.[] | select(.title == "Alerta de disponibilidad E4: API o web") | .number' | head -n1)"
+          if [ -n "$numero" ]; then
+            gh issue comment "$numero" -R "$GH_REPO" --body "Comprobación pública recuperada: $RUN_URL"
+            gh issue close "$numero" -R "$GH_REPO"
+          fi
