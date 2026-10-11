@@ -2,6 +2,9 @@ name: Verificación pública E4
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - documentacion/e4-salud-monitoreo-rendimiento-20261010
   schedule:
     # GitHub Actions: periodicidad aproximada; no garantiza ejecución exacta.
     - cron: "17 * * * *"
