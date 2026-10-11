@@ -2,6 +2,9 @@ name: Medición de rendimiento E4
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - documentacion/e4-salud-monitoreo-rendimiento-20261010
 
 permissions:
   contents: read
