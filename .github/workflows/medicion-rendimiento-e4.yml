@@ -1,0 +1,68 @@
+name: Medición de rendimiento E4
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  medicion:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      API_SALUD: https://zav-api-2026.onrender.com/api/v1/salud
+    steps:
+      - name: Medir 20 solicitudes secuenciales sin carga invasiva
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p evidencia-rendimiento
+          python3 - <<'PY'
+          import csv, datetime, json, os, statistics, subprocess, time
+          destino = os.environ["API_SALUD"]
+          muestras = []
+          for i in range(20):
+              resultado = subprocess.run(
+                  ["curl","-sS","-o","/dev/null","-w","%{http_code},%{time_total}",
+                   "--max-time","60",destino],capture_output=True,text=True)
+              if resultado.returncode:
+                  raise SystemExit(f"Solicitud {i+1} falló: curl={resultado.returncode}")
+              codigo, tiempo = resultado.stdout.strip().split(",")
+              if codigo != "200":
+                  raise SystemExit(f"Solicitud {i+1} devolvió HTTP {codigo}")
+              muestras.append(float(tiempo))
+              time.sleep(1)
+          datos = sorted(muestras)
+          resumen = {
+              "fecha_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+              "url": destino, "metodo":"GET", "solicitudes_secuenciales":len(muestras),
+              "concurrencia":1, "unidad":"segundos", "minimo":min(datos),
+              "mediana":statistics.median(datos), "p95":datos[18],
+              "maximo":max(datos), "promedio":statistics.mean(datos),
+              "observacion":"Incluye latencia de red y posible reactivación de instancia gratuita; no es prueba de carga ni disponibilidad continua."
+          }
+          with open("evidencia-rendimiento/resumen.json","w",encoding="utf-8") as f:
+              json.dump(resumen,f,indent=2,ensure_ascii=False)
+          with open("evidencia-rendimiento/muestras.csv","w",newline="",encoding="utf-8") as f:
+              writer=csv.writer(f)
+              writer.writerow(["numero","tiempo_segundos"])
+              writer.writerows(enumerate(muestras,1))
+          print(json.dumps(resumen,ensure_ascii=False,indent=2))
+          PY
+
+      - name: Publicar resumen verificable
+        if: success()
+        shell: bash
+        run: |
+          echo "## Medición puntual de respuesta HTTP" >> "$GITHUB_STEP_SUMMARY"
+          cat evidencia-rendimiento/resumen.json >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Veinte solicitudes secuenciales; sin usuarios de prueba ni datos comerciales." >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: rendimiento-e4
+          path: evidencia-rendimiento/
+          retention-days: 30
