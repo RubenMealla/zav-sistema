@@ -23,6 +23,13 @@ describe('AppController (e2e)', () => {
       .expect('Hello World!');
   });
 
+  it('/api/v1/version (GET)', () => {
+    return request(app.getHttpServer())
+      .get('/api/v1/version')
+      .expect(200)
+      .expect({ servicio: 'ZAV API', version: '1.0.0', contrato: 'v1' });
+  });
+
   it('/api/v1/salud (GET)', () => {
     return request(app.getHttpServer())
       .get('/api/v1/salud')
