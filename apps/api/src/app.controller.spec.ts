@@ -24,6 +24,17 @@ describe('AppController', () => {
     });
   });
 
+  describe('version', () => {
+    it('expone la versión estable independiente del contrato y sin consultar la base', () => {
+      expect(appController.version()).toEqual({
+        servicio: 'ZAV API',
+        version: '1.0.0',
+        contrato: 'v1',
+      });
+      expect(query).not.toHaveBeenCalled();
+    });
+  });
+
   describe('salud', () => {
     it('confirma PostgreSQL antes de responder ok', async () => {
       query.mockResolvedValue([{ '?column?': 1 }]);
