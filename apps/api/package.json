@@ -1,6 +1,6 @@
 {
   "name": "@zav/api",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "API backend del sistema ZAV - Trabajo Final de Diplomado UAJMS 2026",
   "private": true,
   "license": "UNLICENSED",

@@ -1,11 +1,11 @@
 openapi: 3.0.3
 info:
-  title: ZAV API E3
+  title: ZAV API
   version: 1.0.0
   description: >
-    Contrato de la API REST utilizada por el checkpoint E3 de ZAV.
-    El documento refleja las rutas implementadas; los conflictos de negocio
-    se representan actualmente con HTTP 409 y no con 422.
+    Contrato de las rutas públicas de ZAV API 1.0.0, identificado mediante
+    el prefijo /api/v1. La versión del servicio y la versión mayor del
+    contrato evolucionan de forma independiente.
 servers:
   - url: https://zav-api-2026.onrender.com
     description: API pública estable de demostración
@@ -37,7 +37,26 @@ paths:
                 required: [estado]
                 properties:
                   estado: { type: string, example: ok }
-        '500': { $ref: '#/components/responses/Error500' }
+        '503': { $ref: '#/components/responses/Error503' }
+
+  /api/v1/version:
+    get:
+      tags: [Salud]
+      security: []
+      summary: Consultar versión publicada del servidor
+      description: La versión del servicio se diferencia del prefijo mayor del contrato HTTP.
+      responses:
+        '200':
+          description: Identificación pública del backend, sin datos sensibles
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [servicio, version, contrato]
+                properties:
+                  servicio: { type: string, example: 'ZAV API' }
+                  version: { type: string, example: '1.0.0' }
+                  contrato: { type: string, example: 'v1' }
 
   /api/v1/auth/login:
     post:

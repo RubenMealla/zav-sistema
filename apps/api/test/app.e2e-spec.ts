@@ -3,6 +3,7 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from './../src/app.module.js';
+import { VERSION_API } from './../src/version.js';
 
 describe('AppController (e2e)', () => {
   let app: INestApplication<App>;
@@ -21,6 +22,13 @@ describe('AppController (e2e)', () => {
       .get('/')
       .expect(200)
       .expect('Hello World!');
+  });
+
+  it('/api/v1/version (GET)', () => {
+    return request(app.getHttpServer())
+      .get('/api/v1/version')
+      .expect(200)
+      .expect({ servicio: 'ZAV API', version: VERSION_API, contrato: 'v1' });
   });
 
   it('/api/v1/salud (GET)', () => {
