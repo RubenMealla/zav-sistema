@@ -7,6 +7,7 @@ import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { ApiHttpExceptionFilter } from './common/api-http-exception.filter.js';
 import { CorsMiddleware } from './common/cors.middleware.js';
+import { RegistroHttpMiddleware } from './common/registro-http.middleware.js';
 import { UsuarioEntity } from './database/entities/usuario.entity.js';
 import { ProductoEntity } from './database/entities/producto.entity.js';
 import { LoteEntity } from './database/entities/lote.entity.js';
@@ -58,6 +59,6 @@ import { PedidosModule } from './pedidos/pedidos.module.js';
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(CorsMiddleware).forRoutes('{*splat}');
+    consumer.apply(RegistroHttpMiddleware, CorsMiddleware).forRoutes('{*splat}');
   }
 }

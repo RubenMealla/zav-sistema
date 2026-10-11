@@ -37,7 +37,7 @@ Las aplicaciones **web y móvil mantienen ciclos independientes**: una modificac
 1. Modificar coordinadamente `apps/mobile/package.json` y `apps/mobile/app.json` (`expo.version`).
 2. Para un nuevo APK distribuible, aumentar `android.versionCode` de forma **estrictamente creciente**, incluso cuando se recompila una versión con el mismo identificador funcional. Para iOS, aumentar el `buildNumber` según las reglas de publicación.
 3. Generar y verificar el nuevo APK y registrar la ejecución real de compilación. No afirmar que un APK se instaló en un dispositivo sin comprobación.
-4. Conservar historial, informes y artefactos. Un archivo temporal de GitHub Actions no equivale a un canal de descarga permanente.
+4. Conservar historial, informes y artefactos. El archivo temporal de GitHub Actions fue conservado posteriormente como publicación estable en GitHub Releases, con su huella SHA-256 comprobada. Una nueva versión o compilación debe registrarse de forma independiente.
 
 ## Publicación de una actualización de la API
 

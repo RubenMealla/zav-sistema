@@ -1,0 +1,130 @@
+name: QA recuperación y rendimiento de pedidos
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - pruebas/cierre-operativo-recuperacion-pedidos
+      - main
+    paths:
+      - apps/api/scripts/qa-medir-pedidos.mjs
+      - .github/workflows/qa-recuperacion-rendimiento.yml
+
+permissions:
+  contents: read
+
+jobs:
+  verificar:
+    name: Ensayo de pedidos y restauración aislada
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: zav_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d zav_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/zav_test
+      JWT_SECRET: zav-qa-jwt-secret-solo-pruebas-2026-0123456789abcdef
+      QA_ADMIN_IDENTIFICADOR: admin@zav.test
+      QA_ADMIN_PASSWORD: Admin-QA-2026-Pruebas!
+      QA_VENDEDOR_IDENTIFICADOR: vendedor@zav.test
+      QA_VENDEDOR_PASSWORD: Vendedor-QA-2026-Pruebas!
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.4.2
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+      - name: Preparar esquema y cuentas sintéticas en la base aislada
+        run: NODE_ENV=test node -e "import('./apps/api/test/global-setup-e2e.mjs').then(m => m.default())"
+      - name: Compilar servidor
+        run: pnpm --filter @zav/api build
+      - name: Levantar NestJS contra PostgreSQL de QA
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm --filter @zav/api start:prod > "$RUNNER_TEMP/servidor-qa.log" 2>&1 &
+          for intento in $(seq 1 50); do
+            if curl -fsS --max-time 3 http://127.0.0.1:3001/api/v1/salud > /dev/null; then
+              echo "API de QA disponible."
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "El servidor de QA no arrancó correctamente."
+          tail -n 50 "$RUNNER_TEMP/servidor-qa.log"
+          exit 1
+      - name: Medir 100 pedidos sintéticos a través de la API autenticada
+        run: node apps/api/scripts/qa-medir-pedidos.mjs
+      - name: Generar copia en formato PostgreSQL de la base QA
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm --network host -e PGPASSWORD=postgres -v "$PWD/evidencia-cierre:/evidencia" postgres:18 pg_dump -Fc -h 127.0.0.1 -U postgres -d zav_test -f /evidencia/qa.dump
+          sha256sum evidencia-cierre/qa.dump | cut -d ' ' -f 1 > evidencia-cierre/respaldo-sha256.txt
+      - name: Restaurar en una segunda base independiente y comparar resultados
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm --network host -e PGPASSWORD=postgres postgres:18 createdb -h 127.0.0.1 -U postgres zav_restaurada_qa
+          docker run --rm --network host -e PGPASSWORD=postgres -v "$PWD/evidencia-cierre:/evidencia" postgres:18 pg_restore --no-owner -h 127.0.0.1 -U postgres -d zav_restaurada_qa /evidencia/qa.dump
+          consulta="SELECT (SELECT count(*) FROM pedido)::text || '|' || (SELECT count(*) FROM detalle_pedido)::text || '|' || (SELECT count(*) FROM typeorm_migraciones)::text"
+          origen="$(docker run --rm --network host -e PGPASSWORD=postgres postgres:18 psql -h 127.0.0.1 -U postgres -d zav_test -Atqc "$consulta")"
+          recuperado="$(docker run --rm --network host -e PGPASSWORD=postgres postgres:18 psql -h 127.0.0.1 -U postgres -d zav_restaurada_qa -Atqc "$consulta")"
+          echo "Origen: $origen; restaurado: $recuperado"
+          test "$origen" = "100|100|7"
+          test "$recuperado" = "$origen"
+          python3 - <<'PY'
+          import datetime,json
+          resultado={"fecha_utc":datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "metodo":"pg_dump -Fc / pg_restore",
+            "base_origen":"zav_test (datos sintéticos)",
+            "base_restaurada":"zav_restaurada_qa",
+            "pedidos_origen":100,"pedidos_restaurados":100,
+            "detalles_origen":100,"detalles_restaurados":100,
+            "migraciones_origen":7,"migraciones_restauradas":7,
+            "resultado":"comprobación satisfactoria",
+            "limitacion":"No utiliza ni restaura datos de producción. La recuperación mediante rama Neon se verifica por separado."}
+          with open("evidencia-cierre/restauracion-qa.json","w",encoding="utf-8") as f:
+            json.dump(resultado,f,indent=2,ensure_ascii=False)
+          print(json.dumps(resultado,ensure_ascii=False))
+          PY
+          rm evidencia-cierre/qa.dump
+      - name: Resumen del ensayo
+        if: always()
+        shell: bash
+        run: |
+          echo "## Comprobación operativa controlada" >> "$GITHUB_STEP_SUMMARY"
+          echo "Las pruebas emplean exclusivamente PostgreSQL aislado y datos sintéticos." >> "$GITHUB_STEP_SUMMARY"
+          for archivo in evidencia-cierre/*.json; do
+            if [ -f "$archivo" ]; then
+              echo "### $archivo" >> "$GITHUB_STEP_SUMMARY"
+              echo '~~~json' >> "$GITHUB_STEP_SUMMARY"
+              cat "$archivo" >> "$GITHUB_STEP_SUMMARY"
+              echo '~~~' >> "$GITHUB_STEP_SUMMARY"
+            fi
+          done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: verificacion-cierre-operativo-qa
+          path: evidencia-cierre/
+          if-no-files-found: warn
+          retention-days: 30

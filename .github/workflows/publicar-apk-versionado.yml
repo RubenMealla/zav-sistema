@@ -1,0 +1,67 @@
+name: Publicación verificable ZAV Vendedor 1.0.0
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - pruebas/cierre-operativo-recuperacion-pedidos
+    paths:
+      - .github/workflows/publicar-apk-versionado.yml
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  publicar:
+    name: Conservar APK firmado como versión descargable
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      ORIGEN_EJECUCION: "38027357295"
+      NOMBRE_ARTEFACTO: ZAV-Vendedor-1.0.0-build10000-release-run-322
+      ETIQUETA: zav-vendedor-v1.0.0
+      ORIGEN_CODIGO: d9dd562e14b09768d248717158f7267bda6dc290
+    steps:
+      - uses: actions/checkout@v4
+      - name: Comprobar que no exista una publicación homónima
+        shell: bash
+        run: |
+          set -euo pipefail
+          if gh release view "$ETIQUETA" -R "$REPO" >/dev/null 2>&1; then
+            echo "::error::Ya existe la publicación; no se sobrescribe."
+            exit 1
+          fi
+      - name: Recuperar el APK firmado y su huella verificable
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p evidencia-apk
+          gh run download "$ORIGEN_EJECUCION" -R "$REPO" -n "$NOMBRE_ARTEFACTO" -D evidencia-apk
+          apk="$(find evidencia-apk -type f -name 'ZAV-Vendedor-1.0.0-build10000-release.apk' | head -n1)"
+          checksum="$(find evidencia-apk -type f -name 'ZAV-Vendedor-1.0.0-build10000-release.apk.sha256' | head -n1)"
+          test -n "$apk" && test -n "$checksum"
+          esperado="$(awk 'NR==1{print $1}' "$checksum")"
+          real="$(sha256sum "$apk" | awk '{print $1}')"
+          test "$esperado" = "$real"
+          echo "APK firmado del trabajo original: SHA-256 verificado."
+          echo "APK_FILE=$apk" >> "$GITHUB_ENV"
+          echo "APK_HASH=$checksum" >> "$GITHUB_ENV"
+      - name: Publicar binario original como versión estable
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > "$RUNNER_TEMP/notas-release.md" <<'NOTAS'
+          Instalador firmado de ZAV Vendedor 1.0.0 (código Android 10000).
+          Este instalador es el archivo original producido y comprobado en la ejecución de QA móvil; no constituye una nueva compilación ni modifica el software.
+          El código del APK se corresponde con la revisión d9dd562e14b09768d248717158f7267bda6dc290.
+          Se adjunta su suma SHA-256 para comprobar integridad. Android requiere instalación a partir de una fuente autorizada.
+          El enlace de esta publicación es estable respecto de los archivos temporales de GitHub Actions.
+          NOTAS
+          gh release create "$ETIQUETA" "$APK_FILE" "$APK_HASH"             -R "$REPO" --target "$ORIGEN_CODIGO"             --title "ZAV Vendedor 1.0.0 — Android build 10000"             --notes-file "$RUNNER_TEMP/notas-release.md"
+      - name: Registrar dirección de publicación
+        shell: bash
+        run: |
+          gh release view "$ETIQUETA" -R "$REPO" --json url,assets             --jq '.url, (.assets[] | .name)' >> "$GITHUB_STEP_SUMMARY"
