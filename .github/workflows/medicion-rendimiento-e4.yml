@@ -1,0 +1,97 @@
+name: Medición de rendimiento E4
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - documentacion/e4-salud-monitoreo-rendimiento-20261010
+    paths:
+      - ".github/workflows/medicion-rendimiento-e4.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  medicion:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      API_SALUD: https://zav-api-2026.onrender.com/api/v1/salud
+    steps:
+      - name: Medir reactivación y 20 solicitudes secuenciales
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p evidencia-rendimiento
+          python3 - <<'PY'
+          import csv, datetime, json, os, statistics, subprocess, time
+          destino = os.environ["API_SALUD"]
+          def consultar(limite=120):
+              resultado = subprocess.run(
+                  ["curl","--silent","--show-error","--output","/dev/null",
+                   "--write-out","%{http_code},%{time_total}",
+                   "--max-time",str(limite),destino],capture_output=True,text=True)
+              if resultado.returncode:
+                  return {"codigo":None,"tiempo":None,"error":f"curl={resultado.returncode}"}
+              codigo, tiempo = resultado.stdout.strip().split(",")
+              return {"codigo":int(codigo),"tiempo":float(tiempo),"error":None}
+          inicio = datetime.datetime.now(datetime.timezone.utc).isoformat()
+          calentamiento=[]
+          for i in range(3):
+              observacion=consultar()
+              calentamiento.append(observacion)
+              if observacion["codigo"] == 200:
+                  break
+              time.sleep(10)
+          if calentamiento[-1]["codigo"] != 200:
+              with open("evidencia-rendimiento/reactivacion.json","w",encoding="utf-8") as f:
+                  json.dump({"fecha_utc":inicio,"intentos":calentamiento},f,indent=2)
+              raise SystemExit("La API no devolvió HTTP 200 tras los intentos de reactivación")
+          resultados=[]
+          for i in range(20):
+              observacion=consultar(limite=60)
+              resultados.append(observacion)
+              if observacion["codigo"] != 200:
+                  break
+              time.sleep(1)
+          muestras=[x["tiempo"] for x in resultados if x["codigo"]==200]
+          resumen = {
+              "fecha_utc":inicio, "url":destino, "metodo":"GET",
+              "calentamiento":calentamiento, "solicitudes_previstas":20,
+              "solicitudes_correctas":len(muestras), "concurrencia":1,
+              "unidad":"segundos",
+              "minimo":min(muestras) if muestras else None,
+              "mediana":statistics.median(muestras) if muestras else None,
+              "p95":sorted(muestras)[int((len(muestras)-1)*0.95)] if muestras else None,
+              "maximo":max(muestras) if muestras else None,
+              "promedio":statistics.mean(muestras) if muestras else None,
+              "limitaciones":"Mide la ruta de salud desde GitHub; no mide el listado de pedidos ni verifica una carga de 100 registros. Se separa la reactivación de la fase estable."
+          }
+          with open("evidencia-rendimiento/resumen.json","w",encoding="utf-8") as f:
+              json.dump(resumen,f,indent=2,ensure_ascii=False)
+          with open("evidencia-rendimiento/muestras.csv","w",newline="",encoding="utf-8") as f:
+              writer=csv.writer(f)
+              writer.writerow(["numero","http","tiempo_segundos","error"])
+              writer.writerows((i+1,x["codigo"],x["tiempo"],x["error"]) for i,x in enumerate(resultados))
+          print(json.dumps(resumen,ensure_ascii=False,indent=2))
+          if len(muestras)!=20:
+              raise SystemExit("La medición no obtuvo las veinte muestras previstas")
+          PY
+
+      - name: Publicar resumen verificable
+        if: success()
+        shell: bash
+        run: |
+          echo "## Medición puntual de respuesta HTTP" >> "$GITHUB_STEP_SUMMARY"
+          cat evidencia-rendimiento/resumen.json >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "La fase inicial se mide por separado; no constituye un SLA." >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rendimiento-e4
+          path: evidencia-rendimiento/
+          if-no-files-found: warn
+          retention-days: 30
