@@ -18,6 +18,12 @@ Se identifica como versión estable la aplicación administrativa y su sitio pú
 
 La aplicación móvil conserva el primer número de versión estable registrado, con funciones de gestión de clientes y pedidos, retiro de productos, organización del reparto y entrega con ubicación puntual. Sus verificaciones y compilación de APK figuran en los workflows y documentos de pruebas. No se modifica su número de versión por cambios exclusivos de ZAV Web.
 
+## ZAV API 1.0.0 — primera versión estable del backend
+
+Se identifica de manera independiente el servidor NestJS utilizado por ZAV Web y ZAV Vendedor. Su versión se define en `apps/api/package.json` y se consulta mediante `GET /api/v1/version`.
+
+La respuesta presenta el servicio, la versión de publicación (`1.0.0`) y la versión mayor del contrato (`v1`), sin divulgar datos sensibles. Esta identificación no modifica las operaciones de autenticación, inventario ni pedidos; la ruta de salud continúa verificando la conexión con PostgreSQL. Se mantienen las pruebas de API y de integración para asegurar compatibilidad con ambos clientes.
+
 ## Mantenimiento futuro
 
 Registrar solo cambios realmente implementados, revisados y publicados. El historial Git permite identificar la evolución, pero el identificador de commit no reemplaza al número de versión de la aplicación.
