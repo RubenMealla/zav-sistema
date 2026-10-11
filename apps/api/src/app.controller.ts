@@ -1,9 +1,13 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, ServiceUnavailableException } from '@nestjs/common';
+import { DataSource } from 'typeorm';
 import { AppService } from './app.service.js';
 
 @Controller()
 export class AppController {
-  constructor(private readonly appService: AppService) {}
+  constructor(
+    private readonly appService: AppService,
+    private readonly dataSource: DataSource,
+  ) {}
 
   @Get()
   getHello(): string {
@@ -11,7 +15,13 @@ export class AppController {
   }
 
   @Get('api/v1/salud')
-  salud() {
-    return { estado: 'ok' };
+  async salud() {
+    try {
+      await this.dataSource.query('SELECT 1');
+      return { estado: 'ok' };
+    } catch {
+      // No divulgar detalles de la conexión ni de PostgreSQL en una ruta pública.
+      throw new ServiceUnavailableException('Servicio no disponible.');
+    }
   }
 }
