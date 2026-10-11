@@ -3,6 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { DataSource } from 'typeorm';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
+import { VERSION_API } from './version.js';
 
 describe('AppController', () => {
   let appController: AppController;
@@ -28,9 +29,10 @@ describe('AppController', () => {
     it('expone la versión estable independiente del contrato y sin consultar la base', () => {
       expect(appController.version()).toEqual({
         servicio: 'ZAV API',
-        version: '1.0.0',
+        version: VERSION_API,
         contrato: 'v1',
       });
+      expect(VERSION_API).toMatch(/^\d+\.\d+\.\d+$/);
       expect(query).not.toHaveBeenCalled();
     });
   });
