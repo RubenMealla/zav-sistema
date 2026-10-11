@@ -82,3 +82,34 @@ La ejecución inicial observada fue originada por una publicación en GitHub, no
 ## 7. Seguridad y límites
 
 No insertar secretos, claves API, contraseñas de demostración, identificadores de clientes ni cadenas completas de conexión. Estas verificaciones se efectuaron con operaciones de solo lectura; las pruebas de desarrollo emplean entornos aislados. La rama de recuperación se conserva como evidencia y debe revisarse conforme a las políticas de retención y costes del proveedor.
+
+## 8. Ensayo reproducible de la consulta HTTP de pedidos y restauración
+
+Se creó un ensayo de integración separado de la base empresarial mediante el proceso de GitHub Actions `.github/workflows/qa-recuperacion-rendimiento.yml`. La preparación exige `NODE_ENV=test` y una conexión local a la base `zav_test`, lo que impide ejecutar el procedimiento sobre Neon.
+
+La prueba construyó un entorno PostgreSQL 18 aislado con sus siete migraciones, cuentas sintéticas y cien pedidos ficticios con cien detalles. Sobre el backend NestJS, y después de iniciar una sesión sintética de Administrador, se enviaron **25 solicitudes HTTP GET** a `/api/v1/admin/pedidos?limit=100&page=1`. Todas devolvieron HTTP 200, 100 filas y un total de 100 pedidos.
+
+| Indicador | Resultado |
+|---|---:|
+| Solicitudes satisfactorias | 25 de 25 |
+| Mediana | 3,860 ms |
+| Percentil 95 | 10,521 ms |
+| Promedio | 5,573 ms |
+| Máximo | 15,554 ms |
+| Concurrencia | 1 solicitud a la vez |
+
+Son tiempos observados desde el ejecutor CI contra la API y PostgreSQL locales, **no tiempos del sistema publicado en Render o Vercel**. No se atribuye una meta de dos segundos al RNF-01 porque su redacción no la establece. La prueba ilustra que la consulta paginada admite cien registros en el entorno utilizado.
+
+El mismo ensayo generó una copia `pg_dump -Fc` de la base ficticia y la restauró en otra base independiente mediante `pg_restore`; la comprobación posterior devolvió **100 pedidos, 100 detalles y siete migraciones** en ambas bases. Esto verifica un procedimiento de respaldo y restauración con datos de ensayo, pero **no una restauración desde un respaldo de la base productiva de Neon**, que debe prepararse con controles de acceso y una política de conservación específica.
+
+Ejecución y evidencias JSON reproducibles: https://github.com/RubenMealla/zav-sistema/actions/runs/38106873250.
+
+## 9. Instalador Android con descarga persistente
+
+El APK ya firmado y validado, correspondiente a ZAV Vendedor 1.0.0 (compilación Android 10000), se conservó **sin recompilarlo** en una publicación de GitHub y se verificó su suma SHA-256. La etiqueta de versión conserva como referencia el código utilizado para generar ese instalable.
+
+- Publicación: https://github.com/RubenMealla/zav-sistema/releases/tag/zav-vendedor-v1.0.0
+- APK: https://github.com/RubenMealla/zav-sistema/releases/download/zav-vendedor-v1.0.0/ZAV-Vendedor-1.0.0-build10000-release.apk
+- Huella SHA-256: https://github.com/RubenMealla/zav-sistema/releases/download/zav-vendedor-v1.0.0/ZAV-Vendedor-1.0.0-build10000-release.apk.sha256
+
+La publicación elimina la dependencia de la caducidad de los archivos temporales de las pruebas automatizadas. No equivale a una nueva prueba física de instalación ni a una nueva compilación del cliente móvil.
