@@ -4,6 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
+      - main
       - documentacion/e4-salud-monitoreo-rendimiento-20261010
     paths:
       - ".github/workflows/medicion-rendimiento-e4.yml"
