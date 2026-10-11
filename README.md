@@ -8,7 +8,7 @@ La solución se organiza como un monorepo con una API REST central y dos cliente
 
 - **Administrador — aplicación web:** autenticación, productos, lotes, condición comercial, inventario administrativo, auditoría de pedidos y configuración de Venta y Despacho.
 - **Vendedor — aplicación móvil:** clientes, pedidos, retiro, organización de reparto y entrega con ubicación GPS puntual.
-- **Acceso público:** únicamente las funciones que se habiliten expresamente sin autenticación. El catálogo/noticias/promociones no forman parte de los Must de E3.
+- **Acceso público:** únicamente las funciones que se habiliten expresamente sin autenticación. El catálogo dinámico para clientes no forma parte de las funciones internas prioritarias implementadas.
 
 No se incluyen materias primas, recetas, proveedores, compras, costos de producción, facturación fiscal, seguimiento GPS continuo ni optimización automática de rutas.
 
@@ -23,7 +23,7 @@ Next.js / React (Administrador)
              |
              | PostgreSQL
              v
-      Neon development
+      Neon PostgreSQL (rama de datos `production`)
 
 React Native / Expo (Vendedor)
              |
@@ -36,7 +36,7 @@ La aplicación móvil utiliza MapLibre React Native con OpenFreeMap y `expo-loca
 
 ## Modelo de inventario
 
-El modelo principal de E3 se limita a ocho entidades de negocio:
+El modelo principal se limita a ocho entidades de negocio:
 
 `Usuario, Cliente, Producto, Lote, Ubicacion, Movimiento, Pedido, DetallePedido`.
 
@@ -66,8 +66,7 @@ Las versiones efectivas de dependencias se encuentran en los archivos `package.j
 - API estable: https://zav-api-2026.onrender.com
 - Salud: https://zav-api-2026.onrender.com/api/v1/salud
 - Repositorio: https://github.com/RubenMealla/zav-sistema
-- Base de datos utilizada durante E3: rama Neon `development`
-- Rama Neon `production`: reservada para el cierre productivo posterior
+- Base Neon verificada directamente: `neondb`, rama `production`; el esquema y las migraciones están consultados. La conexión exacta configurada en Render debe comprobarse en las variables del servicio, sin divulgar secretos.
 
 **Vercel Production** sigue la rama Git `main`.  
 **Render `zav-api-2026`** sigue la rama Git `main`.  
@@ -135,7 +134,7 @@ Nunca se versionan archivos `.env`, cadenas de conexión reales, tokens, contras
 - La baja de Producto es lógica y preserva trazabilidad histórica.
 - Los smoke tests públicos no almacenan credenciales válidas en el repositorio.
 
-## API E3
+## API REST
 
 El contrato completo y versionado se encuentra en `docs/api/openapi-e3.yaml`. Resumen de rutas principales:
 
@@ -193,7 +192,7 @@ pnpm --filter @zav/mobile exec tsc --noEmit
 
 GitHub Actions ejecuta QA con PostgreSQL aislado. Los reportes, logs y capturas se conservan como evidencia. Los errores y ejecuciones fallidas reales también se conservan; una ejecución satisfactoria posterior no borra el historial de incidencias.
 
-La documentación de QA de E3 incluye:
+La documentación de QA y sus antecedentes incluye:
 
 - `docs/pruebas/matriz-qa-e3.md`;
 - `docs/pruebas/indice-evidencias-web-api.md`;
@@ -204,6 +203,19 @@ La documentación de QA de E3 incluye:
 - cobertura E2E del 500 y rollback transaccional;
 - validación física de ZAV Vendedor 1.0.0;
 - build APK firmado y versionado.
+
+
+## Verificación operativa, rendimiento y recuperación
+
+La ruta pública `GET /api/v1/salud` ejecuta `SELECT 1` sobre PostgreSQL; responde HTTP 200 con `{"estado":"ok"}` cuando la consulta funciona y HTTP 503 ante un error de acceso a base, sin divulgar detalles de la conexión.
+
+- **Disponibilidad:** el workflow `.github/workflows/verificacion-publica-e4.yml` programa una comprobación aproximada una vez por hora de API y acceso web, con reintentos, historial de ejecución y alertas por incidencias de GitHub. El horario programado de GitHub no es un acuerdo de nivel de servicio; deben revisarse las ejecuciones efectivamente generadas. La ejecución tras la integración en `main` resultó satisfactoria: https://github.com/RubenMealla/zav-sistema/actions/runs/38098308673
+- **Respuesta HTTP de la ruta de salud:** el workflow `.github/workflows/medicion-rendimiento-e4.yml` separa reactivación y respuesta con servidor activo. Veinte solicitudes consecutivas devolvieron HTTP 200, con mediana de 0,103 s y p95 de 0,129 s. Esta medición se ejecutó antes del último despliegue de la consulta SQL y no representa el rendimiento de las operaciones de pedidos, carga de pantalla o usuarios concurrentes. Referencia: https://github.com/RubenMealla/zav-sistema/actions/runs/38098191932
+- **Consulta relacional de pedidos:** se realizó un ensayo no modificador con `EXPLAIN ANALYZE` en PostgreSQL sobre una selección de pedidos vinculados con Cliente y Usuario. Con 24 registros reales, cinco ejecuciones dieron 0,173; 0,152; 0,119; 0,116 y 0,118 ms de ejecución dentro de PostgreSQL. No son tiempos de respuesta HTTP. Véase `docs/operacion/verificacion-operativa-final.md`.
+- **Prueba de recuperación aislada:** se creó una rama Neon desde `production`, sin alterar esta última; coincidieron el esquema, las siete migraciones y los conteos de entidades examinadas. Esta ramificación no equivale a una restauración comprobada de una copia externa o a una política de respaldos periódicos.
+- **Android:** el APK instalable `ZAV Vendedor 1.0.0` se construye en un workflow independiente; el instalable de referencia se conserva en los archivos de GitHub Actions, con expiración de descarga. Verificar la disponibilidad del artefacto antes de distribuirlo al tribunal.
+
+No se almacenan credenciales de demostración ni valores reales de variables de entorno en este README.
 
 ## Kanban y trazabilidad
 
@@ -219,7 +231,7 @@ El límite WIP de la columna **En desarrollo es 1**, coherente con un desarrollo
 
 Tablero: https://trello.com/b/Tn5elZCY/zav-2026-desarrollo-del-sistema-kanban
 
-## Estado de E3
+## Estado integrado
 
 **Integrado y estable en `main`:**
 
@@ -240,7 +252,7 @@ Tablero: https://trello.com/b/Tn5elZCY/zav-2026-desarrollo-del-sistema-kanban
 
 **Interfaz web estable:** `main` contiene la landing, login, panel administrativo, tablas, filtros, confirmaciones, mensajes visibles de error, CRUD de Producto y módulo Distribución.
 
-**Capturas Android automatizadas:** Issue #43 queda separado de la aplicación estable. Los intentos fallidos del workflow se conservan como evidencia de QA y se retomarán después de ordenar la línea web.
+**Capturas Android automatizadas:** se conservan tanto los intentos fallidos históricos como las ejecuciones satisfactorias posteriores de los casos funcionales, con informes y capturas obtenidos en un entorno aislado de pruebas. No representan entregas comerciales reales.
 
 No se considera una funcionalidad implementada únicamente porque aparezca diseñada o documentada.
 
