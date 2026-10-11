@@ -4,6 +4,7 @@ import { cerrarSesion } from '../acciones';
 import { Icono } from '../componentes/icono';
 import { BotonEnviar } from '../componentes/interacciones';
 import { Marca } from '../componentes/marca';
+import { VERSION_WEB } from '../lib/version';
 
 export type Vista = 'resumen' | 'productos' | 'lotes' | 'condiciones' | 'movimientos' | 'pedidos' | 'distribucion';
 type VistaConfig = { titulo: string; descripcion: string; icono: 'inicio' | 'producto' | 'lote' | 'condicion' | 'movimiento' | 'ubicacion' };
@@ -68,7 +69,7 @@ export function MarcoPanel({ vista, perfil, children }: {
 
         <header className="topbar">
           <div className="topbar-titulo">
-            <div className="breadcrumb"><span>Panel</span><span aria-hidden="true">/</span><strong>{vistas[vista].titulo}</strong></div>
+            <div className="breadcrumb"><span>Panel</span><span aria-hidden="true">/</span><strong>{vistas[vista].titulo}</strong><span className="version-web-panel" data-testid="version-web-panel">Versión web {VERSION_WEB}</span></div>
             <h1>{vistas[vista].titulo}</h1>
             <p>{vistas[vista].descripcion}</p>
           </div>

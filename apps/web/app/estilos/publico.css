@@ -90,3 +90,6 @@
 .foto-original-destacada{padding:clamp(18px,3vw,38px)}
 .foto-original-producto{padding:16px;transition:transform .2s ease}
 .producto-publico:hover .foto-original-producto{transform:scale(1.025)}
+
+/* Evita el desbordamiento del pie cuando se muestra la versión en móvil. */
+.publico-footer-legal{flex-wrap:wrap}
