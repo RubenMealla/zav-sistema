@@ -1,6 +1,7 @@
 import { Controller, Get, ServiceUnavailableException } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { AppService } from './app.service.js';
+import { VERSION_API } from './version.js';
 
 @Controller()
 export class AppController {
@@ -12,6 +13,11 @@ export class AppController {
   @Get()
   getHello(): string {
     return this.appService.getHello();
+  }
+
+  @Get('api/v1/version')
+  version() {
+    return { servicio: 'ZAV API', version: VERSION_API, contrato: 'v1' };
   }
 
   @Get('api/v1/salud')
