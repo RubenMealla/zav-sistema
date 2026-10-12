@@ -47,3 +47,11 @@ pnpm --filter @zav/mobile exec tsc --noEmit
 ```
 
 Las pruebas E2E requieren un PostgreSQL exclusivo de QA. Los resultados se consideran verificados solamente después de comprobar la ejecución. Mantener las ramas y commits históricos, no publicar claves de `.env`, ni ejecutar pruebas destructivas sobre Neon Production.
+
+## Diagnóstico exclusivamente en la APK QA
+
+- `apps/mobile/src/components/consola-qa.tsx`: burbuja de diagnóstico, estado de API, últimas peticiones, filtro de errores.
+- `apps/mobile/src/lib/diagnostico-qa.ts`: memoria temporal de hasta 80 solicitudes, sin cuerpos, cabeceras ni tokens.
+- `apps/mobile/src/lib/api.ts`: registra método, ruta sin parámetros, estado HTTP y duración, solo al compilar QA.
+- `apps/mobile/src/app/index.tsx`: presenta la consola únicamente si `EXPO_PUBLIC_BUILD_CHANNEL=qa`.
+- `apps/mobile/app.config.js`: define paquete distinto y configuración HTTP local del APK QA; la compilación release no muestra la consola.

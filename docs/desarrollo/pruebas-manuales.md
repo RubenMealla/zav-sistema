@@ -68,3 +68,15 @@ La compilación QA admite HTTP solamente por su configuración nativa de pruebas
 - [ ] Escribir o corregir la IP, desplazar el formulario con el teclado abierto y tocar **Probar y guardar servidor**.
 - [ ] Ocultar el teclado con **Listo** y regresar al inicio de sesión sin perder la dirección.
 - [ ] Repetir con el teclado mostrando sugerencias o en una pantalla de menor altura.
+
+### Consola QA en el celular
+
+- [ ] Comprobar el botón flotante **QA** tanto en acceso como en la pantalla del vendedor.
+- [ ] Abrir el panel, pulsar **Comprobar API** y verificar que responda la API local.
+- [ ] Consultar las solicitudes al cargar clientes, pedidos y disponibilidad; observar método, ruta, HTTP y duración.
+- [ ] Provocar un error de validación inofensivo y verificar que aparezca sin capturar contraseñas, tokens, cuerpos de solicitud ni datos personales.
+- [ ] Activar **Solo errores**, regresar a **Ver todas** y pulsar **Limpiar**.
+- [ ] Reiniciar la app: el historial de solicitudes debe reiniciarse (no persistente).
+- [ ] Comprobar en el APK release que no se muestra el botón QA ni la configuración manual de IP.
+
+La consola captura peticiones realizadas por `solicitud` en la app y la comprobación manual de salud. No sustituye una consola completa del sistema operativo ni registra errores nativos ajenos a HTTP.

@@ -77,6 +77,26 @@ jobs:
           VERSION="$(node -p "require('./apps/mobile/app.json').expo.version")"
           BUILD_CODE="$(node -p "require('./apps/mobile/app.json').expo.android.versionCode")"
           echo "APK_ARTIFACT_NAME=ZAV-Vendedor-${VERSION}-build${BUILD_CODE}-${BUILD_CHANNEL}-run-${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
+      - name: Verificar separación de configuración QA y release
+        shell: bash
+        run: |
+          EXPO_PUBLIC_BUILD_CHANNEL=qa node - <<'NODE'
+          const cfg = require('./apps/mobile/app.config.js')({ config: require('./apps/mobile/app.json').expo });
+          if (cfg.android.package !== 'bo.zav.gestion.vendedor.qa' ||
+              cfg.name !== 'ZAV Vendedor QA' ||
+              !cfg.plugins.includes('./plugins/with-qa-local-network')) {
+            throw new Error('Configuración Android QA incorrecta');
+          }
+          NODE
+          EXPO_PUBLIC_BUILD_CHANNEL=release node - <<'NODE'
+          const cfg = require('./apps/mobile/app.config.js')({ config: require('./apps/mobile/app.json').expo });
+          if (cfg.android.package !== 'bo.zav.gestion.vendedor' ||
+              cfg.name !== 'ZAV Vendedor' ||
+              cfg.plugins.includes('./plugins/with-qa-local-network')) {
+            throw new Error('Configuración Android release incorrecta');
+          }
+          NODE
+
       - name: Instalar dependencias
         run: pnpm install --frozen-lockfile
 

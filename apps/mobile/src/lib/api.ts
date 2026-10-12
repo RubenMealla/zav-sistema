@@ -13,6 +13,7 @@ import type {
 } from './tipos';
 
 import { obtenerDireccionApi } from './configuracion-api';
+import { registrarSolicitudQa } from './diagnostico-qa';
 
 export class ApiError extends Error {
   constructor(
@@ -31,39 +32,49 @@ async function solicitud<T>(
   opciones: RequestInit = {},
   token?: string,
 ): Promise<T> {
-  const base = obtenerDireccionApi();
-  if (!/^https?:\/\/[^\s/]+/i.test(base)) {
-    throw new ApiError(0, { message: 'Configura EXPO_PUBLIC_API_BASE_URL para conectar con la API.' });
-  }
-  const headers = new Headers(opciones.headers);
-  headers.set('Accept', 'application/json');
-  if (opciones.body) headers.set('Content-Type', 'application/json');
-  if (token) headers.set('Authorization', `Bearer ${token}`);
+  const inicio = Date.now();
+  const metodo = opciones.method ?? 'GET';
+  let codigo = 0;
+  let correcta = false;
 
-  let respuesta: Response;
   try {
-    respuesta = await fetch(`${base}${ruta}`, {
-      ...opciones,
-      headers,
+    const base = obtenerDireccionApi();
+    if (!/^https?:\/\/[^\s/]+/i.test(base)) {
+      throw new ApiError(0, { message: 'Configura EXPO_PUBLIC_API_BASE_URL para conectar con la API.' });
+    }
+    const headers = new Headers(opciones.headers);
+    headers.set('Accept', 'application/json');
+    if (opciones.body) headers.set('Content-Type', 'application/json');
+    if (token) headers.set('Authorization', 'Bearer ' + token);
+
+    let respuesta: Response;
+    try {
+      respuesta = await fetch(base + ruta, { ...opciones, headers });
+    } catch {
+      throw new ApiError(0, { message: 'No se pudo conectar con la API.' });
+    }
+    codigo = respuesta.status;
+
+    let cuerpo: unknown = null;
+    const tipo = respuesta.headers.get('content-type') ?? '';
+    if (tipo.includes('application/json')) {
+      cuerpo = await respuesta.json();
+    }
+    if (!respuesta.ok) {
+      throw new ApiError(
+        respuesta.status,
+        cuerpo && typeof cuerpo === 'object' ? (cuerpo as ApiErrorBody) : null,
+      );
+    }
+    correcta = true;
+    return cuerpo as T;
+  } finally {
+    registrarSolicitudQa({
+      metodo, ruta, codigo,
+      correcta,
+      duracionMs: Date.now() - inicio,
     });
-  } catch {
-    throw new ApiError(0, { message: 'No se pudo conectar con la API.' });
   }
-
-  let cuerpo: unknown = null;
-  const tipo = respuesta.headers.get('content-type') ?? '';
-  if (tipo.includes('application/json')) {
-    cuerpo = await respuesta.json();
-  }
-
-  if (!respuesta.ok) {
-    throw new ApiError(
-      respuesta.status,
-      cuerpo && typeof cuerpo === 'object' ? (cuerpo as ApiErrorBody) : null,
-    );
-  }
-
-  return cuerpo as T;
 }
 
 export function iniciarSesion(identificador: string, contrasena: string) {
