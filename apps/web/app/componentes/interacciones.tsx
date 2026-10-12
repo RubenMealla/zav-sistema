@@ -26,10 +26,13 @@ export function BotonEnviar({
 }) {
   const { pending } = useFormStatus();
   const [confirmando, setConfirmando] = useState(false);
+  const [portalMontado, setPortalMontado] = useState(false);
   const id = useId();
   const formularioRef = useRef<HTMLFormElement | null>(null);
   const disparadorRef = useRef<HTMLButtonElement | null>(null);
   const dialogoRef = useRef<HTMLDialogElement | null>(null);
+
+  useEffect(() => setPortalMontado(true), []);
 
   useEffect(() => {
     const dialogo = dialogoRef.current;
@@ -108,7 +111,7 @@ export function BotonEnviar({
       >
         {children}
       </button>
-      {typeof document !== 'undefined' && createPortal(confirmacionDialogo, document.body)}
+      {portalMontado && createPortal(confirmacionDialogo, document.body)}
     </>
   );
 }

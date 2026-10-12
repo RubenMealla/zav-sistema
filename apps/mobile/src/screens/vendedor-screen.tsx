@@ -224,6 +224,36 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
     [consultarDatos, manejarError],
   );
 
+  // Tras modificar pedidos, evita volver a consultar el directorio de clientes.
+  const refrescarPedidosYDisponibilidad = useCallback(async () => {
+    const [pedidosResultado, disponibilidadResultado] = await Promise.allSettled([
+      listarPedidosActivos(token),
+      obtenerDisponibilidad(token),
+    ]);
+    if (pedidosResultado.status === 'fulfilled') {
+      setPedidos(pedidosResultado.value.items);
+      setTotalPedidos(pedidosResultado.value.total);
+    }
+    if (disponibilidadResultado.status === 'fulfilled') {
+      setDisponibilidad(disponibilidadResultado.value);
+    }
+    const errores = [
+      pedidosResultado.status === 'rejected' ? { recurso: 'pedidos', error: pedidosResultado.reason } : null,
+      disponibilidadResultado.status === 'rejected' ? { recurso: 'productos', error: disponibilidadResultado.reason } : null,
+    ].filter((valor): valor is { recurso: string; error: unknown } => valor !== null);
+    const errorSesion = errores.find(
+      ({ error }) => error instanceof ApiError && (error.status === 401 || error.status === 403),
+    );
+    if (errorSesion) {
+      await manejarError(errorSesion.error);
+    } else if (errores.length) {
+      setError(
+        'ERROR DE ACTUALIZACIÓN · ' +
+          errores.map(({ recurso, error }) => `${recurso}: ${mensajeError(error)}`).join(' · '),
+      );
+    }
+  }, [token, manejarError]);
+
   useEffect(() => {
     let activa = true;
 
@@ -690,7 +720,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
     setAviso('');
     try {
       await retirarPedido(token, id, uuidV4());
-      await cargar(false);
+      await refrescarPedidosYDisponibilidad();
       setAviso('Pedido retirado. Los productos pasaron a distribución bajo tu custodia.');
     } catch (e) {
       await manejarError(e);
@@ -832,7 +862,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
         longitud,
         precisionMetros,
       });
-      await cargar(false);
+      await refrescarPedidosYDisponibilidad();
 
       setPedidosSeleccionados((actuales) => actuales.filter((pedidoId) => pedidoId !== id));
       setPlanificacion((actual) => {
@@ -1058,7 +1088,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
         })),
       );
 
-      await cargar(false);
+      await refrescarPedidosYDisponibilidad();
       setPedidosSeleccionados((actuales) =>
         actuales.filter((id) => !registrados.some((pedido) => pedido.id === id)),
       );

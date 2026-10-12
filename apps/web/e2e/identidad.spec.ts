@@ -188,3 +188,26 @@ test('credenciales inválidas muestran un error legible', async ({ page }) => {
   await expect(page.locator('.mensaje-error')).toContainText('Verifica los datos de acceso');
   await captura(page, 'identidad-acceso-error.png');
 });
+
+test('confirmación sin error de hidratación tras recargar el panel', async ({ page }) => {
+  const errores: string[] = [];
+  const esHidratacion = (texto: string) => /hydration failed|server rendered html didn't match|hydrating/i.test(texto);
+  page.on('pageerror', (error) => {
+    if (esHidratacion(error.message)) errores.push(error.message);
+  });
+  page.on('console', (mensaje) => {
+    if (mensaje.type() === 'error' && esHidratacion(mensaje.text())) errores.push(mensaje.text());
+  });
+  await ingresar(page);
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Resumen' })).toBeVisible();
+
+  const salir = page.getByRole('button', { name: /Cerrar sesión|Salir/, exact: true }).filter({ visible: true }).first();
+  await salir.click();
+  const dialogo = page.getByRole('alertdialog', { name: 'Cerrar sesión' });
+  await expect(dialogo).toBeVisible();
+  await dialogo.getByRole('button', { name: 'Cancelar' }).click();
+  await expect(dialogo).not.toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Resumen' })).toBeVisible();
+  expect(errores).toEqual([]);
+});
