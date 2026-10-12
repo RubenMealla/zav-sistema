@@ -14,7 +14,6 @@ import {
 
 import { ApiError, iniciarSesion } from '@/lib/api';
 import {
-  ES_COMPILACION_QA,
   configurarDireccionApi,
   obtenerDireccionApi,
   validarDireccionApi,
@@ -54,11 +53,14 @@ export function LoginScreen({ onSesion }: Props) {
   }, [mostrarServidor]);
 
   async function probarYGuardarServidor() {
+    if (process.env.EXPO_PUBLIC_BUILD_CHANNEL !== 'qa') return;
     setMensajeServidor('');
     setComprobandoServidor(true);
+    const controlador = new AbortController();
+    const timeout = setTimeout(() => controlador.abort(), 8000);
     try {
       const url = validarDireccionApi(direccion);
-      const respuesta = await fetch(`${url}/api/v1/salud`);
+      const respuesta = await fetch(`${url}/api/v1/salud`, { signal: controlador.signal });
       if (!respuesta.ok) throw new Error('El servidor no respondió correctamente.');
       const cuerpo: unknown = await respuesta.json();
       if (!cuerpo || typeof cuerpo !== 'object' || (cuerpo as { estado?: unknown }).estado !== 'ok') {
@@ -69,8 +71,11 @@ export function LoginScreen({ onSesion }: Props) {
       setMostrarServidor(false);
       setMensajeServidor('Servidor de pruebas conectado.');
     } catch (error) {
-      setMensajeServidor(error instanceof Error ? error.message : 'No se pudo conectar con el servidor.');
+      setMensajeServidor(error instanceof Error && error.name === 'AbortError'
+        ? 'Tiempo de espera agotado (8 segundos). Revisa la IP, Wi-Fi y NestJS.'
+        : error instanceof Error ? error.message : 'No se pudo conectar con el servidor.');
     } finally {
+      clearTimeout(timeout);
       setComprobandoServidor(false);
     }
   }
@@ -118,7 +123,7 @@ export function LoginScreen({ onSesion }: Props) {
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
       >
-      {ES_COMPILACION_QA && mostrarServidor ? (
+      {process.env.EXPO_PUBLIC_BUILD_CHANNEL === 'qa' && mostrarServidor ? (
         <View style={styles.pantallaServidor}>
           <Text style={styles.eyebrow}>ZAV VENDEDOR QA</Text>
           <Text style={styles.tituloServidor}>Conexión de pruebas</Text>
@@ -223,7 +228,7 @@ export function LoginScreen({ onSesion }: Props) {
         </Pressable>
       </View>
 
-      {ES_COMPILACION_QA ? (
+      {process.env.EXPO_PUBLIC_BUILD_CHANNEL === 'qa' ? (
         <View style={styles.servidor}>
           <Text style={styles.servidorTitulo}>ENTORNO DE PRUEBAS · NO PRODUCCIÓN</Text>
           <Text style={styles.servidorDireccion} selectable>

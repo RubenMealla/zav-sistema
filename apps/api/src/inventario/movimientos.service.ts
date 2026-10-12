@@ -167,6 +167,17 @@ export class MovimientosService {
         return previo.id;
       }
 
+      const referencias = await manager.query(
+        'SELECT producto_id FROM lote WHERE id = $1::uuid',
+        [loteId],
+      ) as Array<{ producto_id: string }>;
+      if (!referencias.length) throw new NotFoundException('Lote no encontrado.');
+
+      // Los pedidos y los movimientos que afectan venta se serializan por producto.
+      await manager.query('SELECT pg_advisory_xact_lock(hashtext($1::text))', [`producto:${referencias[0].producto_id}`]);
+      await manager.query('SELECT pg_advisory_xact_lock(hashtext($1::text))', [`lote:${loteId}`]);
+
+      // La condición puede cambiar mientras se espera el bloqueo del producto.
       const lotes = await manager.query(
         `SELECT id, producto_id, condicion, (vence_el >= CURRENT_DATE) AS vigente
          FROM lote WHERE id = $1::uuid`,
@@ -174,10 +185,6 @@ export class MovimientosService {
       ) as Array<{ id: string; producto_id: string; condicion: string; vigente: boolean }>;
       if (!lotes.length) throw new NotFoundException('Lote no encontrado.');
       const lote = lotes[0];
-
-      // Los pedidos y los movimientos que afectan venta se serializan por producto.
-      await manager.query('SELECT pg_advisory_xact_lock(hashtext($1::text))', [`producto:${lote.producto_id}`]);
-      await manager.query('SELECT pg_advisory_xact_lock(hashtext($1::text))', [`lote:${loteId}`]);
 
       const ubicaciones = await manager.query(
         `SELECT id, codigo, nombre

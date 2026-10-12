@@ -48,7 +48,29 @@ export function LandingPublica(){
  const[destacado,setDestacado]=useState(0);
  const[familiaActiva,setFamiliaActiva]=useState(familias[0].id);
  const familia=useMemo(()=>familias.find(x=>x.id===familiaActiva)??familias[0],[familiaActiva]);
- useEffect(()=>{const ss=['novedades','productos','zav'].map(id=>document.getElementById(id)).filter((e):e is HTMLElement=>Boolean(e));const o=new IntersectionObserver(es=>{const v=es.filter(e=>e.isIntersecting).sort((a,b)=>b.intersectionRatio-a.intersectionRatio)[0];if(v?.target.id)setSeccionActiva(v.target.id)},{rootMargin:'-25% 0px -55% 0px',threshold:[.05,.2,.45]});ss.forEach(s=>o.observe(s));return()=>o.disconnect()},[]);
+ useEffect(() => {
+  const secciones = ['novedades', 'productos', 'zav']
+   .map(id => document.getElementById(id)).filter((e): e is HTMLElement => Boolean(e));
+  let observador: IntersectionObserver;
+  const observar = () => {
+   observador?.disconnect();
+   const visibles = new Map<string, number>();
+   // Los porcentajes de rootMargin se calculan sobre el ancho, incluso los verticales.
+   const alto = window.innerHeight;
+   observador = new IntersectionObserver(entradas => {
+    for (const entrada of entradas) {
+     if (entrada.isIntersecting) visibles.set(entrada.target.id, entrada.intersectionRatio);
+     else visibles.delete(entrada.target.id);
+    }
+    const activa = [...visibles].sort((a, b) => b[1] - a[1])[0];
+    if (activa) setSeccionActiva(activa[0]);
+   }, { rootMargin: `-${Math.round(alto * .25)}px 0px -${Math.round(alto * .55)}px 0px`, threshold: [0, .05, .2, .45] });
+   secciones.forEach(seccion => observador.observe(seccion));
+  };
+  observar();
+  window.addEventListener('resize', observar);
+  return () => { observador.disconnect(); window.removeEventListener('resize', observar); };
+ }, []);
  const mover=(d:number)=>setDestacado(a=>(a+d+destacados.length)%destacados.length);
  return <div className="sitio-publico">
  <a className="saltar-contenido" href="#principal">Saltar al contenido</a>

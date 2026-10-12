@@ -138,6 +138,14 @@ test('landing pública conserva la nueva jerarquía editorial', async ({ page })
   await expect.poll(async () => nav.getByRole('link', { name: 'Productos' }).getAttribute('class')).toContain('activo');
   await sinDesborde(page);
   await captura(page, 'landing-editorial-1440.png');
+  for (const alto of [720, 1000]) {
+    await page.setViewportSize({ width: 1440, height: alto });
+    for (const nombre of ['Nosotros', 'Noticias', 'Productos']) {
+      const enlace = nav.getByRole('link', { name: nombre });
+      await enlace.click();
+      await expect(enlace).toHaveAttribute('aria-current', 'location');
+    }
+  }
 });
 
 test('teclado, contraste y movimiento reducido', async ({ page }) => {

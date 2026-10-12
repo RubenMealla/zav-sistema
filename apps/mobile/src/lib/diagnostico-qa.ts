@@ -39,17 +39,24 @@ export function registrarSolicitudQa(datos: {
 }) {
   if (!ES_COMPILACION_QA) return;
 
-  // Omitir consultas, parámetros, UUID y posibles identificadores.
+  // Solo conservar segmentos del contrato. También oculta identificadores que
+  // no sean UUID, fragmentos y textos inesperados en rutas de error.
+  const segmentosPublicos = new Set([
+    'api', 'v1', 'auth', 'login', 'me', 'salud', 'version', 'productos', 'clientes',
+    'pedidos', 'disponibilidad', 'retiro', 'retiros', 'entrega', 'cancelacion',
+    'planificacion', 'estado', 'ubicacion', 'ubicaciones', 'venta-despacho',
+    'geografia', 'autocompletar', 'geocodificar', 'reversa',
+  ]);
   const ruta = datos.ruta
-    .split('?')[0]
-    .replace(/[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/gi, ':id')
-    .replace(/\/\d+(?=\/|$)/g, '/:id')
+    .split(/[?#]/)[0]
+    .split('/').map((segmento) => !segmento || segmentosPublicos.has(segmento) ? segmento : ':id').join('/')
     .slice(0, 90);
 
   const registro: SolicitudQa = {
     id: siguienteId++,
     momento: new Date().toISOString(),
-    metodo: datos.metodo.toUpperCase().slice(0, 8),
+    metodo: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'HEAD', 'OPTIONS'].includes(datos.metodo.toUpperCase())
+      ? datos.metodo.toUpperCase() : 'OTRO',
     ruta: ruta.startsWith('/api/v1/') ? ruta : '/api/v1/(no mostrada)',
     codigo: datos.codigo,
     duracionMs: Math.max(0, Math.round(datos.duracionMs)),

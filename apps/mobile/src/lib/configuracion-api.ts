@@ -4,7 +4,7 @@ const CLAVE_API_QA = 'zav_api_pruebas_v1';
 const API_INICIAL = (process.env.EXPO_PUBLIC_API_BASE_URL ?? '').trim().replace(/\/+$/, '');
 export const ES_COMPILACION_QA = process.env.EXPO_PUBLIC_BUILD_CHANNEL === 'qa';
 
-let apiActual = API_INICIAL;
+let apiActual = ES_COMPILACION_QA && API_INICIAL ? validarDireccionApi(API_INICIAL) : API_INICIAL;
 
 export function obtenerDireccionApi(): string {
   return apiActual;
@@ -25,7 +25,7 @@ export function validarDireccionApi(valor: string): string {
     throw new Error('Usa solamente la dirección del servidor, sin rutas ni credenciales.');
   }
 
-  if (ES_COMPILACION_QA && url.hostname.toLowerCase() === 'zav-api-2026.onrender.com') {
+  if (ES_COMPILACION_QA && url.hostname.toLowerCase().replace(/\.$/, '') === 'zav-api-2026.onrender.com') {
     throw new Error('El APK de pruebas no puede utilizar la API de producción.');
   }
 

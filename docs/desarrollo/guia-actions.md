@@ -10,8 +10,8 @@ Para revisar una mejora nueva, comienza en [PR #71](https://github.com/RubenMeal
 |---|---|---|
 | 01 · Calidad — API | `qa-backend.yml` | Lint, build, pruebas unitarias y E2E contra PostgreSQL aislado |
 | 02 · Calidad — Web | `qa-web-playwright.yml` | Lint, compilación y Playwright |
-| 03 · Calidad — Móvil | `qa-mobile.yml` | Lint y TypeScript móvil |
-| 04 · Android — Compilación APK | `qa-mobile-apk.yml` | APK firmado y verificación de identidad e integridad |
+| 03 · Calidad — Móvil | `qa-mobile.yml` | Lint, TypeScript, regresiones y separación de bundles QA/release |
+| 04 · Android — Compilación APK | `qa-mobile-apk.yml` | APK firmado, identidad, permiso HTTP y prueba de hora QA en emulador |
 | 05 · Monitoreo — Web y API | `verificacion-publica-e4.yml` | Comprobación pública periódica y alerta |
 | 06 · QA especial — Pedidos y recuperación | `qa-recuperacion-rendimiento.yml` | Ensayo aislado de carga y restauración |
 
@@ -28,6 +28,7 @@ Para revisar una mejora nueva, comienza en [PR #71](https://github.com/RubenMeal
 
 - **01, 02 y 03:** en PR a `main` cuando los archivos afectados coinciden, tras integrar en `main`, o manualmente con **Run workflow** desde la rama seleccionada. No duplican la misma prueba por `push` a una rama de desarrollo que ya tiene PR.
 - **04:** cuando un PR modifica la aplicación Android, cuando cambian archivos móviles en `main`, o al ejecutarlo manualmente. En ramas distintas de `main` usa canal **QA**, incluso con `workflow_dispatch`. En `main` utiliza canal **release**; no publica automáticamente una nueva versión en GitHub Releases.
+- **04, comprobación de hora:** después del APK QA, otro trabajo instala ese artefacto en Android 35 y verifica la consola con el emulador en UTC y Tokio. Usa un servidor sintético `/api/v1/salud`, sin Neon ni credenciales. Las capturas, XML y resultado se conservan en `hora-bolivia-android-*`; no equivalen a una prueba física. Este trabajo no se ejecuta sobre el APK de producción.
 - **05:** conserva el monitoreo programado de `main` y la lógica de apertura/cierre de alertas.
 - **06:** ensayo especializado manual o disparado por cambios definidos en su YAML. **07 a 10:** scripts archivados, sin ejecución activa; conservar sus resultados y no restaurarlos automáticamente.
 

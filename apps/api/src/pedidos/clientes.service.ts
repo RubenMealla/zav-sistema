@@ -74,7 +74,7 @@ export class ClientesService {
       );
     }
 
-    await this.db.query(
+    const [, cantidadActualizada] = await this.db.query(
       `UPDATE cliente
        SET nombre = $2,
            telefono = $3,
@@ -83,9 +83,10 @@ export class ClientesService {
            longitud = $6,
            ubicacion_confirmada_en = now(),
            actualizado_en = now()
-       WHERE id = $1::uuid AND activo = TRUE`,
+       WHERE id = $1::uuid AND activo = TRUE RETURNING id`,
       [id, nombre, telefono, direccion, latitud, longitud],
-    );
+    ) as [Array<{ id: string }>, number];
+    if (!cantidadActualizada) throw new NotFoundException('Cliente activo no encontrado.');
 
     return this.obtener(id);
   }
@@ -101,16 +102,17 @@ export class ClientesService {
     const direccion =
       datos.direccion === undefined ? null : texto(datos.direccion, 'direccion', 240);
 
-    await this.db.query(
+    const [, cantidadActualizada] = await this.db.query(
       `UPDATE cliente
        SET direccion = COALESCE($2, direccion),
            latitud = $3,
            longitud = $4,
            ubicacion_confirmada_en = now(),
            actualizado_en = now()
-       WHERE id = $1::uuid AND activo = TRUE`,
+       WHERE id = $1::uuid AND activo = TRUE RETURNING id`,
       [id, direccion, latitud, longitud],
-    );
+    ) as [Array<{ id: string }>, number];
+    if (!cantidadActualizada) throw new NotFoundException('Cliente activo no encontrado.');
 
     return this.obtener(id);
   }

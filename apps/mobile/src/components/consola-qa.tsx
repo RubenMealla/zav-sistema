@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { obtenerDireccionApi } from '@/lib/configuracion-api';
+import { formatearHoraQa } from '@/lib/hora-qa';
 import {
   limpiarSolicitudesQa,
   obtenerSolicitudesQa,
@@ -143,7 +144,7 @@ export function ConsolaQa() {
                 <Text style={styles.detalle}>
                   {registro.correcta ? 'Petición completada' :
                     registro.codigo === 0 ? 'Error de conexión o respuesta' : 'El servidor rechazó la petición'}
-                  {' · '}{registro.momento.slice(11, 19)} UTC
+                  {' · '}{formatearHoraQa(registro.momento)} Bolivia (UTC-04:00)
                 </Text>
               </View>
             ))}

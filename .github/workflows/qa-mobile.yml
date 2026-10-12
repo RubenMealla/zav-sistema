@@ -64,6 +64,30 @@ jobs:
           set -o pipefail
           pnpm --filter @zav/mobile exec tsc --noEmit 2>&1 | tee apps/mobile/test-results/typescript.log
 
+      - name: Probar lógica móvil y aislamiento QA
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm --filter @zav/mobile test 2>&1 | tee apps/mobile/test-results/pruebas.log
+
+      - name: Verificar bundles Android QA y release
+        working-directory: apps/mobile
+        shell: bash
+        env:
+          EXPO_NO_DOTENV: '1'
+        run: |
+          set -euo pipefail
+          for canal in qa release; do
+            export EXPO_PUBLIC_BUILD_CHANNEL="$canal"
+            if [ "$canal" = qa ]; then
+              export EXPO_PUBLIC_API_BASE_URL=http://10.0.2.2:3001
+            else
+              export EXPO_PUBLIC_API_BASE_URL=https://zav-api-2026.onrender.com
+            fi
+            pnpm exec expo export --platform android --output-dir "dist/verificacion-$canal" --source-maps --no-bytecode
+            node scripts/verificar-bundle.mjs "dist/verificacion-$canal" "$canal" | tee "test-results/bundle-$canal.log"
+          done
+
       - name: Registrar resumen reproducible
         if: always()
         shell: bash

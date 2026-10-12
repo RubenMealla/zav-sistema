@@ -48,7 +48,7 @@ El modelo principal se limita a ocho entidades de negocio:
 
 | Capa | Tecnologías principales |
 |---|---|
-| Web | Next.js 16.3.5, React 19.2.8, TypeScript |
+| Web | Next.js 16.3.8, React 19.2.8, TypeScript |
 | Móvil | React Native 0.86.3, Expo SDK 57, Expo Router, TypeScript |
 | Mapas móvil | MapLibre React Native, OpenFreeMap, expo-location |
 | API | NestJS 12, Node.js 24, TypeScript, TypeORM |
@@ -214,9 +214,12 @@ Móvil:
 ```bash
 pnpm --filter @zav/mobile lint
 pnpm --filter @zav/mobile exec tsc --noEmit
+pnpm --filter @zav/mobile test
 ```
 
 GitHub Actions ejecuta QA con PostgreSQL aislado. Los reportes, logs y capturas se conservan como evidencia. Los errores y ejecuciones fallidas reales también se conservan; una ejecución satisfactoria posterior no borra el historial de incidencias.
+
+La [auditoría integral del 12/10/2026](docs/pruebas/auditoria-integral-2026-10-12.md) registra las correcciones de inventario, seguridad y Android QA, las mediciones reproducibles y las limitaciones pendientes antes de integrar el PR #71.
 
 La documentación de QA y sus antecedentes incluye:
 

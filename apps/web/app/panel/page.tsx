@@ -52,7 +52,7 @@ type EventoCondicion = {
   creadoEn: string;
   usuario: { identificador: string; nombre: string };
 };
-type Pagina<T> = { items: T[]; total: number };
+type Pagina<T> = { items: T[]; total: number; limit?: number };
 type Perfil = { nombre: string; identificador: string; rol: string };
 type PedidoAuditoria = {
   id: string;
@@ -298,7 +298,7 @@ export default async function Panel({
                 </article>
               </section>
 
-              <p className="alcance-datos">Lotes consultados: {itemsLotes.length} (máximo 30), base del cálculo de condiciones y existencia física. Los totales de productos y lotes corresponden al registro completo.</p>
+              <p className="alcance-datos">Lotes consultados: {itemsLotes.length} (máximo {lotes.datos?.limit ?? 50}), base del cálculo de condiciones y existencia física. Los totales de productos y lotes corresponden al registro completo.</p>
               <div className="dashboard-grid">
                 <section className="card">
                   <div className="card-cabecera">

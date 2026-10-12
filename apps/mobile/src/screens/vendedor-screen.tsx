@@ -87,6 +87,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
   const [seccion, setSeccion] = useState<Seccion>('pedidos');
   const [pedidos, setPedidos] = useState<PedidoResumen[]>([]);
   const [totalPedidos, setTotalPedidos] = useState(0);
+  const [paginaPedidos, setPaginaPedidos] = useState(1);
   const [cargandoMasPedidos, setCargandoMasPedidos] = useState(false);
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [disponibilidad, setDisponibilidad] = useState<Disponibilidad[]>([]);
@@ -185,6 +186,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
         if (pedidosResultado.status === 'fulfilled') {
           setPedidos(pedidosResultado.value.items);
           setTotalPedidos(pedidosResultado.value.total);
+          setPaginaPedidos(pedidosResultado.value.page);
         } else {
           errores.push({ recurso: 'pedidos', error: pedidosResultado.reason });
         }
@@ -233,6 +235,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
     if (pedidosResultado.status === 'fulfilled') {
       setPedidos(pedidosResultado.value.items);
       setTotalPedidos(pedidosResultado.value.total);
+      setPaginaPedidos(pedidosResultado.value.page);
     }
     if (disponibilidadResultado.status === 'fulfilled') {
       setDisponibilidad(disponibilidadResultado.value);
@@ -269,6 +272,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
       if (pedidosResultado.status === 'fulfilled') {
         setPedidos(pedidosResultado.value.items);
         setTotalPedidos(pedidosResultado.value.total);
+        setPaginaPedidos(pedidosResultado.value.page);
       } else {
         errores.push({ recurso: 'pedidos', error: pedidosResultado.reason });
       }
@@ -313,14 +317,17 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
   }
 
   async function cargarMasPedidos() {
-    if (cargandoMasPedidos || pedidos.length >= totalPedidos) return;
+    if (cargandoMasPedidos || cargando || actualizando || pedidos.length >= totalPedidos) return;
 
     setCargandoMasPedidos(true);
     setError('');
     try {
-      const respuesta = await listarPedidosActivos(token);
-      setPedidos(respuesta.items);
+      const respuesta = await listarPedidosActivos(token, paginaPedidos + 1);
+      setPedidos((actuales) => [...new Map(
+        [...actuales, ...respuesta.items].map((pedido) => [pedido.id, pedido]),
+      ).values()]);
       setTotalPedidos(respuesta.total);
+      setPaginaPedidos(respuesta.page);
     } catch (e) {
       await manejarError(e);
     } finally {

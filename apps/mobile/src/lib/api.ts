@@ -36,6 +36,11 @@ async function solicitud<T>(
   const metodo = opciones.method ?? 'GET';
   let codigo = 0;
   let correcta = false;
+  const controlador = new AbortController();
+  const cancelar = () => controlador.abort();
+  opciones.signal?.addEventListener('abort', cancelar, { once: true });
+  if (opciones.signal?.aborted) cancelar();
+  const timeout = setTimeout(cancelar, ruta === '/api/v1/pedidos/retiros' ? 120_000 : 60_000);
 
   try {
     const base = obtenerDireccionApi();
@@ -49,16 +54,25 @@ async function solicitud<T>(
 
     let respuesta: Response;
     try {
-      respuesta = await fetch(base + ruta, { ...opciones, headers });
+      respuesta = await fetch(base + ruta, { ...opciones, headers, signal: controlador.signal });
     } catch {
-      throw new ApiError(0, { message: 'No se pudo conectar con la API.' });
+      throw new ApiError(0, { message: controlador.signal.aborted
+        ? 'Tiempo de espera agotado. Actualiza los datos para comprobar el resultado antes de reintentar.'
+        : 'No se pudo conectar con la API.' });
     }
     codigo = respuesta.status;
 
     let cuerpo: unknown = null;
     const tipo = respuesta.headers.get('content-type') ?? '';
+    if (respuesta.ok && respuesta.status !== 204 && !tipo.includes('application/json')) {
+      throw new ApiError(502, { message: 'La API devolvió una respuesta que no es JSON.' });
+    }
     if (tipo.includes('application/json')) {
-      cuerpo = await respuesta.json();
+      try {
+        cuerpo = await respuesta.json();
+      } catch {
+        throw new ApiError(respuesta.ok ? 502 : respuesta.status, { message: 'La API devolvió una respuesta incompleta o inválida.' });
+      }
     }
     if (!respuesta.ok) {
       throw new ApiError(
@@ -69,6 +83,8 @@ async function solicitud<T>(
     correcta = true;
     return cuerpo as T;
   } finally {
+    clearTimeout(timeout);
+    opciones.signal?.removeEventListener('abort', cancelar);
     registrarSolicitudQa({
       metodo, ruta, codigo,
       correcta,
@@ -92,8 +108,9 @@ export function listarClientes(
   token: string,
   q = '',
   activo?: 'true' | 'false' | 'todos',
+  page = 1,
 ) {
-  const params = new URLSearchParams({ limit: '100' });
+  const params = new URLSearchParams({ limit: '100', page: String(page) });
   if (q.trim()) params.set('q', q.trim());
   if (activo) params.set('activo', activo);
   return solicitud<Lista<Cliente>>(
@@ -104,21 +121,13 @@ export function listarClientes(
 }
 
 export async function listarDirectorioClientes(token: string, q = '') {
-  const activos = await listarClientes(token, q);
-  let inactivos: Lista<Cliente> | null = null;
-
-  try {
-    inactivos = await listarClientes(token, q, 'false');
-  } catch (error) {
-    // Compatibilidad temporal: una API anterior puede no conocer el filtro activo.
-    if (!(error instanceof ApiError && (error.status === 400 || error.status === 404))) {
-      throw error;
-    }
-  }
-
+  let pagina = await listarClientes(token, q, 'todos');
   const porId = new Map<string, Cliente>();
-  for (const cliente of activos.items) porId.set(cliente.id, cliente);
-  for (const cliente of inactivos?.items ?? []) porId.set(cliente.id, cliente);
+  for (const cliente of pagina.items) porId.set(cliente.id, cliente);
+  while (pagina.page * pagina.limit < pagina.total && pagina.items.length) {
+    pagina = await listarClientes(token, q, 'todos', pagina.page + 1);
+    for (const cliente of pagina.items) porId.set(cliente.id, cliente);
+  }
   const items = [...porId.values()].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
 
   return {
@@ -173,22 +182,8 @@ export function listarPedidos(
   );
 }
 
-export async function listarPedidosActivos(token: string) {
-  const [registrados, distribucion] = await Promise.all([
-    listarPedidos(token, 'REGISTRADO', 1, 100),
-    listarPedidos(token, 'EN_DISTRIBUCION', 1, 100),
-  ]);
-
-  const items = [...registrados.items, ...distribucion.items].sort(
-    (a, b) => new Date(b.creadoEn).getTime() - new Date(a.creadoEn).getTime(),
-  );
-
-  return {
-    items,
-    total: items.length,
-    page: 1,
-    limit: Math.max(100, items.length),
-  } satisfies Lista<PedidoResumen>;
+export function listarPedidosActivos(token: string, page = 1) {
+  return listarPedidos(token, 'ACTIVOS', page, 100);
 }
 
 export function obtenerPedido(token: string, id: string) {
