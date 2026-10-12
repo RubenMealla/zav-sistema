@@ -6,117 +6,19 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { DataSource, EntityManager } from 'typeorm';
-import { enteroPositivo, objeto, paginacion, texto, uuid } from '../inventario/validacion.js';
+import { objeto, paginacion, texto, uuid } from '../inventario/validacion.js';
 import { distanciaHaversine } from './geografia.service.js';
 
-const CAMPOS_PEDIDO = ['clienteId', 'direccionEntrega', 'observacion', 'detalles'] as const;
-const CAMPOS_DETALLE = ['productoId', 'cantidad'] as const;
-const CAMPOS_RETIRO = ['operacionClave'] as const;
-const CAMPOS_RETIROS = ['retiros'] as const;
-const CAMPOS_RETIRO_ITEM = ['pedidoId', 'operacionClave'] as const;
-const CAMPOS_ENTREGA = ['operacionClave', 'latitud', 'longitud', 'precisionMetros', 'observacionDistancia'] as const;
-const CAMPOS_CANCELACION = ['motivo'] as const;
-
-type EstadoPedido = 'REGISTRADO' | 'EN_DISTRIBUCION' | 'ENTREGADO' | 'CANCELADO';
-
-type DetalleEntrada = {
-  productoId: string;
-  cantidad: number;
-};
-
-type FilaPedido = {
-  id: string;
-  cliente_id: string;
-  vendedor_id: string;
-  estado: EstadoPedido;
-  direccion_entrega: string;
-  observacion: string | null;
-  destino_latitud: string | null;
-  destino_longitud: string | null;
-  retiro_operacion_clave: string | null;
-  retirado_en: Date | null;
-  entrega_operacion_clave: string | null;
-  entregado_en: Date | null;
-  entrega_latitud: string | null;
-  entrega_longitud: string | null;
-  entrega_precision_m: string | null;
-  entrega_distancia_destino_m: string | null;
-  entrega_observacion: string | null;
-  cancelado_en: Date | null;
-  cancelacion_motivo: string | null;
-  creado_en: Date;
-  actualizado_en: Date;
-  cliente_nombre: string;
-  cliente_telefono: string | null;
-  vendedor_nombre: string;
-};
-
-type FilaDetalle = {
-  id: string;
-  producto_id: string;
-  producto_codigo: string;
-  producto_nombre: string;
-  cantidad: number;
-  precio_unitario_bob: string;
-  subtotal_bob: string;
-};
-
-type FilaDisponibilidad = {
-  id: string;
-  codigo: string;
-  nombre: string;
-  familia: string;
-  presentacion: string;
-  peso_gramos: number;
-  precio_bob: string;
-  fisico: number;
-  comprometido: number;
-  disponible: number;
-};
-
-function opcional(valor: unknown, campo: string, maximo: number): string | null {
-  if (valor === undefined || valor === null || valor === '') return null;
-  return texto(valor, campo, maximo);
-}
-
-function numeroRango(valor: unknown, campo: string, minimo: number, maximo: number): number {
-  if (typeof valor !== 'number' || !Number.isFinite(valor) || valor < minimo || valor > maximo) {
-    throw new BadRequestException(`${campo} debe estar entre ${minimo} y ${maximo}.`);
-  }
-  return valor;
-}
-
-function numeroOpcionalNoNegativo(valor: unknown, campo: string, maximo: number): number | null {
-  if (valor === undefined || valor === null) return null;
-  if (typeof valor !== 'number' || !Number.isFinite(valor) || valor < 0 || valor > maximo) {
-    throw new BadRequestException(`${campo} debe ser un numero entre 0 y ${maximo}.`);
-  }
-  return valor;
-}
+import type { DetalleEntrada, EstadoPedido, FilaPedido, FilaDetalle, FilaDisponibilidad } from './tipos-pedidos.js';
+import {
+  CAMPOS_PEDIDO, CAMPOS_RETIRO, CAMPOS_RETIROS, CAMPOS_RETIRO_ITEM,
+  CAMPOS_ENTREGA, CAMPOS_CANCELACION,
+  opcional, numeroRango, numeroOpcionalNoNegativo, detallesEntrada,
+} from './validacion-pedidos.js';
 
 @Injectable()
 export class PedidosService {
   constructor(private readonly db: DataSource) {}
-
-  private detallesEntrada(valor: unknown): DetalleEntrada[] {
-    if (!Array.isArray(valor) || valor.length < 1 || valor.length > 50) {
-      throw new BadRequestException('detalles debe contener entre 1 y 50 productos.');
-    }
-
-    const detalles = valor.map((elemento, indice) => {
-      const datos = objeto(elemento, CAMPOS_DETALLE);
-      return {
-        productoId: uuid(datos.productoId, `detalles[${indice}].productoId`),
-        cantidad: enteroPositivo(datos.cantidad, `detalles[${indice}].cantidad`),
-      };
-    });
-
-    if (new Set(detalles.map((d) => d.productoId)).size !== detalles.length) {
-      throw new BadRequestException('Un producto no puede repetirse dentro del mismo pedido.');
-    }
-
-    return detalles;
-  }
 
   private async bloquearProductos(manager: EntityManager, productoIds: string[]) {
     for (const productoId of [...productoIds].sort()) {
@@ -185,7 +87,7 @@ export class PedidosService {
   async crear(entrada: unknown, vendedorId: string) {
     const datos = objeto(entrada, CAMPOS_PEDIDO);
     const clienteId = uuid(datos.clienteId, 'clienteId');
-    const detalles = this.detallesEntrada(datos.detalles);
+    const detalles = detallesEntrada(datos.detalles);
     const observacion = opcional(datos.observacion, 'observacion', 300);
 
     const pedidoId = await this.db.transaction(async (manager) => {
@@ -514,7 +416,7 @@ export class PedidosService {
     const id = uuid(idEntrada, 'id');
     const datos = objeto(entrada, CAMPOS_PEDIDO);
     const clienteId = uuid(datos.clienteId, 'clienteId');
-    const detalles = this.detallesEntrada(datos.detalles);
+    const detalles = detallesEntrada(datos.detalles);
     const observacion = opcional(datos.observacion, 'observacion', 300);
 
     await this.db.transaction(async (manager) => {
