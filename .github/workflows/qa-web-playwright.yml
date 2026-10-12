@@ -11,6 +11,7 @@ on:
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
       - ".github/workflows/qa-web-playwright.yml"
+  workflow_dispatch:
   pull_request:
     branches:
       - main
