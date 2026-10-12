@@ -10,10 +10,14 @@ module.exports = ({ config }) => {
     name: compilacionQa ? 'ZAV Vendedor QA' : config.name,
     android: {
       ...config.android,
+      softwareKeyboardLayoutMode: compilacionQa ? 'resize' : config.android?.softwareKeyboardLayoutMode,
       package: compilacionQa
         ? 'bo.zav.gestion.vendedor.qa'
         : config.android?.package,
     },
+    androidStatusBar: compilacionQa
+      ? { ...config.androidStatusBar, translucent: false }
+      : config.androidStatusBar,
     plugins: compilacionQa
       ? [...(config.plugins ?? []), './plugins/with-qa-local-network']
       : config.plugins,

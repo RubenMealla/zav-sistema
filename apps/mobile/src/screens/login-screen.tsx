@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -33,6 +34,7 @@ function separarError(mensaje: string) {
 }
 
 export function LoginScreen({ onSesion }: Props) {
+  const scrollRef = useRef<ScrollView>(null);
   const [identificador, setIdentificador] = useState('');
   const [contrasena, setContrasena] = useState('');
   const [error, setError] = useState('');
@@ -42,6 +44,14 @@ export function LoginScreen({ onSesion }: Props) {
   const [servidorActivo, setServidorActivo] = useState(obtenerDireccionApi());
   const [mensajeServidor, setMensajeServidor] = useState('');
   const [comprobandoServidor, setComprobandoServidor] = useState(false);
+
+  useEffect(() => {
+    if (!mostrarServidor) return;
+    const listener = Keyboard.addListener('keyboardDidShow', () => {
+      scrollRef.current?.scrollToEnd({ animated: true });
+    });
+    return () => listener.remove();
+  }, [mostrarServidor]);
 
   async function probarYGuardarServidor() {
     setMensajeServidor('');
@@ -101,7 +111,58 @@ export function LoginScreen({ onSesion }: Props) {
       style={styles.pantalla}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <ScrollView contentContainerStyle={styles.contenido} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        ref={scrollRef}
+        style={styles.desplazamiento}
+        contentContainerStyle={[styles.contenido, mostrarServidor && styles.contenidoServidor]}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+      >
+      {ES_COMPILACION_QA && mostrarServidor ? (
+        <View style={styles.pantallaServidor}>
+          <Text style={styles.eyebrow}>ZAV VENDEDOR QA</Text>
+          <Text style={styles.tituloServidor}>Conexión de pruebas</Text>
+          <Text style={styles.servidorNota}>
+            El celular y la computadora deben estar en la misma red Wi-Fi.
+            Escribe la dirección IPv4 de tu PC y el puerto 3001.
+          </Text>
+          <View style={styles.servidorFormulario}>
+            <Text style={styles.label}>Dirección de la API local</Text>
+            <TextInput
+              accessibilityLabel="Dirección de la API de pruebas"
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="url"
+              returnKeyType="done"
+              placeholder="http://192.168.1.20:3001"
+              placeholderTextColor="#8a8982"
+              style={styles.input}
+              value={direccion}
+              onChangeText={setDireccion}
+              onSubmitEditing={() => Keyboard.dismiss()}
+            />
+            <Pressable
+              accessibilityRole="button"
+              disabled={comprobandoServidor}
+              onPress={() => { Keyboard.dismiss(); void probarYGuardarServidor(); }}
+              style={[styles.servidorBoton, comprobandoServidor && styles.deshabilitado]}
+            >
+              <Text style={styles.servidorBotonTexto}>
+                {comprobandoServidor ? 'Comprobando conexión…' : 'Probar y guardar servidor'}
+              </Text>
+            </Pressable>
+            {mensajeServidor ? <Text style={styles.servidorAviso}>{mensajeServidor}</Text> : null}
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => { Keyboard.dismiss(); setMostrarServidor(false); }}
+              style={styles.servidorVolver}
+            >
+              <Text style={styles.servidorEnlaceTexto}>Volver al inicio de sesión</Text>
+            </Pressable>
+          </View>
+        </View>
+      ) : (
+      <>
       <View style={styles.marca}>
         <Text style={styles.eyebrow}>ZAV · DISTRIBUCIÓN</Text>
         <Text style={styles.titulo}>Acceso del Vendedor</Text>
@@ -174,37 +235,9 @@ export function LoginScreen({ onSesion }: Props) {
             style={styles.servidorEnlace}
           >
             <Text style={styles.servidorEnlaceTexto}>
-              {mostrarServidor ? 'Ocultar configuración' : 'Configurar API de mi computadora'}
+              Configurar API de mi computadora
             </Text>
           </Pressable>
-          {mostrarServidor ? (
-            <View style={styles.servidorFormulario}>
-              <Text style={styles.servidorNota}>
-                Conecta el celular y la PC a la misma red Wi-Fi. Escribe la IP privada de la PC, no 10.0.2.2.
-              </Text>
-              <TextInput
-                accessibilityLabel="Dirección de la API de pruebas"
-                autoCapitalize="none"
-                autoCorrect={false}
-                keyboardType="url"
-                placeholder="http://192.168.1.20:3001"
-                placeholderTextColor="#8a8982"
-                style={styles.input}
-                value={direccion}
-                onChangeText={setDireccion}
-              />
-              <Pressable
-                accessibilityRole="button"
-                disabled={comprobandoServidor}
-                onPress={probarYGuardarServidor}
-                style={[styles.servidorBoton, comprobandoServidor && styles.deshabilitado]}
-              >
-                <Text style={styles.servidorBotonTexto}>
-                  {comprobandoServidor ? 'Comprobando conexión…' : 'Probar y guardar servidor'}
-                </Text>
-              </Pressable>
-            </View>
-          ) : null}
           {mensajeServidor ? <Text style={styles.servidorAviso}>{mensajeServidor}</Text> : null}
         </View>
       ) : null}
@@ -212,6 +245,8 @@ export function LoginScreen({ onSesion }: Props) {
       <Text style={styles.pie}>
         Uso interno · El token de sesión se almacena de forma cifrada en el dispositivo.
       </Text>
+      </>
+      )}
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -219,6 +254,7 @@ export function LoginScreen({ onSesion }: Props) {
 
 const styles = StyleSheet.create({
   pantalla: { flex: 1, backgroundColor: '#f6f5f0' },
+  desplazamiento: { flex: 1 },
   contenido: {
     flexGrow: 1,
     justifyContent: 'center',
@@ -226,6 +262,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 22,
     paddingVertical: 28,
   },
+  contenidoServidor: { justifyContent: 'flex-start' },
+  pantallaServidor: { width: '100%', gap: 15, paddingTop: 8 },
+  tituloServidor: { color: '#20201e', fontSize: 25, fontWeight: '800' },
+  servidorVolver: { alignItems: 'center', paddingVertical: 10 },
   marca: { gap: 8 },
   eyebrow: {
     color: '#b83b17',

@@ -61,3 +61,10 @@ Guardar capturas de errores y éxitos **reales**, indicando fecha, rama, commit,
 7. Iniciar sesión con una cuenta Vendedor del entorno Development y realizar las comprobaciones móviles del apartado anterior. Evitar contraseñas y datos reales cuando se utiliza HTTP en una red local de pruebas.
 
 La compilación QA admite HTTP solamente por su configuración nativa de pruebas; la compilación release conserva la política de red original. El servidor local puede cambiar de IP sin regenerar el APK. Esta configuración no afecta a Neon Production ni a la app estable.
+
+### Comprobar el teclado en Android físico
+
+- [ ] Abrir **Configurar API de mi computadora**, tocar el campo de dirección y verificar que no quede oculto por el teclado.
+- [ ] Escribir o corregir la IP, desplazar el formulario con el teclado abierto y tocar **Probar y guardar servidor**.
+- [ ] Ocultar el teclado con **Listo** y regresar al inicio de sesión sin perder la dirección.
+- [ ] Repetir con el teclado mostrando sugerencias o en una pantalla de menor altura.
