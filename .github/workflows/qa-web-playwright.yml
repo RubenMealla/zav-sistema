@@ -1,12 +1,8 @@
-name: QA web Playwright
+name: 02 · Calidad — Web
 
 on:
   push:
     branches:
-      - "pruebas/**"
-      - "desarrollo/**"
-      - "correccion/**"
-      - "mejora/**"
       - main
     paths:
       - "apps/web/**"

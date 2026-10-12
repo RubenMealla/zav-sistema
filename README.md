@@ -197,6 +197,8 @@ El contrato completo y versionado se encuentra en `docs/api/openapi-e3.yaml`. Re
 
 Los comandos críticos utilizan `operacionClave` para idempotencia. Repetir la misma operación con los mismos datos no duplica movimientos; reutilizar la misma clave para una operación diferente se rechaza.
 
+La [guía de GitHub Actions](docs/desarrollo/guia-actions.md) distingue las verificaciones habituales, el monitoreo y las evidencias históricas, además de explicar cómo consultar resultados y APK.
+
 ## Pruebas
 
 API:

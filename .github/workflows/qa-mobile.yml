@@ -1,12 +1,8 @@
-name: QA mobile
+name: 03 · Calidad — Móvil
 
 on:
   push:
     branches:
-      - "desarrollo/**"
-      - "correccion/**"
-      - "pruebas/**"
-      - "mejora/**"
       - main
     paths:
       - "apps/mobile/**"

@@ -1,13 +1,8 @@
-name: QA backend
+name: 01 · Calidad — API
 
 on:
   push:
     branches:
-      - "desarrollo/**"
-      - "correccion/**"
-      - "pruebas/**"
-      - "configuracion/**"
-      - "mejora/**"
       - main
     paths:
       - "apps/api/**"

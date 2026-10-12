@@ -1,4 +1,4 @@
-name: APK móvil E3
+name: 04 · Android — Compilación APK
 
 on:
   pull_request:
@@ -31,8 +31,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       CI: 1
-      BUILD_CHANNEL: ${{ github.event_name == 'pull_request' && 'qa' || 'release' }}
-      EXPO_PUBLIC_API_BASE_URL: ${{ github.event_name == 'pull_request' && (vars.ZAV_QA_API_BASE_URL || 'http://10.0.2.2:3001') || 'https://zav-api-2026.onrender.com' }}
+      BUILD_CHANNEL: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && 'release' || 'qa' }}
+      EXPO_PUBLIC_API_BASE_URL: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && 'https://zav-api-2026.onrender.com' || (vars.ZAV_QA_API_BASE_URL || 'http://10.0.2.2:3001') }}
       EXPO_PUBLIC_MAP_STYLE_URL: https://tiles.openfreemap.org/styles/liberty
       ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
       ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
