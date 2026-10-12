@@ -1,4 +1,4 @@
-const API = process.env.API_BASE_URL ?? 'https://zav-api-2026.onrender.com';
+import { API_BASE_URL as API } from '../../../../lib/api-servidor';
 
 type ContextoRuta = { params: Promise<{ ruta: string[] }> };
 

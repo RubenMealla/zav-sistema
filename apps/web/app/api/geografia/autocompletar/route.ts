@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers';
 
-const API = process.env.API_BASE_URL ?? (process.env.NODE_ENV === 'production' ? 'https://zav-api-2026.onrender.com' : 'http://localhost:3001');
+import { API_BASE_URL as API } from '../../../lib/api-servidor';
 const VIEWBOX_TARIJA = '-65.333333,-20.833333,-62.250000,-22.833333';
 type Resultado = { direccion:string; principal:string; secundaria:string; tipo:string; departamento:string|null; ciudad:string|null; paisCodigo:string; latitud:number; longitud:number };
 type EstadoProveedor = { disponible:boolean; resultados:Resultado[] };

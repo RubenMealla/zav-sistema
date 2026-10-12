@@ -3,7 +3,7 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 
-const API = process.env.API_BASE_URL ?? (process.env.NODE_ENV === 'production' ? 'https://zav-api-2026.onrender.com' : 'http://localhost:3001');
+import { API_BASE_URL as API } from './lib/api-servidor';
 const COOKIE = 'zav_acceso';
 
 type RespuestaLogin = { accessToken?: string; usuario?: { rol?: string } };
