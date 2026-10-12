@@ -147,7 +147,7 @@ export default async function Panel({
 
   try {
     const necesitaProductos = vista === 'resumen' || vista === 'productos' || vista === 'lotes';
-    const necesitaLotes = vista !== 'productos';
+    const necesitaLotes = ['resumen', 'lotes', 'condiciones', 'movimientos'].includes(vista);
 
     const productoParametros = new URLSearchParams({ limit: vista === 'productos' ? String(limiteTabla) : '100' });
     if (vista === 'productos') productoParametros.set('page', String(productoPagina));
