@@ -90,6 +90,8 @@ La instalación transitoria de parches Expo se interrumpió por espacio y luego 
 
 Los resultados de Actions del SHA publicado se registran en la conversación del PR #71. Los workflows 01–04 conservan sus artefactos, agregando regresiones móviles, verificación de bundles y hora sobre APK QA. No se borran workflows históricos ni ejecuciones. El workflow especial 06 no se disparó contra infraestructura ni restauró bases compartidas.
 
+La primera ejecución Linux de QA móvil detectó reutilización de transformaciones Metro entre canales: los módulos QA estaban excluidos, pero el login conservaba un texto compilado de QA. Se separó la clave de caché por la huella de variables `EXPO_PUBLIC_*`, incluido canal y URL, y se amplió la regresión. Se conservó la assertion que detectó el problema y la exportación consecutiva de ambos canales. Esta corrección de CI justifica un segundo commit, sin reescribir el primero.
+
 ## F. Android
 
 | Aspecto | Producción | QA |

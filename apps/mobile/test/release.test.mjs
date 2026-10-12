@@ -31,6 +31,17 @@ test('Metro excluye consola, registro y configuración QA del grafo release', ()
     const resultado = metro.resolver.resolveRequest(context, origen, 'android');
     assert.equal(resultado.filePath, path.resolve(directorio, destino));
   }
+  const rutaMetro = require.resolve('../metro.config.js');
+  process.env.EXPO_PUBLIC_BUILD_CHANNEL = 'qa';
+  delete require.cache[rutaMetro];
+  const qa = require(rutaMetro);
+  assert.notEqual(qa.cacheVersion, metro.cacheVersion, 'QA y release no comparten transformaciones');
+  process.env.EXPO_PUBLIC_API_BASE_URL = 'http://192.168.1.30:3001';
+  delete require.cache[rutaMetro];
+  assert.notEqual(require(rutaMetro).cacheVersion, qa.cacheVersion, 'Cambiar la API invalida el código anterior');
+  process.env.EXPO_PUBLIC_BUILD_CHANNEL = 'release';
+  process.env.EXPO_PUBLIC_API_BASE_URL = 'https://api.release.test';
+  delete require.cache[rutaMetro];
 });
 
 test('configuración Expo mantiene nombres, paquetes, versión y permisos separados', () => {
