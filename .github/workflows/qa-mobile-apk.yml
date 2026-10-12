@@ -32,6 +32,7 @@ jobs:
     env:
       CI: 1
       BUILD_CHANNEL: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && 'release' || 'qa' }}
+      EXPO_PUBLIC_BUILD_CHANNEL: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && 'release' || 'qa' }}
       EXPO_PUBLIC_API_BASE_URL: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && 'https://zav-api-2026.onrender.com' || (vars.ZAV_QA_API_BASE_URL || 'http://10.0.2.2:3001') }}
       EXPO_PUBLIC_MAP_STYLE_URL: https://tiles.openfreemap.org/styles/liberty
       ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -163,8 +164,15 @@ jobs:
 
           VERSION="$(node -p "require('../app.json').expo.version")"
           VERSION_CODE="$(node -p "require('../app.json').expo.android.versionCode")"
-          printf '%s\n' "$BADGING" | grep -F "package: name='bo.zav.gestion.vendedor' versionCode='$VERSION_CODE' versionName='$VERSION'"
-          printf '%s\n' "$BADGING" | grep -F "application-label:'ZAV Vendedor'"
+          if [ "$BUILD_CHANNEL" = "qa" ]; then
+            PACKAGE="bo.zav.gestion.vendedor.qa"
+            ETIQUETA="ZAV Vendedor QA"
+          else
+            PACKAGE="bo.zav.gestion.vendedor"
+            ETIQUETA="ZAV Vendedor"
+          fi
+          printf '%s\n' "$BADGING" | grep -F "package: name='$PACKAGE' versionCode='$VERSION_CODE' versionName='$VERSION'"
+          printf '%s\n' "$BADGING" | grep -F "application-label:'$ETIQUETA'"
 
           APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
           test -n "$APKSIGNER"

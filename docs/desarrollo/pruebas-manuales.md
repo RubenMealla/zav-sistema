@@ -49,3 +49,15 @@
 ## Evidencias y criterio de aceptación
 
 Guardar capturas de errores y éxitos **reales**, indicando fecha, rama, commit, rol y escenario. Los checks de GitHub Actions cubren parte del código, pero **no sustituyen** la revisión manual. No marcar una tarea como validada sin una ejecución observada. Antes de integrar a `main`, revisar el PR, validar funcionalidades afectadas y evitar crear datos reales de operación en el entorno de pruebas.
+
+## Probar el APK QA en un teléfono físico
+
+1. En PowerShell de la PC, usar `ipconfig` y localizar la dirección IPv4 de la conexión Wi-Fi (por ejemplo `192.168.1.20`). La IP puede cambiar. El celular y la PC deben usar la misma red local.
+2. Mantener NestJS activo con la conexión de Neon `development-pc-20261011` y `NODE_ENV=development`. Nunca usar `production`.
+3. Abrir en el navegador del celular `http://IP_DE_PC:3001/api/v1/salud`. Debe devolver `{"estado":"ok"}`. Si falla, revisar red y firewall de Windows antes de iniciar sesión.
+4. Descargar el artefacto más reciente `ZAV-Vendedor-1.0.0-build10000-qa-run-N` desde la verificación **04 · Android — Compilación APK** del PR #71, descomprimir e instalar el APK en Android (habilitar instalación de origen autorizado si el sistema lo solicita).
+5. Comprobar que el icono se llame **ZAV Vendedor QA**; esta variante tiene identificador distinto al instalador estable.
+6. Abrir **Configurar API de mi computadora** en la pantalla de acceso, escribir `http://IP_DE_PC:3001` y pulsar **Probar y guardar servidor**.
+7. Iniciar sesión con una cuenta Vendedor del entorno Development y realizar las comprobaciones móviles del apartado anterior. Evitar contraseñas y datos reales cuando se utiliza HTTP en una red local de pruebas.
+
+La compilación QA admite HTTP solamente por su configuración nativa de pruebas; la compilación release conserva la política de red original. El servidor local puede cambiar de IP sin regenerar el APK. Esta configuración no afecta a Neon Production ni a la app estable.

@@ -12,9 +12,7 @@ import type {
   VentaDespacho,
 } from './tipos';
 
-export const API_BASE_URL = (process.env.EXPO_PUBLIC_API_BASE_URL ?? '')
-  .trim()
-  .replace(/\/+$/, '');
+import { obtenerDireccionApi } from './configuracion-api';
 
 export class ApiError extends Error {
   constructor(
@@ -33,7 +31,8 @@ async function solicitud<T>(
   opciones: RequestInit = {},
   token?: string,
 ): Promise<T> {
-  if (!/^https?:\/\/[^\s/]+/i.test(API_BASE_URL)) {
+  const base = obtenerDireccionApi();
+  if (!/^https?:\/\/[^\s/]+/i.test(base)) {
     throw new ApiError(0, { message: 'Configura EXPO_PUBLIC_API_BASE_URL para conectar con la API.' });
   }
   const headers = new Headers(opciones.headers);
@@ -43,7 +42,7 @@ async function solicitud<T>(
 
   let respuesta: Response;
   try {
-    respuesta = await fetch(`${API_BASE_URL}${ruta}`, {
+    respuesta = await fetch(`${base}${ruta}`, {
       ...opciones,
       headers,
     });

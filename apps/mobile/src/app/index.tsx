@@ -3,6 +3,7 @@ import { ActivityIndicator, StyleSheet, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ApiError, perfil } from '@/lib/api';
+import { cargarDireccionApi } from '@/lib/configuracion-api';
 import { borrarSesion, guardarSesion, leerSesion } from '@/lib/sesion';
 import type { Sesion } from '@/lib/tipos';
 import { LoginScreen } from '@/screens/login-screen';
@@ -17,6 +18,7 @@ export default function Inicio() {
 
     async function cargarSesionGuardada() {
       try {
+        await cargarDireccionApi();
         const guardada = await leerSesion();
         if (!guardada) return;
 

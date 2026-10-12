@@ -4,6 +4,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -11,6 +12,12 @@ import {
 } from 'react-native';
 
 import { ApiError, iniciarSesion } from '@/lib/api';
+import {
+  ES_COMPILACION_QA,
+  configurarDireccionApi,
+  obtenerDireccionApi,
+  validarDireccionApi,
+} from '@/lib/configuracion-api';
 import type { Sesion } from '@/lib/tipos';
 
 type Props = {
@@ -30,6 +37,34 @@ export function LoginScreen({ onSesion }: Props) {
   const [contrasena, setContrasena] = useState('');
   const [error, setError] = useState('');
   const [enviando, setEnviando] = useState(false);
+  const [mostrarServidor, setMostrarServidor] = useState(false);
+  const [direccion, setDireccion] = useState(obtenerDireccionApi());
+  const [servidorActivo, setServidorActivo] = useState(obtenerDireccionApi());
+  const [mensajeServidor, setMensajeServidor] = useState('');
+  const [comprobandoServidor, setComprobandoServidor] = useState(false);
+
+  async function probarYGuardarServidor() {
+    setMensajeServidor('');
+    setComprobandoServidor(true);
+    try {
+      const url = validarDireccionApi(direccion);
+      const respuesta = await fetch(`${url}/api/v1/salud`);
+      if (!respuesta.ok) throw new Error('El servidor no respondió correctamente.');
+      const cuerpo: unknown = await respuesta.json();
+      if (!cuerpo || typeof cuerpo !== 'object' || (cuerpo as { estado?: unknown }).estado !== 'ok') {
+        throw new Error('La dirección no corresponde a una API ZAV disponible.');
+      }
+      const guardada = await configurarDireccionApi(url);
+      setServidorActivo(guardada);
+      setMostrarServidor(false);
+      setMensajeServidor('Servidor de pruebas conectado.');
+    } catch (error) {
+      setMensajeServidor(error instanceof Error ? error.message : 'No se pudo conectar con el servidor.');
+    } finally {
+      setComprobandoServidor(false);
+    }
+  }
+
 
   async function ingresar() {
     const usuario = identificador.trim().toLowerCase();
@@ -66,6 +101,7 @@ export function LoginScreen({ onSesion }: Props) {
       style={styles.pantalla}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
+      <ScrollView contentContainerStyle={styles.contenido} keyboardShouldPersistTaps="handled">
       <View style={styles.marca}>
         <Text style={styles.eyebrow}>ZAV · DISTRIBUCIÓN</Text>
         <Text style={styles.titulo}>Acceso del Vendedor</Text>
@@ -126,20 +162,69 @@ export function LoginScreen({ onSesion }: Props) {
         </Pressable>
       </View>
 
+      {ES_COMPILACION_QA ? (
+        <View style={styles.servidor}>
+          <Text style={styles.servidorTitulo}>ENTORNO DE PRUEBAS · NO PRODUCCIÓN</Text>
+          <Text style={styles.servidorDireccion} selectable>
+            API: {servidorActivo || 'Sin configurar'}
+          </Text>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => { setMostrarServidor((anterior) => !anterior); setMensajeServidor(''); }}
+            style={styles.servidorEnlace}
+          >
+            <Text style={styles.servidorEnlaceTexto}>
+              {mostrarServidor ? 'Ocultar configuración' : 'Configurar API de mi computadora'}
+            </Text>
+          </Pressable>
+          {mostrarServidor ? (
+            <View style={styles.servidorFormulario}>
+              <Text style={styles.servidorNota}>
+                Conecta el celular y la PC a la misma red Wi-Fi. Escribe la IP privada de la PC, no 10.0.2.2.
+              </Text>
+              <TextInput
+                accessibilityLabel="Dirección de la API de pruebas"
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="url"
+                placeholder="http://192.168.1.20:3001"
+                placeholderTextColor="#8a8982"
+                style={styles.input}
+                value={direccion}
+                onChangeText={setDireccion}
+              />
+              <Pressable
+                accessibilityRole="button"
+                disabled={comprobandoServidor}
+                onPress={probarYGuardarServidor}
+                style={[styles.servidorBoton, comprobandoServidor && styles.deshabilitado]}
+              >
+                <Text style={styles.servidorBotonTexto}>
+                  {comprobandoServidor ? 'Comprobando conexión…' : 'Probar y guardar servidor'}
+                </Text>
+              </Pressable>
+            </View>
+          ) : null}
+          {mensajeServidor ? <Text style={styles.servidorAviso}>{mensajeServidor}</Text> : null}
+        </View>
+      ) : null}
+
       <Text style={styles.pie}>
         Uso interno · El token de sesión se almacena de forma cifrada en el dispositivo.
       </Text>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  pantalla: {
-    flex: 1,
-    backgroundColor: '#f6f5f0',
-    paddingHorizontal: 22,
+  pantalla: { flex: 1, backgroundColor: '#f6f5f0' },
+  contenido: {
+    flexGrow: 1,
     justifyContent: 'center',
-    gap: 22,
+    gap: 20,
+    paddingHorizontal: 22,
+    paddingVertical: 28,
   },
   marca: { gap: 8 },
   eyebrow: {
@@ -211,6 +296,23 @@ const styles = StyleSheet.create({
   botonPresionado: { backgroundColor: '#963011' },
   botonTexto: { color: '#fff', fontWeight: '800', fontSize: 15 },
   deshabilitado: { opacity: 0.6 },
+  servidor: {
+    backgroundColor: '#fffaf6',
+    borderWidth: 1,
+    borderColor: '#d9b5a3',
+    borderRadius: 10,
+    padding: 14,
+    gap: 9,
+  },
+  servidorTitulo: { color: '#9b3215', fontSize: 11, fontWeight: '900', letterSpacing: 0.5 },
+  servidorDireccion: { color: '#50504a', fontSize: 12, lineHeight: 18 },
+  servidorEnlace: { paddingVertical: 6 },
+  servidorEnlaceTexto: { color: '#9b3215', fontSize: 13, fontWeight: '800' },
+  servidorFormulario: { gap: 9 },
+  servidorNota: { color: '#66665e', fontSize: 12, lineHeight: 18 },
+  servidorBoton: { minHeight: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 7, backgroundColor: '#262622' },
+  servidorBotonTexto: { color: '#fff', fontSize: 13, fontWeight: '700' },
+  servidorAviso: { color: '#8b4a2f', fontSize: 12, lineHeight: 18 },
   pie: {
     color: '#717169',
     fontSize: 12,

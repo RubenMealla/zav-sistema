@@ -26,6 +26,8 @@ Esta guía facilita cambios manuales durante el desarrollo y la presentación de
 | Funciones geográficas y fechas móviles | `apps/mobile/src/lib/distribucion.ts` |
 | Mapas, selectores e historial móvil | `apps/mobile/src/components/` |
 | Conexión móvil a la API | `apps/mobile/src/lib/api.ts` |
+| Configurar API en Android físico QA | `apps/mobile/src/lib/configuracion-api.ts` y `apps/mobile/src/screens/login-screen.tsx` |
+| Permitir HTTP local exclusivamente en QA | `apps/mobile/plugins/with-qa-local-network.js` y `apps/mobile/app.config.js` |
 | Workflows Android y QA | `.github/workflows/` |
 
 ## Comandos de revisión
