@@ -1,6 +1,7 @@
+import { useMemo, useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import type { Cliente, Disponibilidad, PuntoGeografico } from '@/lib/tipos';
-import { BotonAccion, Campo, Estado, Titulo, Vacio } from './vendedor-ui';
+import { BotonAccion, Campo, Titulo, Vacio } from './vendedor-ui';
 import { styles } from '@/screens/vendedor-estilos';
 
 export function Clientes({

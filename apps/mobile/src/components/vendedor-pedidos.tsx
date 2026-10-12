@@ -1,6 +1,7 @@
+import { useMemo, useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import type { PedidoResumen, PlanificacionReparto } from '@/lib/tipos';
-import { fechaCorta, formatearDistancia } from '@/lib/distribucion';
+import { esHoyBolivia, fechaCorta, formatearDistancia } from '@/lib/distribucion';
 import { MapaReparto } from '@/components/mapas-distribucion';
 import { BotonAccion, Dato, Estado, Titulo, Vacio, estadoLegible } from './vendedor-ui';
 import { styles } from '@/screens/vendedor-estilos';
