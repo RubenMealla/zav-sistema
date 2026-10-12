@@ -3,6 +3,7 @@ import {
   codigo,
   enteroPositivo,
   fechaHoyBolivia,
+  FECHA_HOY_BOLIVIA_SQL,
   fechaIso,
   objeto,
   paginacion,
@@ -28,6 +29,9 @@ describe('Validacion del inventario', () => {
     expect(fechaIso('2026-09-24', 'elaboradoEl')).toBe('2026-09-24');
     expect(() => fechaIso('2026-02-30', 'elaboradoEl')).toThrow(BadRequestException);
     expect(fechaHoyBolivia(new Date('2026-10-06T02:30:00.000Z'))).toBe('2026-10-05');
+    expect(fechaHoyBolivia(new Date('2026-10-13T03:59:59.000Z'))).toBe('2026-10-12');
+    expect(fechaHoyBolivia(new Date('2026-10-13T04:00:00.000Z'))).toBe('2026-10-13');
+    expect(FECHA_HOY_BOLIVIA_SQL).toContain("AT TIME ZONE 'America/La_Paz'");
     expect(precio('12.50')).toBe('12.50');
     expect(() => precio('-1')).toThrow(BadRequestException);
     expect(() => precio('4.123')).toThrow(BadRequestException);

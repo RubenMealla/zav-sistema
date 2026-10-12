@@ -5,6 +5,7 @@ import pg from 'pg';
 import request from 'supertest';
 import type { App } from 'supertest/types';
 import { AppModule } from '../src/app.module.js';
+import { FECHA_HOY_BOLIVIA_SQL, fechaHoyBolivia } from '../src/inventario/validacion.js';
 
 describe('Regresiones de auditoría integral', () => {
   let app: INestApplication<App>;
@@ -46,6 +47,55 @@ describe('Regresiones de auditoría integral', () => {
   const crear = (clienteId: string, productoId: string, cantidad: number) => request(app.getHttpServer())
     .post('/api/v1/pedidos').set('Authorization', `Bearer ${vendedor}`)
     .send({ clienteId, detalles: [{ productoId, cantidad }] });
+
+  it('usa fecha civil de Bolivia independientemente de la zona PostgreSQL', async () => {
+    const conexion = await db.connect();
+    try {
+      await conexion.query('BEGIN');
+      for (const zona of ['UTC', 'Asia/Tokyo']) {
+        await conexion.query("SELECT set_config('TimeZone', $1, true)", [zona]);
+        const ahora = await conexion.query(`SELECT (${FECHA_HOY_BOLIVIA_SQL})::text AS hoy`);
+        expect(ahora.rows[0].hoy).toBe(fechaHoyBolivia());
+        for (const [instante, fecha, vigente] of [
+          ['2026-10-13T03:59:59Z', '2026-10-12', true],
+          ['2026-10-13T04:00:00Z', '2026-10-13', false],
+        ] as const) {
+          const calculo = await conexion.query(
+            `SELECT ($1::timestamptz AT TIME ZONE 'America/La_Paz')::date::text AS hoy,
+                    (DATE '2026-10-12' >= ($1::timestamptz AT TIME ZONE 'America/La_Paz')::date) AS vigente`,
+            [instante],
+          );
+          expect(calculo.rows[0]).toEqual({ hoy: fecha, vigente });
+        }
+      }
+    } finally {
+      await conexion.query('ROLLBACK');
+      conexion.release();
+    }
+  });
+
+  it('permite liberar un lote durante su día de vencimiento en Bolivia', async () => {
+    const hoy = fechaHoyBolivia();
+    const vigente = await preparar();
+    const vencido = await preparar();
+    for (const { lotes } of [vigente, vencido]) {
+      await db.query("UPDATE lote SET condicion='RETENIDO' WHERE id=$1", [lotes[0]]);
+    }
+    await db.query(
+      "UPDATE lote SET elaborado_el=$2::date-2, vence_el=$2::date WHERE id=$1",
+      [vigente.lotes[0], hoy],
+    );
+    await db.query(
+      "UPDATE lote SET elaborado_el=$2::date-3, vence_el=$2::date-1 WHERE id=$1",
+      [vencido.lotes[0], hoy],
+    );
+    const liberar = (id: string) =>
+      request(app.getHttpServer()).post(`/api/v1/lotes/${id}/liberar`)
+        .set('Authorization', `Bearer ${admin}`)
+        .send({ operacionClave: randomUUID(), motivo: 'Verificación de fecha civil de Bolivia' });
+    await liberar(vigente.lotes[0]).expect(201);
+    await liberar(vencido.lotes[0]).expect(409);
+  });
 
   it('devuelve 400 por fechas de auditoría inexistentes y formatos ambiguos', async () => {
     for (const fecha of ['2026-02-30', '2026-13-01', 'ayer']) {

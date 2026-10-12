@@ -7,6 +7,7 @@ import {
 import { DataSource } from 'typeorm';
 import {
   codigo,
+  FECHA_HOY_BOLIVIA_SQL,
   enteroPositivo,
   objeto,
   paginacion,
@@ -179,7 +180,7 @@ export class MovimientosService {
 
       // La condición puede cambiar mientras se espera el bloqueo del producto.
       const lotes = await manager.query(
-        `SELECT id, producto_id, condicion, (vence_el >= CURRENT_DATE) AS vigente
+        `SELECT id, producto_id, condicion, (vence_el >= ${FECHA_HOY_BOLIVIA_SQL}) AS vigente
          FROM lote WHERE id = $1::uuid`,
         [loteId],
       ) as Array<{ id: string; producto_id: string; condicion: string; vigente: boolean }>;
@@ -214,7 +215,7 @@ export class MovimientosService {
              WHERE l.producto_id = $1::uuid
                AND u.codigo = 'VENTA_DESPACHO'
                AND l.condicion = 'LIBERADO'
-               AND l.vence_el >= CURRENT_DATE`,
+               AND l.vence_el >= ${FECHA_HOY_BOLIVIA_SQL}`,
             [lote.producto_id],
           ) as Promise<Array<{ cantidad: number }>>,
           manager.query(

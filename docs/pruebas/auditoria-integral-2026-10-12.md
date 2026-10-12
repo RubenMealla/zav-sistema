@@ -130,3 +130,9 @@ Entrega únicamente en `origin/mejora/calidad-arquitectura`, mediante commit con
 ## I. Recomendación técnica
 
 Mantener el PR abierto hasta aprobar Actions en el SHA final y completar el ensayo físico QA (entrada de IP, pérdida de conexión, reorganizar reparto, retiro individual/múltiple, entrega/GPS y separación de variantes). Revisar los avisos transitivos pendientes y aceptar o resolver su exposición con evidencia. No recomendar una integración incondicional mientras estas comprobaciones estén pendientes. Los cambios transaccionales y de rendimiento ya tienen regresiones locales; la aceptación final debe incluir Android real. No se realizó el merge.
+
+## Cierre de vigencia de lotes: fecha Bolivia
+
+Decisión confirmada el 12/10/2026: `vence_el` es una fecha civil de Bolivia. El lote es vigente **durante todo el día señalado** y pasa a vencido al comenzar el día siguiente en `America/La_Paz`, sin depender de la zona horaria de PostgreSQL. Los filtros de lotes, liberación, stock disponible, bloqueo/traslado y retiro de pedidos usan la expresión compartida `FECHA_HOY_BOLIVIA_SQL`, definida en `apps/api/src/inventario/validacion.ts`. Las columnas `DATE` y las migraciones históricas no se modificaron.
+
+Se añadieron regresiones en `validacion.spec.ts` y `auditoria-integral.e2e-spec.ts` para verificar medianoche UTC frente a Bolivia, zonas de sesión PostgreSQL y liberación de lote en su fecha final. Estos cambios requieren aprobación del CI en el commit posterior.

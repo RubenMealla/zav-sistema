@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { DataSource } from 'typeorm';
-import { objeto, paginacion, texto, uuid } from './validacion.js';
+import { FECHA_HOY_BOLIVIA_SQL, objeto, paginacion, texto, uuid } from './validacion.js';
 
 const CAMPOS_CAMBIO = ['operacionClave', 'motivo'] as const;
 type Condicion = 'LIBERADO' | 'RETENIDO' | 'BLOQUEADO';
@@ -133,9 +133,9 @@ export class CondicionesLoteService {
 
       if (condicionNueva === 'LIBERADO') {
         const fechaActual = await manager.query(
-          "SELECT to_char(CURRENT_DATE, 'YYYY-MM-DD') AS hoy",
+          `SELECT to_char(${FECHA_HOY_BOLIVIA_SQL}, 'YYYY-MM-DD') AS hoy`,
         ) as { hoy: string }[];
-        if (lote.vence_el <= fechaActual[0].hoy) {
+        if (lote.vence_el < fechaActual[0].hoy) {
           throw new ConflictException('No se puede liberar un lote vencido.');
         }
         if (!lote.producto_activo) {
@@ -164,7 +164,7 @@ export class CondicionesLoteService {
                WHERE l.producto_id = $1::uuid
                  AND u.codigo = 'VENTA_DESPACHO'
                  AND l.condicion = 'LIBERADO'
-                 AND l.vence_el >= CURRENT_DATE`,
+                 AND l.vence_el >= ${FECHA_HOY_BOLIVIA_SQL}`,
               [lote.producto_id],
             ) as Promise<Array<{ cantidad: number }>>,
             manager.query(

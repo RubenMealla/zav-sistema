@@ -1,6 +1,6 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { DataSource, EntityManager } from 'typeorm';
-import { fechaIso, paginacion, texto, uuid } from '../inventario/validacion.js';
+import { FECHA_HOY_BOLIVIA_SQL, fechaIso, paginacion, texto, uuid } from '../inventario/validacion.js';
 import type { EstadoPedido, FilaPedido, FilaDetalle, FilaDisponibilidad } from './tipos-pedidos.js';
 
 // Lecturas SQL compartidas. Las validaciones de stock reciben el manager de la transacción.
@@ -23,7 +23,7 @@ export class ConsultasPedidos {
          JOIN ubicacion u ON u.id = s.ubicacion_id
          WHERE u.codigo = 'VENTA_DESPACHO'
            AND l.condicion = 'LIBERADO'
-           AND l.vence_el >= CURRENT_DATE
+           AND l.vence_el >= ${FECHA_HOY_BOLIVIA_SQL}
          GROUP BY l.producto_id
        ),
        comprometido AS (

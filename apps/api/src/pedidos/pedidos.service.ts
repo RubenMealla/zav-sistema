@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { DataSource, EntityManager } from 'typeorm';
-import { objeto, texto, uuid } from '../inventario/validacion.js';
+import { FECHA_HOY_BOLIVIA_SQL, objeto, texto, uuid } from '../inventario/validacion.js';
 import { distanciaHaversine } from './geografia.service.js';
 
 import type { EstadoPedido } from './tipos-pedidos.js';
@@ -403,7 +403,7 @@ export class PedidosService {
            WHERE l.producto_id = $1::uuid
              AND s.ubicacion_id = $2::uuid
              AND l.condicion = 'LIBERADO'
-             AND l.vence_el >= CURRENT_DATE
+             AND l.vence_el >= ${FECHA_HOY_BOLIVIA_SQL}
              AND s.cantidad_fisica > 0
            ORDER BY l.vence_el ASC, l.creado_en ASC, l.id ASC`,
           [detalle.producto_id, origenId],

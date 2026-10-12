@@ -13,6 +13,7 @@ import {
   codigoPostgres,
   enteroPositivo,
   fechaHoyBolivia,
+  FECHA_HOY_BOLIVIA_SQL,
   fechaIso,
   objeto,
   paginacion,
@@ -87,8 +88,8 @@ export class LotesService {
     const vigencia = vigenciaFiltro(consulta.vigencia);
     const qb = this.lotes.createQueryBuilder('l');
     if (productoId) qb.andWhere('l.producto_id = :productoId', { productoId });
-    if (vigencia === 'vigente') qb.andWhere('l.vence_el >= CURRENT_DATE');
-    if (vigencia === 'vencido') qb.andWhere('l.vence_el < CURRENT_DATE');
+    if (vigencia === 'vigente') qb.andWhere(`l.vence_el >= ${FECHA_HOY_BOLIVIA_SQL}`);
+    if (vigencia === 'vencido') qb.andWhere(`l.vence_el < ${FECHA_HOY_BOLIVIA_SQL}`);
     const [items, total] = await qb.orderBy('l.creado_en', 'DESC').addOrderBy('l.id', 'DESC')
       .skip((page - 1) * limit).take(limit).getManyAndCount();
     const saldos = await this.saldos(items.map((lote) => lote.id));
