@@ -1,4 +1,4 @@
-name: APK móvil E3
+name: 04 · Android — Compilación APK
 
 on:
   pull_request:
@@ -31,8 +31,9 @@ jobs:
     runs-on: ubuntu-latest
     env:
       CI: 1
-      BUILD_CHANNEL: ${{ github.event_name == 'pull_request' && 'qa' || 'release' }}
-      EXPO_PUBLIC_API_BASE_URL: https://zav-api-2026.onrender.com
+      BUILD_CHANNEL: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && 'release' || 'qa' }}
+      EXPO_PUBLIC_BUILD_CHANNEL: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && 'release' || 'qa' }}
+      EXPO_PUBLIC_API_BASE_URL: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && 'https://zav-api-2026.onrender.com' || (vars.ZAV_QA_API_BASE_URL || 'http://10.0.2.2:3001') }}
       EXPO_PUBLIC_MAP_STYLE_URL: https://tiles.openfreemap.org/styles/liberty
       ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
       ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -60,6 +61,41 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
+
+      - name: Validar destino de la API y version Android
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "$BUILD_CHANNEL" = "qa" ]; then
+            case "$EXPO_PUBLIC_API_BASE_URL" in
+              https://zav-api-2026.onrender.com* )
+                echo "::error::El APK QA no puede conectar con produccion."; exit 1 ;;
+              http://*|https://* ) ;;
+              * ) echo "::error::URL de QA invalida."; exit 1 ;;
+            esac
+          fi
+          VERSION="$(node -p "require('./apps/mobile/app.json').expo.version")"
+          BUILD_CODE="$(node -p "require('./apps/mobile/app.json').expo.android.versionCode")"
+          echo "APK_ARTIFACT_NAME=ZAV-Vendedor-${VERSION}-build${BUILD_CODE}-${BUILD_CHANNEL}-run-${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
+      - name: Verificar separación de configuración QA y release
+        shell: bash
+        run: |
+          EXPO_PUBLIC_BUILD_CHANNEL=qa node - <<'NODE'
+          const cfg = require('./apps/mobile/app.config.js')({ config: require('./apps/mobile/app.json').expo });
+          if (cfg.android.package !== 'bo.zav.gestion.vendedor.qa' ||
+              cfg.name !== 'ZAV Vendedor QA' ||
+              !cfg.plugins.includes('./plugins/with-qa-local-network')) {
+            throw new Error('Configuración Android QA incorrecta');
+          }
+          NODE
+          EXPO_PUBLIC_BUILD_CHANNEL=release node - <<'NODE'
+          const cfg = require('./apps/mobile/app.config.js')({ config: require('./apps/mobile/app.json').expo });
+          if (cfg.android.package !== 'bo.zav.gestion.vendedor' ||
+              cfg.name !== 'ZAV Vendedor' ||
+              cfg.plugins.includes('./plugins/with-qa-local-network')) {
+            throw new Error('Configuración Android release incorrecta');
+          }
+          NODE
 
       - name: Instalar dependencias
         run: pnpm install --frozen-lockfile
@@ -146,12 +182,30 @@ jobs:
           BADGING="$("$AAPT" dump badging "$APK")"
           printf '%s\n' "$BADGING"
 
-          printf '%s\n' "$BADGING" | grep -F "package: name='bo.zav.gestion.vendedor' versionCode='10000' versionName='1.0.0'"
-          printf '%s\n' "$BADGING" | grep -F "application-label:'ZAV Vendedor'"
+          VERSION="$(node -p "require('../app.json').expo.version")"
+          VERSION_CODE="$(node -p "require('../app.json').expo.android.versionCode")"
+          if [ "$BUILD_CHANNEL" = "qa" ]; then
+            PACKAGE="bo.zav.gestion.vendedor.qa"
+            ETIQUETA="ZAV Vendedor QA"
+          else
+            PACKAGE="bo.zav.gestion.vendedor"
+            ETIQUETA="ZAV Vendedor"
+          fi
+          printf '%s\n' "$BADGING" | grep -F "package: name='$PACKAGE' versionCode='$VERSION_CODE' versionName='$VERSION'"
+          printf '%s\n' "$BADGING" | grep -F "application-label:'$ETIQUETA'"
 
           APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
           test -n "$APKSIGNER"
           "$APKSIGNER" verify --verbose --print-certs "$APK"
+
+          "$AAPT" dump xmltree "$APK" AndroidManifest.xml > "$RUNNER_TEMP/zav-manifest.txt"
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          manifest = Path(os.environ['RUNNER_TEMP'], 'zav-manifest.txt').read_text()
+          habilitado = any('usesCleartextTraffic' in linea and '0xffffffff' in linea for linea in manifest.splitlines())
+          assert habilitado == (os.environ['BUILD_CHANNEL'] == 'qa'), 'HTTP local debe habilitarse solamente en QA'
+          PY
 
           VERSION="$(node -p "require('../app.json').expo.version")"
           VERSION_CODE="$(node -p "require('../app.json').expo.android.versionCode")"
@@ -167,9 +221,44 @@ jobs:
       - name: Guardar APK autónomo versionado
         uses: actions/upload-artifact@v4
         with:
-          name: ZAV-Vendedor-1.0.0-build10000-${{ env.BUILD_CHANNEL }}-run-${{ github.run_number }}
+          name: ${{ env.APK_ARTIFACT_NAME }}
           path: |
-            apps/mobile/dist/ZAV-Vendedor-1.0.0-build10000-${{ env.BUILD_CHANNEL }}.apk
-            apps/mobile/dist/ZAV-Vendedor-1.0.0-build10000-${{ env.BUILD_CHANNEL }}.apk.sha256
+            apps/mobile/dist/ZAV-Vendedor-*.apk
+            apps/mobile/dist/ZAV-Vendedor-*.apk.sha256
           if-no-files-found: error
+          retention-days: 30
+
+  verificar-hora-android:
+    name: Verificar hora QA en Android
+    needs: construir-apk
+    if: github.ref != 'refs/heads/main' || github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: ZAV-Vendedor-*-qa-run-${{ github.run_number }}
+          path: apk-qa
+          merge-multiple: true
+      - name: Habilitar aceleración del emulador
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Comprobar hora boliviana con Android en UTC y Tokio
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_2
+          disable-animations: true
+          script: python3 apps/mobile/scripts/qa-hora-android.py
+      - name: Conservar evidencia de hora Android
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hora-bolivia-android-${{ github.run_number }}
+          path: evidencias-hora-android/
           retention-days: 30

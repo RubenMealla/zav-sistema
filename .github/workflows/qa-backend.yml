@@ -1,13 +1,8 @@
-name: QA backend
+name: 01 · Calidad — API
 
 on:
   push:
     branches:
-      - "desarrollo/**"
-      - "correccion/**"
-      - "pruebas/**"
-      - "configuracion/**"
-      - "mejora/**"
       - main
     paths:
       - "apps/api/**"
@@ -15,6 +10,7 @@ on:
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
       - ".github/workflows/qa-backend.yml"
+  workflow_dispatch:
   pull_request:
     branches:
       - main

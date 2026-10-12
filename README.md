@@ -48,7 +48,7 @@ El modelo principal se limita a ocho entidades de negocio:
 
 | Capa | Tecnologías principales |
 |---|---|
-| Web | Next.js 16.3.5, React 19.2.8, TypeScript |
+| Web | Next.js 16.3.8, React 19.2.8, TypeScript |
 | Móvil | React Native 0.86.3, Expo SDK 57, Expo Router, TypeScript |
 | Mapas móvil | MapLibre React Native, OpenFreeMap, expo-location |
 | API | NestJS 12, Node.js 24, TypeScript, TypeORM |
@@ -60,28 +60,19 @@ El modelo principal se limita a ocho entidades de negocio:
 
 Las versiones efectivas de dependencias se encuentran en los archivos `package.json` y `pnpm-lock.yaml`.
 
-## Versiones estables de las aplicaciones
+## Versiones de los componentes
 
-- **ZAV Web 1.0.0:** primera versión estable del sitio público, acceso y sistema administrativo. El valor se define en `apps/web/package.json` y aparece en las tres interfaces sin repetirse en el código.
-- **ZAV Vendedor 1.0.0:** primera versión estable de la aplicación Android, identificada también por `android.versionCode: 10000` en `apps/mobile/app.json`. Su número no cambia cuando solo se actualiza la web.
-- **API:** se versiona separadamente; el prefijo `/api/v1` corresponde al contrato HTTP, no al número de versión de la web.
-- El paquete privado raíz del monorepositorio no representa una versión distribuida al usuario.
+La primera línea estable se versiona de forma independiente:
 
-La política SemVer, el procedimiento de publicación y el historial funcional están en [Versionado de las aplicaciones](docs/gestion/versionado-aplicaciones.md) y [Historial de versiones](docs/gestion/historial-versiones.md). Cada nueva versión requiere pruebas, registro de cambios y verificación del despliegue.
-
-## Versionamiento de los componentes
-
-La primera línea estable identifica por separado tres componentes:
-
-| Componente | Versión | Origen |
+| Componente | Versión estable | Fuente |
 |---|---|---|
 | ZAV Web | **1.0.0** | `apps/web/package.json` |
-| ZAV Vendedor (Android) | **1.0.0**, compilación **10000** | `apps/mobile/package.json` y `apps/mobile/app.json` |
-| ZAV API (NestJS) | **1.0.0** | `apps/api/package.json` |
+| ZAV API | **1.0.0** | `apps/api/package.json` |
+| ZAV Vendedor (Android) | **1.0.0** · compilación **10000** | `apps/mobile/package.json` y `apps/mobile/app.json` |
 
-La API expone `GET /api/v1/version`, que devuelve el nombre del servicio, la versión de publicación y el identificador del contrato `v1`. La versión `1.0.0` del backend y el prefijo de contrato `/api/v1` no se sustituyen entre sí.
+La API expone `GET /api/v1/version`. El prefijo `/api/v1` identifica el contrato HTTP y no debe confundirse con la versión del paquete. Cada aplicación puede cambiar de versión sin obligar a las demás a cambiar. Se sigue el esquema `MAYOR.MENOR.PARCHE`; el monorepositorio raíz no es una versión distribuida.
 
-Las versiones evolucionan de forma independiente, utilizando numeración `MAYOR.MENOR.PARCHE`. Se documentan la convención y las publicaciones en [versionado de aplicaciones](docs/gestion/versionado-aplicaciones.md) e [historial de versiones](docs/gestion/historial-versiones.md).
+La política de publicación y el historial se documentan en [Versionado de aplicaciones](docs/gestion/versionado-aplicaciones.md) e [Historial de versiones](docs/gestion/historial-versiones.md). Los cambios en la rama `mejora/calidad-arquitectura` todavía **no constituyen una versión publicada**.
 
 ## Entornos y URLs de revisión
 
@@ -101,6 +92,14 @@ La ruta de salud responde:
 ```json
 {"estado":"ok"}
 ```
+
+## Localización del código y entornos de trabajo
+
+La [guía de ubicación del código](docs/desarrollo/guia-codigo.md) permite encontrar con rapidez estilos, textos, formularios, controladores, validaciones y componentes Android.
+
+Para pruebas, utilizar una rama Git desde `main` y una rama independiente de Neon. `development-pc-20261011` contiene datos copiados inicialmente de `production`; no es una base vacía. Ningún proceso de desarrollo debe modificar producción.
+
+**Android QA:** los APK de revisión utilizan `http://10.0.2.2:3001` para el emulador, o la variable de repositorio `ZAV_QA_API_BASE_URL` para otra API de pruebas. El workflow impide apuntar la compilación QA a la API de producción. Los APK release mantienen su configuración de producción.
 
 ## Ejecución local
 
@@ -189,6 +188,8 @@ El contrato completo y versionado se encuentra en `docs/api/openapi-e3.yaml`. Re
 
 Los comandos críticos utilizan `operacionClave` para idempotencia. Repetir la misma operación con los mismos datos no duplica movimientos; reutilizar la misma clave para una operación diferente se rechaza.
 
+La [guía de GitHub Actions](docs/desarrollo/guia-actions.md) explica los seis workflows operativos y el archivo de procesos históricos. Para probar cambios locales, seguir la [guía de pruebas manuales](docs/desarrollo/pruebas-manuales.md).
+
 ## Pruebas
 
 API:
@@ -213,9 +214,12 @@ Móvil:
 ```bash
 pnpm --filter @zav/mobile lint
 pnpm --filter @zav/mobile exec tsc --noEmit
+pnpm --filter @zav/mobile test
 ```
 
 GitHub Actions ejecuta QA con PostgreSQL aislado. Los reportes, logs y capturas se conservan como evidencia. Los errores y ejecuciones fallidas reales también se conservan; una ejecución satisfactoria posterior no borra el historial de incidencias.
+
+La [auditoría integral del 12/10/2026](docs/pruebas/auditoria-integral-2026-10-12.md) registra las correcciones de inventario, seguridad y Android QA, las mediciones reproducibles y las limitaciones pendientes antes de integrar el PR #71.
 
 La documentación de QA y sus antecedentes incluye:
 

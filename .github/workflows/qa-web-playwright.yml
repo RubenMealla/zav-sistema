@@ -1,12 +1,8 @@
-name: QA web Playwright
+name: 02 · Calidad — Web
 
 on:
   push:
     branches:
-      - "pruebas/**"
-      - "desarrollo/**"
-      - "correccion/**"
-      - "mejora/**"
       - main
     paths:
       - "apps/web/**"
@@ -15,6 +11,7 @@ on:
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
       - ".github/workflows/qa-web-playwright.yml"
+  workflow_dispatch:
   pull_request:
     branches:
       - main

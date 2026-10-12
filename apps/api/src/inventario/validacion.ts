@@ -66,6 +66,10 @@ export function fechaIso(valor: unknown, campo: string): string {
   return valor;
 }
 
+// Vigencia de lotes por día civil boliviano, independiente de TimeZone PostgreSQL.
+// El lote continúa vigente durante toda su fecha venceEl (Bolivia).
+export const FECHA_HOY_BOLIVIA_SQL = "(CURRENT_TIMESTAMP AT TIME ZONE 'America/La_Paz')::date";
+
 export function fechaHoyBolivia(fecha = new Date()): string {
   const partes = new Intl.DateTimeFormat('en-US', {
     timeZone: 'America/La_Paz',

@@ -1,4 +1,6 @@
 import { MarcoPanel, vistas, type Vista } from './marco-panel';
+import { limiteSeguro, paginaSegura } from './lib/paginacion-panel';
+import { mensajes, mensajesOk } from './lib/mensajes-panel';
 import Link from 'next/link';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
@@ -18,18 +20,7 @@ import {
 import { AccionesProducto } from './acciones-producto';
 import { Paginacion } from '../componentes/paginacion';
 
-const API = process.env.API_BASE_URL ?? (process.env.NODE_ENV === 'production' ? 'https://zav-api-2026.onrender.com' : 'http://localhost:3001');
-const LIMITES_TABLA = [10, 20, 30, 50, 100, 150] as const;
-function limiteSeguro(valor: string | undefined) {
-  const numero = Number.parseInt(valor ?? '20', 10);
-  return LIMITES_TABLA.includes(numero as (typeof LIMITES_TABLA)[number]) ? numero : 20;
-}
-
-function paginaSegura(valor: string | undefined) {
-  const numero = Number.parseInt(valor ?? '1', 10);
-  return Number.isFinite(numero) && numero > 0 ? numero : 1;
-}
-
+import { API_BASE_URL as API } from '../lib/api-servidor';
 type Producto = {
   id: string;
   codigo: string;
@@ -61,7 +52,7 @@ type EventoCondicion = {
   creadoEn: string;
   usuario: { identificador: string; nombre: string };
 };
-type Pagina<T> = { items: T[]; total: number };
+type Pagina<T> = { items: T[]; total: number; limit?: number };
 type Perfil = { nombre: string; identificador: string; rol: string };
 type PedidoAuditoria = {
   id: string;
@@ -82,35 +73,6 @@ type VentaDespacho = {
   clase: string;
   ubicacion: { latitud: number; longitud: number } | null;
 };
-const mensajes: Record<string, string> = {
-  codigo: 'Ya existe un producto con ese código.',
-  'lote-duplicado': 'El código de lote o la clave de operación ya está registrado.',
-  'traslado-conflicto': 'No se pudo trasladar. Revisa el saldo disponible.',
-  'condicion-conflicto': 'No se pudo cambiar la condición. Revisa estado, vigencia y producto.',
-  conexion: 'No se pudo conectar con la API de ZAV. Comprueba la conexión e inténtalo nuevamente.',
-  'solicitud-invalida': 'Hay datos incompletos o inválidos. Revisa los campos y vuelve a intentar.',
-  'registro-no-encontrado': 'El registro ya no existe o cambió desde la última consulta. Actualiza la pantalla y vuelve a intentar.',
-  servicio: 'El servicio de ZAV no pudo completar la operación. Inténtalo nuevamente; si persiste, revisa el estado de la API.',
-  producto: 'No se registró el producto. Revisa los datos.',
-  'producto-edicion': 'No se pudo actualizar el producto. Revisa los datos.',
-  'producto-baja': 'No se pudo desactivar el producto.',
-  lote: 'No se registró el lote. Comprueba fechas, ubicación y cantidad.',
-  traslado: 'No se registró el traslado. Revisa lote, ubicaciones y cantidad.',
-  condicion: 'No se cambió la condición del lote. Revisa los datos.',
-  'despacho-geo': 'No se pudo guardar la ubicación geográfica de Venta y Despacho.',
-};
-
-const mensajesOk: Record<string, string> = {
-  producto: 'Producto registrado correctamente.',
-  'producto-editado': 'Producto actualizado correctamente.',
-  'producto-baja': 'Producto desactivado correctamente.',
-  lote: 'Lote e ingreso inicial registrados correctamente.',
-  traslado: 'Traslado registrado correctamente.',
-  condicion: 'Condición del lote actualizada correctamente.',
-  'despacho-geo': 'Ubicación geográfica de Venta y Despacho actualizada.',
-  'sesion-iniciada': 'Sesión iniciada correctamente.',
-};
-
 async function consultar<T>(ruta: string, token: string): Promise<{ estado: number; datos?: T }> {
   const respuesta = await fetch(`${API}${ruta}`, {
     headers: { Authorization: `Bearer ${token}` },
@@ -185,7 +147,7 @@ export default async function Panel({
 
   try {
     const necesitaProductos = vista === 'resumen' || vista === 'productos' || vista === 'lotes';
-    const necesitaLotes = vista !== 'productos';
+    const necesitaLotes = ['resumen', 'lotes', 'condiciones', 'movimientos'].includes(vista);
 
     const productoParametros = new URLSearchParams({ limit: vista === 'productos' ? String(limiteTabla) : '100' });
     if (vista === 'productos') productoParametros.set('page', String(productoPagina));
@@ -336,7 +298,7 @@ export default async function Panel({
                 </article>
               </section>
 
-              <p className="alcance-datos">Lotes consultados: {itemsLotes.length} (máximo 30), base del cálculo de condiciones y existencia física. Los totales de productos y lotes corresponden al registro completo.</p>
+              <p className="alcance-datos">Lotes consultados: {itemsLotes.length} (máximo {lotes.datos?.limit ?? 50}), base del cálculo de condiciones y existencia física. Los totales de productos y lotes corresponden al registro completo.</p>
               <div className="dashboard-grid">
                 <section className="card">
                   <div className="card-cabecera">

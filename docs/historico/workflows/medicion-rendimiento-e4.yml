@@ -1,4 +1,4 @@
-name: Medición de rendimiento E4
+name: 08 · Medición histórica — Rendimiento E4
 
 on:
   workflow_dispatch:

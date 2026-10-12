@@ -1,4 +1,4 @@
-name: Verificación pública E4
+name: 05 · Monitoreo — Web y API
 
 on:
   workflow_dispatch:

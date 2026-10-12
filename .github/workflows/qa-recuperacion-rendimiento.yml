@@ -1,4 +1,4 @@
-name: QA recuperación y rendimiento de pedidos
+name: 06 · QA especial — Pedidos y recuperación
 
 on:
   workflow_dispatch:

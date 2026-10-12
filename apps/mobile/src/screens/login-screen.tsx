@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -11,6 +13,11 @@ import {
 } from 'react-native';
 
 import { ApiError, iniciarSesion } from '@/lib/api';
+import {
+  configurarDireccionApi,
+  obtenerDireccionApi,
+  validarDireccionApi,
+} from '@/lib/configuracion-api';
 import type { Sesion } from '@/lib/tipos';
 
 type Props = {
@@ -26,10 +33,53 @@ function separarError(mensaje: string) {
 }
 
 export function LoginScreen({ onSesion }: Props) {
+  const scrollRef = useRef<ScrollView>(null);
   const [identificador, setIdentificador] = useState('');
   const [contrasena, setContrasena] = useState('');
   const [error, setError] = useState('');
   const [enviando, setEnviando] = useState(false);
+  const [mostrarServidor, setMostrarServidor] = useState(false);
+  const [direccion, setDireccion] = useState(obtenerDireccionApi());
+  const [servidorActivo, setServidorActivo] = useState(obtenerDireccionApi());
+  const [mensajeServidor, setMensajeServidor] = useState('');
+  const [comprobandoServidor, setComprobandoServidor] = useState(false);
+
+  useEffect(() => {
+    if (!mostrarServidor) return;
+    const listener = Keyboard.addListener('keyboardDidShow', () => {
+      scrollRef.current?.scrollToEnd({ animated: true });
+    });
+    return () => listener.remove();
+  }, [mostrarServidor]);
+
+  async function probarYGuardarServidor() {
+    if (process.env.EXPO_PUBLIC_BUILD_CHANNEL !== 'qa') return;
+    setMensajeServidor('');
+    setComprobandoServidor(true);
+    const controlador = new AbortController();
+    const timeout = setTimeout(() => controlador.abort(), 8000);
+    try {
+      const url = validarDireccionApi(direccion);
+      const respuesta = await fetch(`${url}/api/v1/salud`, { signal: controlador.signal });
+      if (!respuesta.ok) throw new Error('El servidor no respondió correctamente.');
+      const cuerpo: unknown = await respuesta.json();
+      if (!cuerpo || typeof cuerpo !== 'object' || (cuerpo as { estado?: unknown }).estado !== 'ok') {
+        throw new Error('La dirección no corresponde a una API ZAV disponible.');
+      }
+      const guardada = await configurarDireccionApi(url);
+      setServidorActivo(guardada);
+      setMostrarServidor(false);
+      setMensajeServidor('Servidor de pruebas conectado.');
+    } catch (error) {
+      setMensajeServidor(error instanceof Error && error.name === 'AbortError'
+        ? 'Tiempo de espera agotado (8 segundos). Revisa la IP, Wi-Fi y NestJS.'
+        : error instanceof Error ? error.message : 'No se pudo conectar con el servidor.');
+    } finally {
+      clearTimeout(timeout);
+      setComprobandoServidor(false);
+    }
+  }
+
 
   async function ingresar() {
     const usuario = identificador.trim().toLowerCase();
@@ -66,6 +116,58 @@ export function LoginScreen({ onSesion }: Props) {
       style={styles.pantalla}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
+      <ScrollView
+        ref={scrollRef}
+        style={styles.desplazamiento}
+        contentContainerStyle={[styles.contenido, mostrarServidor && styles.contenidoServidor]}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+      >
+      {process.env.EXPO_PUBLIC_BUILD_CHANNEL === 'qa' && mostrarServidor ? (
+        <View style={styles.pantallaServidor}>
+          <Text style={styles.eyebrow}>ZAV VENDEDOR QA</Text>
+          <Text style={styles.tituloServidor}>Conexión de pruebas</Text>
+          <Text style={styles.servidorNota}>
+            El celular y la computadora deben estar en la misma red Wi-Fi.
+            Escribe la dirección IPv4 de tu PC y el puerto 3001.
+          </Text>
+          <View style={styles.servidorFormulario}>
+            <Text style={styles.label}>Dirección de la API local</Text>
+            <TextInput
+              accessibilityLabel="Dirección de la API de pruebas"
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="url"
+              returnKeyType="done"
+              placeholder="http://192.168.1.20:3001"
+              placeholderTextColor="#8a8982"
+              style={styles.input}
+              value={direccion}
+              onChangeText={setDireccion}
+              onSubmitEditing={() => Keyboard.dismiss()}
+            />
+            <Pressable
+              accessibilityRole="button"
+              disabled={comprobandoServidor}
+              onPress={() => { Keyboard.dismiss(); void probarYGuardarServidor(); }}
+              style={[styles.servidorBoton, comprobandoServidor && styles.deshabilitado]}
+            >
+              <Text style={styles.servidorBotonTexto}>
+                {comprobandoServidor ? 'Comprobando conexión…' : 'Probar y guardar servidor'}
+              </Text>
+            </Pressable>
+            {mensajeServidor ? <Text style={styles.servidorAviso}>{mensajeServidor}</Text> : null}
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => { Keyboard.dismiss(); setMostrarServidor(false); }}
+              style={styles.servidorVolver}
+            >
+              <Text style={styles.servidorEnlaceTexto}>Volver al inicio de sesión</Text>
+            </Pressable>
+          </View>
+        </View>
+      ) : (
+      <>
       <View style={styles.marca}>
         <Text style={styles.eyebrow}>ZAV · DISTRIBUCIÓN</Text>
         <Text style={styles.titulo}>Acceso del Vendedor</Text>
@@ -126,21 +228,49 @@ export function LoginScreen({ onSesion }: Props) {
         </Pressable>
       </View>
 
+      {process.env.EXPO_PUBLIC_BUILD_CHANNEL === 'qa' ? (
+        <View style={styles.servidor}>
+          <Text style={styles.servidorTitulo}>ENTORNO DE PRUEBAS · NO PRODUCCIÓN</Text>
+          <Text style={styles.servidorDireccion} selectable>
+            API: {servidorActivo || 'Sin configurar'}
+          </Text>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => { setMostrarServidor((anterior) => !anterior); setMensajeServidor(''); }}
+            style={styles.servidorEnlace}
+          >
+            <Text style={styles.servidorEnlaceTexto}>
+              Configurar API de mi computadora
+            </Text>
+          </Pressable>
+          {mensajeServidor ? <Text style={styles.servidorAviso}>{mensajeServidor}</Text> : null}
+        </View>
+      ) : null}
+
       <Text style={styles.pie}>
         Uso interno · El token de sesión se almacena de forma cifrada en el dispositivo.
       </Text>
+      </>
+      )}
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  pantalla: {
-    flex: 1,
-    backgroundColor: '#f6f5f0',
-    paddingHorizontal: 22,
+  pantalla: { flex: 1, backgroundColor: '#f6f5f0' },
+  desplazamiento: { flex: 1 },
+  contenido: {
+    flexGrow: 1,
     justifyContent: 'center',
-    gap: 22,
+    gap: 20,
+    paddingHorizontal: 22,
+    paddingVertical: 28,
   },
+  contenidoServidor: { justifyContent: 'flex-start' },
+  pantallaServidor: { width: '100%', gap: 15, paddingTop: 8 },
+  tituloServidor: { color: '#20201e', fontSize: 25, fontWeight: '800' },
+  servidorVolver: { alignItems: 'center', paddingVertical: 10 },
   marca: { gap: 8 },
   eyebrow: {
     color: '#b83b17',
@@ -211,6 +341,23 @@ const styles = StyleSheet.create({
   botonPresionado: { backgroundColor: '#963011' },
   botonTexto: { color: '#fff', fontWeight: '800', fontSize: 15 },
   deshabilitado: { opacity: 0.6 },
+  servidor: {
+    backgroundColor: '#fffaf6',
+    borderWidth: 1,
+    borderColor: '#d9b5a3',
+    borderRadius: 10,
+    padding: 14,
+    gap: 9,
+  },
+  servidorTitulo: { color: '#9b3215', fontSize: 11, fontWeight: '900', letterSpacing: 0.5 },
+  servidorDireccion: { color: '#50504a', fontSize: 12, lineHeight: 18 },
+  servidorEnlace: { paddingVertical: 6 },
+  servidorEnlaceTexto: { color: '#9b3215', fontSize: 13, fontWeight: '800' },
+  servidorFormulario: { gap: 9 },
+  servidorNota: { color: '#66665e', fontSize: 12, lineHeight: 18 },
+  servidorBoton: { minHeight: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 7, backgroundColor: '#262622' },
+  servidorBotonTexto: { color: '#fff', fontSize: 13, fontWeight: '700' },
+  servidorAviso: { color: '#8b4a2f', fontSize: 12, lineHeight: 18 },
   pie: {
     color: '#717169',
     fontSize: 12,

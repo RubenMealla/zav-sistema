@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers';
 
-const API = process.env.API_BASE_URL ?? (process.env.NODE_ENV === 'production' ? 'https://zav-api-2026.onrender.com' : 'http://localhost:3001');
+import { API_BASE_URL as API } from '../../../lib/api-servidor';
 const VIEWBOX_TARIJA = '-65.333333,-20.833333,-62.250000,-22.833333';
 type Resultado = { direccion:string; principal:string; secundaria:string; tipo:string; departamento:string|null; ciudad:string|null; paisCodigo:string; latitud:number; longitud:number };
 type EstadoProveedor = { disponible:boolean; resultados:Resultado[] };
@@ -84,6 +84,25 @@ export async function GET(solicitud: Request) {
   if(!token)return Response.json({message:'Sesión requerida.'},{status:401});
   const q=new URL(solicitud.url).searchParams.get('q')?.trim()??'';
   if(q.length<1||q.length>200)return Response.json({message:'La búsqueda debe contener entre 1 y 200 caracteres.'},{status:400});
+
+  // La existencia de una cookie no acredita una sesión. Validar antes de
+  // consultar proveedores externos, incluso si la API de geografía falla.
+  try {
+    const perfil = await fetch(`${API}/api/v1/auth/me`, {
+      headers: { Authorization: `Bearer ${token}` }, cache: 'no-store',
+      signal: AbortSignal.timeout(5500),
+    });
+    if (!perfil.ok) {
+      const status = perfil.status === 401 || perfil.status === 403 ? perfil.status : 503;
+      return Response.json({ message: 'No se pudo verificar la sesión.' }, { status });
+    }
+    const usuario = await perfil.json() as { rol?: string };
+    if (usuario.rol !== 'ADMINISTRADOR') {
+      return Response.json({ message: 'Acceso exclusivo del Administrador.' }, { status: 403 });
+    }
+  } catch {
+    return Response.json({ message: 'No se pudo verificar la sesión.' }, { status: 503 });
+  }
 
   try{
     const respuesta=await fetch(`${API}/api/v1/geografia/autocompletar?q=${encodeURIComponent(q)}`,{headers:{Authorization:`Bearer ${token}`},cache:'no-store',signal:AbortSignal.timeout(5500)});

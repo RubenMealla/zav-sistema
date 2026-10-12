@@ -22,6 +22,12 @@ describe('AuthService', () => {
     expect(findOne).not.toHaveBeenCalled();
   });
 
+  it('rechaza campos adicionales antes de consultar usuarios', async () => {
+    await expect(servicio.iniciarSesion({ identificador: 'admin.zav', contrasena: 'clave', rol: 'ADMINISTRADOR' })).rejects.toBeInstanceOf(BadRequestException);
+    expect(findOne).not.toHaveBeenCalled();
+    expect(signAsync).not.toHaveBeenCalled();
+  });
+
   it('rechaza un identificador inexistente sin emitir token', async () => {
     findOne.mockResolvedValue(null);
     await expect(servicio.iniciarSesion({ identificador: 'desconocido', contrasena: 'clave-de-prueba' })).rejects.toBeInstanceOf(UnauthorizedException);

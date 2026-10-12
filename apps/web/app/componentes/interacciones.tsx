@@ -1,8 +1,13 @@
 'use client';
 
-import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { createPortal, useFormStatus } from 'react-dom';
 import { Icono, type NombreIcono } from './icono';
+
+// Durante la hidratación coincide con el HTML del servidor; después permite el portal.
+const suscribirMontaje = () => () => {};
+const leerMontajeCliente = () => true;
+const leerMontajeServidor = () => false;
 
 type ConfirmacionEnvio = {
   titulo: string;
@@ -26,6 +31,7 @@ export function BotonEnviar({
 }) {
   const { pending } = useFormStatus();
   const [confirmando, setConfirmando] = useState(false);
+  const portalMontado = useSyncExternalStore(suscribirMontaje, leerMontajeCliente, leerMontajeServidor);
   const id = useId();
   const formularioRef = useRef<HTMLFormElement | null>(null);
   const disparadorRef = useRef<HTMLButtonElement | null>(null);
@@ -108,7 +114,7 @@ export function BotonEnviar({
       >
         {children}
       </button>
-      {typeof document !== 'undefined' && createPortal(confirmacionDialogo, document.body)}
+      {portalMontado && createPortal(confirmacionDialogo, document.body)}
     </>
   );
 }

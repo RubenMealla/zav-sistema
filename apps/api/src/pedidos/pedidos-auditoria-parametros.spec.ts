@@ -3,6 +3,17 @@ import { DataSource } from 'typeorm';
 import { PedidosService } from './pedidos.service.js';
 
 describe('PedidosService.listarAdmin: marcadores SQL', () => {
+  it.each(['2026-02-30', '2026-13-01', 'ayer', '2026-1-01'])(
+    'rechaza la fecha %s antes de consultar PostgreSQL', async (fecha) => {
+      const query = vi.fn().mockResolvedValue([]);
+      const service = new PedidosService({ query } as unknown as DataSource);
+      for (const campo of ['desde', 'hasta']) {
+        await expect(service.listarAdmin({ [campo]: fecha })).rejects.toMatchObject({ status: 400 });
+      }
+      expect(query).not.toHaveBeenCalled();
+    },
+  );
+
   it('parametriza vendedor, búsqueda y fechas sin concatenar los valores en SQL', async () => {
     const query = vi.fn()
       .mockResolvedValueOnce([])
