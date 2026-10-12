@@ -5,7 +5,8 @@ Esta guía facilita cambios manuales durante el desarrollo y la presentación de
 | Necesidad | Ruta |
 |---|---|
 | Menú y títulos del panel | `apps/web/app/panel/marco-panel.tsx` |
-| Colores y tamaños del panel | `apps/web/app/estilos/panel.css` y `controles.css` |
+| Colores principales y variables visuales | `apps/web/app/globals.css` (bloque `:root`) |
+| Diseño y tamaños del panel | `apps/web/app/estilos/panel.css` y `controles.css` |
 | Diseño para pantallas pequeñas | `apps/web/app/estilos/responsive.css` |
 | Pantalla de acceso | `apps/web/app/acceso/page.tsx` |
 | Página pública | `apps/web/app/componentes/landing-publica.tsx` |

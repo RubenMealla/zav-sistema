@@ -1,6 +1,6 @@
 .app-shell {
   min-height: 100dvh;
-  background: #efede7;
+  background: var(--panel-fondo);
 }
 
 .sidebar {
@@ -12,8 +12,8 @@
   flex-direction: column;
   padding: 16px 12px;
   color: #fff;
-  background: #151512;
-  border-right: 1px solid #34332e;
+  background: var(--panel-lateral);
+  border-right: 1px solid var(--panel-borde);
 }
 
 .sidebar-marca {
@@ -62,7 +62,7 @@
 }
 
 .nav-item:hover { color: #fff; background: #20201c; }
-.nav-item-activo { color: #fff; background: #24231f; border-left-color: #e45a2e; }
+.nav-item-activo { color: #fff; background: #24231f; border-left-color: var(--marca); }
 .nav-item-activo .nav-icono { color: #f07851; }
 
 .sidebar-pie {

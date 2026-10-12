@@ -9,8 +9,8 @@
     justify-content: space-between;
     gap: 14px;
     padding: 4px 14px;
-    background: #151512;
-    border-bottom: 1px solid #34332e;
+    background: var(--panel-lateral);
+    border-bottom: 1px solid var(--panel-borde);
   }
 
   .cabecera-movil-marca { display: flex; align-items: center; gap: 8px; color: #fff; font-size: 11px; }
@@ -42,7 +42,7 @@
   .nav-movil .nav-item-activo {
     color: #a73a1d;
     background: #faf5f1;
-    border-bottom-color: #e45a2e;
+    border-bottom-color: var(--marca);
   }
 
   .vista-contenido {

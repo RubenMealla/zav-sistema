@@ -31,6 +31,11 @@
   --azul: #2b5e85;
   --azul-fondo: #edf4fa;
   --radio: 3px;
+  --accion-primaria: #ca4d26;
+  --accion-primaria-hover: #a73a1d;
+  --panel-fondo: #efede7;
+  --panel-lateral: #151512;
+  --panel-borde: #34332e;
 }
 
 * { box-sizing: border-box; }
@@ -60,8 +65,8 @@ button:disabled { opacity: .5; cursor: not-allowed; }
   text-align: center;
 }
 
-.boton-primario { color: #fff; background: #ca4d26; border-color: #ca4d26; }
-.boton-primario:hover:not(:disabled) { background: #a73a1d; border-color: #a73a1d; }
+.boton-primario { color: #fff; background: var(--accion-primaria); border-color: var(--accion-primaria); }
+.boton-primario:hover:not(:disabled) { background: var(--accion-primaria-hover); border-color: var(--accion-primaria-hover); }
 .boton-secundario { color: var(--tinta); background: #fff; border-color: var(--gris-300); }
 .boton-secundario:hover:not(:disabled) { background: #f5f2ec; border-color: #8d877e; }
 .boton-terciario { color: #5d5850; background: transparent; border-color: transparent; }
