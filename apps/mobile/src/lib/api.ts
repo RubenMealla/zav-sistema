@@ -12,9 +12,9 @@ import type {
   VentaDespacho,
 } from './tipos';
 
-export const API_BASE_URL =
-  process.env.EXPO_PUBLIC_API_BASE_URL?.replace(/\/$/, '') ??
-  'https://zav-api-2026.onrender.com';
+export const API_BASE_URL = (process.env.EXPO_PUBLIC_API_BASE_URL ?? '')
+  .trim()
+  .replace(/\/+$/, '');
 
 export class ApiError extends Error {
   constructor(
@@ -33,6 +33,9 @@ async function solicitud<T>(
   opciones: RequestInit = {},
   token?: string,
 ): Promise<T> {
+  if (!/^https?:\/\/[^\s/]+/i.test(API_BASE_URL)) {
+    throw new ApiError(0, { message: 'Configura EXPO_PUBLIC_API_BASE_URL para conectar con la API.' });
+  }
   const headers = new Headers(opciones.headers);
   headers.set('Accept', 'application/json');
   if (opciones.body) headers.set('Content-Type', 'application/json');

@@ -32,7 +32,7 @@ jobs:
     env:
       CI: 1
       BUILD_CHANNEL: ${{ github.event_name == 'pull_request' && 'qa' || 'release' }}
-      EXPO_PUBLIC_API_BASE_URL: https://zav-api-2026.onrender.com
+      EXPO_PUBLIC_API_BASE_URL: ${{ github.event_name == 'pull_request' && (vars.ZAV_QA_API_BASE_URL || 'http://10.0.2.2:3001') || 'https://zav-api-2026.onrender.com' }}
       EXPO_PUBLIC_MAP_STYLE_URL: https://tiles.openfreemap.org/styles/liberty
       ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
       ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -61,6 +61,21 @@ jobs:
           distribution: temurin
           java-version: "17"
 
+      - name: Validar destino de la API y version Android
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "$BUILD_CHANNEL" = "qa" ]; then
+            case "$EXPO_PUBLIC_API_BASE_URL" in
+              https://zav-api-2026.onrender.com* )
+                echo "::error::El APK QA no puede conectar con produccion."; exit 1 ;;
+              http://*|https://* ) ;;
+              * ) echo "::error::URL de QA invalida."; exit 1 ;;
+            esac
+          fi
+          VERSION="$(node -p "require('./apps/mobile/app.json').expo.version")"
+          BUILD_CODE="$(node -p "require('./apps/mobile/app.json').expo.android.versionCode")"
+          echo "APK_ARTIFACT_NAME=ZAV-Vendedor-${VERSION}-build${BUILD_CODE}-${BUILD_CHANNEL}-run-${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
       - name: Instalar dependencias
         run: pnpm install --frozen-lockfile
 
@@ -146,7 +161,9 @@ jobs:
           BADGING="$("$AAPT" dump badging "$APK")"
           printf '%s\n' "$BADGING"
 
-          printf '%s\n' "$BADGING" | grep -F "package: name='bo.zav.gestion.vendedor' versionCode='10000' versionName='1.0.0'"
+          VERSION="$(node -p "require('../app.json').expo.version")"
+          VERSION_CODE="$(node -p "require('../app.json').expo.android.versionCode")"
+          printf '%s\n' "$BADGING" | grep -F "package: name='bo.zav.gestion.vendedor' versionCode='$VERSION_CODE' versionName='$VERSION'"
           printf '%s\n' "$BADGING" | grep -F "application-label:'ZAV Vendedor'"
 
           APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
@@ -167,9 +184,9 @@ jobs:
       - name: Guardar APK autónomo versionado
         uses: actions/upload-artifact@v4
         with:
-          name: ZAV-Vendedor-1.0.0-build10000-${{ env.BUILD_CHANNEL }}-run-${{ github.run_number }}
+          name: ${{ env.APK_ARTIFACT_NAME }}
           path: |
-            apps/mobile/dist/ZAV-Vendedor-1.0.0-build10000-${{ env.BUILD_CHANNEL }}.apk
-            apps/mobile/dist/ZAV-Vendedor-1.0.0-build10000-${{ env.BUILD_CHANNEL }}.apk.sha256
+            apps/mobile/dist/ZAV-Vendedor-*.apk
+            apps/mobile/dist/ZAV-Vendedor-*.apk.sha256
           if-no-files-found: error
           retention-days: 30
