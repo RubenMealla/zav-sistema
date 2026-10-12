@@ -25,12 +25,14 @@ def layout():
     return ET.fromstring(adb('shell', 'cat', '/sdcard/zav-hora.xml'))
 
 
-def esperar(texto, atributo='text'):
+def esperar(texto, atributo='text', exacto=False):
     limite = time.monotonic() + 50
     while time.monotonic() < limite:
         raiz = layout()
         for nodo in raiz.iter('node'):
-            if texto in nodo.get(atributo, ''):
+            valor = nodo.get(atributo, '')
+            coincide = valor == texto if exacto else texto in valor
+            if coincide:
                 return nodo
         time.sleep(1)
     raise AssertionError(f'No aparece: {texto}')
@@ -78,7 +80,7 @@ try:
         esperar('Servidor de pruebas conectado.')
         tocar(esperar('Abrir consola QA', 'content-desc'))
         inicio = time.time()
-        tocar(esperar('Comprobar API'))
+        tocar(esperar('Comprobar API', exacto=True))
         esperar('API ZAV disponible')
         nodo = esperar('Bolivia (UTC-04:00)')
         fin = time.time()

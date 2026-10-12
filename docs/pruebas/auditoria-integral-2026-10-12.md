@@ -8,7 +8,7 @@ Informe de ingeniería del PR [#71](https://github.com/RubenMealla/zav-sistema/p
 - `main` y `origin/main`: `522c81d78e1b7d33f01cf7b44b8c2e5f3945f770`. PR abierto, en borrador. Sus cuatro comprobaciones iniciales estaban aprobadas.
 - Windows; Node.js 24.19.0; pnpm 12.4.2, coincidente con `packageManager`; PostgreSQL local 17.10. Next.js 16.3.5 → 16.3.8, React web 19.2.8, NestJS 12, TypeORM 1.1.1, Expo 57.0.24, React Native 0.86.3. Aplicaciones 1.0.0 y Android `versionCode=10000` conservados.
 - Revisión de rutas y acciones web, sesión y roles, formularios/modal/SSR, módulos API, SQL y migraciones, inventario y distribución, cliente HTTP y pantallas móviles, diagnóstico, configuración Expo y seis workflows activos. Se consultaron README, guías técnicas y las cuatro issues.
-- Las pruebas usan PostgreSQL **nuevo y aislado**, `127.0.0.1:55432/zav_test`, y credenciales sintéticas de QA. No se abrió una conexión a Neon, incluida `development-pc-20261011`; su latencia no queda evaluada. No se modificaron producción, Vercel, Render, dominios ni secretos.
+- Las pruebas que escriben datos usan PostgreSQL **nuevo y aislado**, `127.0.0.1:55432/zav_test`, y credenciales sintéticas de QA. Se añadió una comprobación de conexión **solo lectura** a Neon `development-pc-20261011`, después de verificar su endpoint con los metadatos del proyecto. No se modificaron producción, datos/configuración de Neon, Vercel, Render, dominios ni secretos.
 
 ## B. Hallazgos y evidencia
 
@@ -52,6 +52,8 @@ La reducción demostrada es de diez consultas en entrega. No se afirma mejora te
 
 En móvil, pedidos activos pasan de dos solicitudes a una por página. Un directorio de hasta 100 clientes pasa de dos solicitudes a una. Para más clientes se hacen las páginas necesarias, evitando omisiones. No se atribuye un porcentaje de rapidez de pantalla sin medición física.
 
+**Conexión Neon development:** PostgreSQL 18.6 en `aws-sa-east-1`, conexión `pg` desde esta PC, TLS verificado, `BEGIN READ ONLY` y comprobación de `transaction_read_only=on`; cierre con `ROLLBACK`. Primera conexión: 2.065,683 ms, incluyendo red, TLS, autenticación y posible reactivación del endpoint observado en estado idle. Después de un calentamiento excluido, 25 `SELECT 1` dieron mediana **213,270 ms** y P95 **215,550 ms**. [Muestras](evidencias/auditoria-20261012/neon-lectura.json). Es una referencia del intercambio con la base, no una medición de entrega ni una comparación antes/después en Neon. El diagnóstico no encontró consultas activas de más de cinco minutos; el ranking histórico no estuvo disponible porque falta `pg_stat_statements`. No se instaló la extensión.
+
 Reproducir desde la raíz, configurando previamente las variables sintéticas documentadas por los workflows:
 
 ```powershell
@@ -92,6 +94,8 @@ Los resultados de Actions del SHA publicado se registran en la conversación del
 
 La primera ejecución Linux de QA móvil detectó reutilización de transformaciones Metro entre canales: los módulos QA estaban excluidos, pero el login conservaba un texto compilado de QA. Se separó la clave de caché por la huella de variables `EXPO_PUBLIC_*`, incluido canal y URL, y se amplió la regresión. Se conservó la assertion que detectó el problema y la exportación consecutiva de ambos canales. Esta corrección de CI justifica un segundo commit, sin reescribir el primero.
 
+La ejecución 339 compiló el APK QA firmado y aprobó su manifest, identidad y bundle. La prueba Android llegó a la consola, pero su selector parcial pulsó la ayuda «Pulsa Comprobar API…» en lugar del botón; XML y captura mostraron `Estado: sin comprobar` y cero solicitudes. El tercer commit corrige únicamente esa selección a coincidencia exacta y actualiza las evidencias del informe. Se reprodujo el selector contra el XML real; la assertion de hora permanece intacta y vuelve a ejecutarse en CI. No se presenta la ejecución fallida como validación horaria.
+
 ## F. Android
 
 | Aspecto | Producción | QA |
@@ -120,7 +124,7 @@ Entrega únicamente en `origin/mejora/calidad-arquitectura`, mediante commit con
 3. Peers previos: CLI React Native 0.86.3 frente a metro-config 0.87.1 auto resuelto, y tipos React DOM 19.3 frente a tipos React móvil 19.2. No impiden las verificaciones actuales, pero merecen actualización coordinada del SDK.
 4. Login sin limitación de intentos a nivel de aplicación: endurecimiento pendiente con política explícita de proxies, almacenamiento y usuarios compartiendo IP; no introducir bloqueos improvisados antes del cierre.
 5. Pantallas móviles grandes (`vendedor-screen.tsx`, `mapas.tsx`) y panel web conservan responsabilidades amplias. Se recomienda extraer por flujo en una fase con pruebas de dispositivo, sin dividir por tamaño arbitrario. El historial móvil mantiene su límite existente por estado; el resumen web agrega la muestra inicial de lotes y ya informa ese alcance. No usar esta muestra como reporte global de existencias.
-6. Falta medir red real hacia Neon development y sesiones con GPS. No extrapolar los milisegundos locales a teléfonos. La vigencia de lotes usa la fecha de PostgreSQL; no se alteró esa política para corregir exclusivamente la consola QA.
+6. Falta medir los flujos completos de negocio hacia Neon development y sesiones con GPS. No extrapolar `SELECT 1` ni los milisegundos locales a teléfonos. La sesión Neon informa zona GMT y la vigencia de lotes usa `CURRENT_DATE`: confirmar la política de cierre del día de negocio en Bolivia. No se alteró esa política para corregir exclusivamente la consola QA.
 7. Permisos adicionales generados por Expo (almacenamiento/overlay, entre otros) se mantienen como antes; evaluar su minimización con pruebas nativas específicas.
 
 ## I. Recomendación técnica
