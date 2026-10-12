@@ -25,6 +25,10 @@ export class AuthService {
       throw new BadRequestException('Debes indicar identificador y contrasena.');
     }
 
+    if (Object.keys(datos).some((campo) => !['identificador', 'contrasena'].includes(campo))) {
+      throw new BadRequestException('El inicio de sesión contiene campos no permitidos.');
+    }
+
     const identificador = datos.identificador.trim().toLowerCase();
     const contrasena = datos.contrasena;
     if (!IDENTIFICADOR_VALIDO.test(identificador) || contrasena.length < 1 || contrasena.length > 128) {

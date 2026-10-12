@@ -102,6 +102,14 @@ La ruta de salud responde:
 {"estado":"ok"}
 ```
 
+## Localización del código y entornos de trabajo
+
+La [guía de ubicación del código](docs/desarrollo/guia-codigo.md) permite encontrar con rapidez estilos, textos, formularios, controladores, validaciones y componentes Android.
+
+Para pruebas, utilizar una rama Git desde `main` y una rama independiente de Neon. `development-pc-20261011` contiene datos copiados inicialmente de `production`; no es una base vacía. Ningún proceso de desarrollo debe modificar producción.
+
+**Android QA:** los APK de revisión utilizan `http://10.0.2.2:3001` para el emulador, o la variable de repositorio `ZAV_QA_API_BASE_URL` para otra API de pruebas. El workflow impide apuntar la compilación QA a la API de producción. Los APK release mantienen su configuración de producción.
+
 ## Ejecución local
 
 Desde la raíz:
