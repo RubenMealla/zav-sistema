@@ -8,7 +8,6 @@ import {
   RefreshControl,
   ScrollView,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 
@@ -44,8 +43,8 @@ import { uuidV4 } from '@/lib/uuid';
 import { styles } from './vendedor-estilos';
 import { Pedidos } from '@/components/vendedor-pedidos';
 import { Clientes, NuevoPedido } from '@/components/vendedor-formularios';
-import { fechaCorta, esHoyBolivia, distanciaMetros, formatearDistancia, recalcularSecuencia } from '@/lib/distribucion';
-import { MapaReparto, MapaRepartoModal, SelectorUbicacionMapa } from '@/components/mapas-distribucion';
+import { distanciaMetros, formatearDistancia, recalcularSecuencia } from '@/lib/distribucion';
+import { MapaRepartoModal, SelectorUbicacionMapa } from '@/components/mapas-distribucion';
 import { HistorialPedidosModal } from '@/components/historial-pedidos';
 import {
   SelectorClientePedidoModal,

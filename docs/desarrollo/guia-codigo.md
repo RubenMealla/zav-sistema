@@ -17,7 +17,10 @@ Esta guía facilita cambios manuales durante el desarrollo y la presentación de
 | Login, JWT y roles | `apps/api/src/auth/` |
 | Validaciones de inventario | `apps/api/src/inventario/validacion.ts` |
 | Pedidos y distribución | `apps/api/src/pedidos/` |
-| Pantalla principal del vendedor | `apps/mobile/src/screens/vendedor-screen.tsx` |
+| Coordinación de la pantalla móvil | `apps/mobile/src/screens/vendedor-screen.tsx` |
+| Listado, acciones y organización de pedidos | `apps/mobile/src/components/vendedor-pedidos.tsx` |
+| Formularios de clientes y pedidos | `apps/mobile/src/components/vendedor-formularios.tsx` |
+| Botones y controles compartidos | `apps/mobile/src/components/vendedor-ui.tsx` |
 | Estilos de la pantalla móvil | `apps/mobile/src/screens/vendedor-estilos.ts` |
 | Funciones geográficas y fechas móviles | `apps/mobile/src/lib/distribucion.ts` |
 | Mapas, selectores e historial móvil | `apps/mobile/src/components/` |
