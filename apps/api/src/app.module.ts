@@ -20,6 +20,7 @@ import { AuthModule } from './auth/auth.module.js';
 import { InventarioModule } from './inventario/inventario.module.js';
 import { PedidosModule } from './pedidos/pedidos.module.js';
 import { CatalogoModule } from './catalogo/catalogo.module.js';
+import { OperacionesModule } from './operaciones/operaciones.module.js';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { CatalogoModule } from './catalogo/catalogo.module.js';
     InventarioModule,
     PedidosModule,
     CatalogoModule,
+    OperacionesModule,
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
@@ -61,6 +63,8 @@ import { CatalogoModule } from './catalogo/catalogo.module.js';
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(RegistroHttpMiddleware, CorsMiddleware).forRoutes('{*splat}');
+    consumer
+      .apply(RegistroHttpMiddleware, CorsMiddleware)
+      .forRoutes('{*splat}');
   }
 }

@@ -153,6 +153,7 @@ export class LotesService {
           return previo.id;
         }
 
+        await manager.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`producto:${productoId}`]);
         const producto = await manager.getRepository(ProductoEntity).findOneBy({ id: productoId, activo: true });
         if (!producto) throw new NotFoundException('Producto activo no encontrado.');
         const ubicaciones = await manager.query(

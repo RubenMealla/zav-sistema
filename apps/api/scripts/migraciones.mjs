@@ -7,6 +7,7 @@ import { GeolocalizacionDistribucion1790557200000 } from '../migrations/17905572
 import { CierreClientesPedidosE31791104400000 } from '../migrations/1791104400000-cierre-clientes-pedidos-e3.mjs';
 import { CatalogoAdministrable1791856800000 } from '../migrations/1791856800000-catalogo-administrable.mjs';
 import { NormalizacionCatalogoCompatible1791856860000 } from '../migrations/1791856860000-normalizacion-catalogo-compatible.mjs';
+import { OperacionesCustodia1791856920000 } from '../migrations/1791856920000-operaciones-custodia.mjs';
 
 export const MIGRACIONES_ZAV = [
   InicialZav1790208000000,
@@ -18,4 +19,5 @@ export const MIGRACIONES_ZAV = [
   CierreClientesPedidosE31791104400000,
   CatalogoAdministrable1791856800000,
   NormalizacionCatalogoCompatible1791856860000,
+  OperacionesCustodia1791856920000,
 ];
