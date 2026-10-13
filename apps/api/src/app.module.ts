@@ -19,6 +19,7 @@ import { DetallePedidoEntity } from './database/entities/detalle-pedido.entity.j
 import { AuthModule } from './auth/auth.module.js';
 import { InventarioModule } from './inventario/inventario.module.js';
 import { PedidosModule } from './pedidos/pedidos.module.js';
+import { CatalogoModule } from './catalogo/catalogo.module.js';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { PedidosModule } from './pedidos/pedidos.module.js';
     AuthModule,
     InventarioModule,
     PedidosModule,
+    CatalogoModule,
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
