@@ -8,6 +8,7 @@ import { CierreClientesPedidosE31791104400000 } from '../migrations/179110440000
 import { CatalogoAdministrable1791856800000 } from '../migrations/1791856800000-catalogo-administrable.mjs';
 import { NormalizacionCatalogoCompatible1791856860000 } from '../migrations/1791856860000-normalizacion-catalogo-compatible.mjs';
 import { OperacionesCustodia1791856920000 } from '../migrations/1791856920000-operaciones-custodia.mjs';
+import { GuardasOperativasCompatibles1791856980000 } from '../migrations/1791856980000-guardas-operativas-compatibles.mjs';
 
 export const MIGRACIONES_ZAV = [
   InicialZav1790208000000,
@@ -20,4 +21,5 @@ export const MIGRACIONES_ZAV = [
   CatalogoAdministrable1791856800000,
   NormalizacionCatalogoCompatible1791856860000,
   OperacionesCustodia1791856920000,
+  GuardasOperativasCompatibles1791856980000,
 ];

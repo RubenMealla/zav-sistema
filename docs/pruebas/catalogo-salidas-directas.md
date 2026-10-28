@@ -44,3 +44,13 @@ Después de las correcciones, `pnpm --filter @zav/api test:e2e` terminó con **4
 La ejecución completa posterior terminó con **57/57 pruebas, 6 archivos**, en 91,59 s. Incluye 15 escenarios nuevos: FEFO multiproducto, coordenadas históricas, cliente especial, validación comercial, idempotencia simultánea, ventas concurrentes, carga contra pedido, retiro contra venta, custodia ajena, GPS obligatorio, recepción, devolución contra venta, inspección y reversión. Las 26 pruebas unitarias API también finalizaron correctamente.
 
 Intentos conservados: primer recorrido de operaciones, 45 aprobadas/12 fallidas por inferencia incompatible del parámetro SQL tipo (text/varchar); se corrigió con cast explícito. Segundo recorrido, 55 aprobadas/2 fallidas por plural incorrecto de la URL de traslado en el test; se corrigió contra el controlador existente. No se modificaron los resultados esperados para ocultar defectos.
+
+## Continuación del 28 de octubre de 2026
+
+Se comprobó de nuevo la rama de trabajo, el remoto y `origin/main` mediante fetch: la base sigue siendo `e9dc1a40476a72034f38e4dabb0e178c62af0066`. Se conservaron los cambios sin commit de la sesión anterior y los artefactos fallidos de Playwright. PostgreSQL local recuperó su WAL al iniciar después de la interrupción; se volvió a preparar únicamente `zav_test`.
+
+La suite completa API terminó con **60/60 pruebas, 6 archivos, 119,86 s**. Se añadieron verificaciones de inmutabilidad SQL, rechazo de saldo negativo, altas/precios provisionales mediante la API anterior y revalidación de condición del lote después de esperar un bloqueo real. Primer intento: 59/60; una prueba esperaba 409 donde el contrato previo de pedidos devuelve 404 para productos no habilitados. Se corrigió esa expectativa tras revisar el servicio y se comprobó también ausencia de detalles de pedido.
+
+Móvil: **15/15 pruebas** de lógica; lint pasa después de mantener un único diálogo de confirmación activo durante GPS, recepción y devolución. Todavía no equivale a prueba Android instalada. Web: compilación correcta; se detectaron y corrigieron el rechazo de origen legítimo detrás de Next, filtros vacíos/no admitidos y una carrera del test al navegar antes de finalizar login. La repetición E2E web sigue pendiente de resultados.
+
+El respaldo del 12/13 de octubre y el ensayo Neon son evidencias históricas, no un respaldo actualizado para desplegar el 28 de octubre. Antes de producción se deben refrescar identidades, versión, respaldo y ensayo si cambió el estado. No se ha ejecutado una migración productiva durante esta continuación.

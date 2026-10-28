@@ -32,8 +32,8 @@ describe('Regresiones de auditoría integral', () => {
 
   async function preparar(lotes = 1) {
     const codigo = 'AUD-' + randomUUID().slice(0, 8);
-    const producto = await db.query(`INSERT INTO producto (codigo,nombre,familia,presentacion,peso_gramos,precio_bob)
-      VALUES ($1,'Producto auditoría','QA','Unidad',100,10) RETURNING id`, [codigo]);
+    const producto = await db.query(`INSERT INTO producto (codigo,nombre,familia,presentacion,peso_gramos,precio_bob,validacion_comercial)
+      VALUES ($1,'Producto auditoría','QA','Unidad',100,10,'VALIDADO') RETURNING id`, [codigo]);
     const cliente = await db.query(`INSERT INTO cliente (nombre,direccion,latitud,longitud)
       VALUES ('Cliente auditoría','Dirección sintética',-21.5355,-64.7302) RETURNING id`);
     const filas = await db.query(`INSERT INTO lote (codigo,producto_id,elaborado_el,vence_el,condicion)

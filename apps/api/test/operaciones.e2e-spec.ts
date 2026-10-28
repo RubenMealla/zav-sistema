@@ -532,6 +532,48 @@ describe('Salidas directas y custodia: HTTP y PostgreSQL real', () => {
     expect(original.body.reversionId).toBe(body.id);
     expect(original.body.estado).toBe('CONFIRMADA');
   });
+  it('rechaza alteraciones del historial y saldos negativos incluso por SQL directo', async () => {
+    const p = await stock(6);
+    const venta = (await post('operaciones/salidas-directas', salida(p.id, 2)).expect(201)).body;
+    for (const [sql, id] of [
+      ['DELETE FROM operacion_inventario WHERE id=$1', venta.id],
+      ['UPDATE detalle_operacion SET cantidad=cantidad+1 WHERE operacion_id=$1', venta.id],
+      ['DELETE FROM movimiento WHERE asignacion_operacion_id IN (SELECT a.id FROM asignacion_operacion a JOIN detalle_operacion d ON d.id=a.detalle_id WHERE d.operacion_id=$1)', venta.id],
+    ]) await expect(db.query(sql, [id])).rejects.toMatchObject({code:'23514'});
+    await expect(db.query(`INSERT INTO movimiento(operacion_clave,lote_id,tipo,origen_id,destino_id,cantidad,usuario_id)
+      VALUES($1,$2,'TRASLADO',(SELECT id FROM ubicacion WHERE codigo='VENTA_DESPACHO'),(SELECT id FROM ubicacion WHERE codigo='PRODUCCION_ALMACENAMIENTO'),100,$3)`,[randomUUID(),p.lotes[0],adminId])).rejects.toMatchObject({code:'23514'});
+    const original=await get(`operaciones/${venta.id}`).expect(200);
+    expect(original.body.detalles[0].cantidad).toBe(2);
+  });
+  it('el API anterior no permite usar altas provisionales ni precios editados sin validar', async () => {
+    const codigo=`LEG-${randomUUID().slice(0,8)}`;
+    const p=(await post('productos',{codigo,nombre:codigo,familia:'QA compatibilidad',presentacion:'Paquete QA',pesoGramos:500,precioBob:'20.00'}).expect(201)).body;
+    expect((await db.query('SELECT validacion_comercial FROM producto WHERE id=$1',[p.id])).rows[0].validacion_comercial).toBe('PROVISIONAL');
+    const existente=await stock(6);
+    await request(app.getHttpServer()).patch(`/api/v1/productos/${existente.id}`).set('Authorization',`Bearer ${admin}`).send({precioBob:'31.00'}).expect(200);
+    expect((await db.query('SELECT validacion_comercial FROM producto WHERE id=$1',[existente.id])).rows[0].validacion_comercial).toBe('PROVISIONAL');
+    await post('operaciones/salidas-directas',salida(existente.id,1)).expect(409);
+    // Pedidos conserva su contrato previo: un producto no habilitado devuelve 404.
+    const rechazado=await post('pedidos',{clienteId,detalles:[{productoId:existente.id,cantidad:1}]},vendedor).expect(404);
+    expect(rechazado.body.message).toBe('Uno o mas productos activos no existen.');
+    expect((await db.query('SELECT count(*)::int AS total FROM detalle_pedido WHERE producto_id=$1',[existente.id])).rows[0].total).toBe(0);
+    await request(app.getHttpServer()).patch(`/api/v1/productos/${existente.id}`).set('Authorization',`Bearer ${admin}`).send({validacionComercial:'VALIDADO'}).expect(200);
+    await post('operaciones/salidas-directas',salida(existente.id,1)).expect(201);
+  });
+  it('revalida la condición del lote después de esperar al bloqueo de producto', async () => {
+    const p=await stock(6),tx=await db.connect();
+    let respuesta:Promise<request.Response>|undefined;
+    try{
+      await tx.query('BEGIN');
+      await tx.query("SELECT pg_advisory_xact_lock(hashtext('producto:'||$1::text))",[p.id]);
+      respuesta=post('operaciones/salidas-directas',salida(p.id,6)).then(r=>r);
+      await expect.poll(async()=>Number((await db.query("SELECT count(*) FROM pg_stat_activity WHERE datname=current_database() AND wait_event='advisory'")).rows[0].count),{timeout:5000}).toBeGreaterThan(0);
+      await tx.query("UPDATE lote SET condicion='BLOQUEADO' WHERE producto_id=$1",[p.id]);
+      await tx.query('COMMIT');
+      expect((await respuesta).status).toBe(409);
+      expect(Number((await db.query('SELECT sum(cantidad_fisica) AS total FROM saldo_inventario WHERE lote_id=ANY($1::uuid[])',[p.lotes])).rows[0].total)).toBe(6);
+    }finally{await tx.query('ROLLBACK');tx.release();await respuesta;}
+  });
   it('conciliación física/custodia, sin saldos negativos ni asignaciones sin movimientos confirmados', async () => {
     const { body } = await get('operaciones/conciliacion').expect(200);
     expect(body.conciliado).toBe(true);
