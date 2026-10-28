@@ -1,3 +1,4 @@
+import {crearPresentacionWeb} from './soporte-catalogo';
 import { expect, test, type APIRequestContext } from '@playwright/test';
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
@@ -32,33 +33,13 @@ test('captura un producto registrado sin datos de otras pruebas', async ({ page 
   await page.getByRole('button', { name: /Ingresar al sistema/ }).click();
   await expect(page).toHaveURL(/\/panel/);
 
-  const modulos = page.getByRole('navigation', { name: 'Módulos del sistema', exact: true });
-  await modulos.getByRole('link', { name: 'Productos', exact: true }).click();
-  await page.getByRole('button', { name: 'Nuevo producto' }).click();
-
-  const modal = page.getByRole('dialog');
-  await modal.getByLabel('Familia').fill('Fiambres');
-  await modal.getByLabel('Código').fill(codigo);
-  await modal.getByLabel('Nombre').fill('Producto de prueba QA');
-  await modal.getByLabel('Presentación').fill('Unidad de prueba');
-  await modal.getByLabel('Peso (gramos)').fill('250');
-  await modal.getByLabel('Precio (Bs)').fill('19.50');
-  await modal.getByRole('button', { name: 'Guardar producto' }).click();
-
-  const dialogo = page.getByRole('alertdialog');
-  await expect(dialogo).toBeVisible();
-  await page.screenshot({
-    path: path.join(DIR, 'WEB-15-confirmacion-producto.png'),
-    fullPage: true,
-  });
-  await dialogo.getByRole('button', { name: 'Sí, registrar producto', exact: true }).click();
-
-  await expect(page.getByRole('status')).toContainText('Producto registrado correctamente');
-  const buscar = page.getByPlaceholder('Código o nombre del producto');
-  await buscar.fill(codigo);
-  await page.getByRole('button', { name: 'Aplicar filtros' }).click();
-  await expect(page.getByRole('cell', { name: codigo })).toBeVisible();
-
+  await crearPresentacionWeb(page,{codigo,nombre:'Producto de prueba QA '+codigo,precio:'19.50'});
+  await page.getByRole('row').filter({hasText:codigo}).getByRole('button',{name:'Editar',exact:true}).click();
+  await page.getByRole('region',{name:'Editar catálogo'}).getByRole('button',{name:'Guardar cambios',exact:true}).click();
+  const dialogo=page.getByRole('alertdialog');await expect(dialogo).toBeVisible();
+  await page.screenshot({path:path.join(DIR,'WEB-15-confirmacion-producto.png'),fullPage:true});
+  await dialogo.getByRole('button',{name:'Cancelar'}).click();
+  await page.getByRole('button',{name:'Cerrar editor'}).click();
   await page.screenshot({
     path: path.join(DIR, 'WEB-13-producto-registrado-limpio.png'),
     fullPage: true,
@@ -77,7 +58,7 @@ test('captura el manejo visible de un traslado sin saldo suficiente', async ({ p
       familia: 'QA',
       presentacion: 'Unidad',
       pesoGramos: 250,
-      precioBob: 12,
+      precioBob: 12, validacionComercial: 'VALIDADO',
     },
   });
   expect(producto.status()).toBe(201);
@@ -145,32 +126,17 @@ test('muestra en la web un 400 devuelto por la API para datos inválidos', async
   await page.getByRole('button', { name: /Ingresar al sistema/ }).click();
   await expect(page).toHaveURL(/\/panel/);
 
-  const modulos = page.getByRole('navigation', { name: 'Módulos del sistema', exact: true });
-  await modulos.getByRole('link', { name: 'Productos', exact: true }).click();
-  await page.getByRole('button', { name: 'Nuevo producto' }).click();
-
-  const modal = page.getByRole('dialog', { name: 'Registrar producto' });
-  await modal.getByLabel('Familia').fill('QA validación');
-  const codigo = modal.getByLabel('Código');
-  await codigo.evaluate((elemento) => {
-    const input = elemento as HTMLInputElement;
-    input.removeAttribute('pattern');
-    input.removeAttribute('minlength');
-  });
-  await codigo.fill('!');
-  await modal.getByLabel('Nombre comercial').fill('Producto inválido QA');
-  await modal.getByLabel('Presentación').fill('Unidad de prueba');
-  await modal.getByLabel('Peso (gramos)').fill('250');
-  await modal.getByLabel('Precio (Bs)').fill('10.00');
-
-  await modal.getByRole('button', { name: 'Guardar producto' }).click();
-  const confirmacion = page.getByRole('alertdialog');
-  await expect(confirmacion).toBeVisible();
-  await confirmacion.getByRole('button', { name: 'Sí, registrar producto', exact: true }).click();
-
-  const alerta = page.getByRole('alert').filter({ hasText: /HTTP 400|datos incompletos|inválidos|codigo debe/i }).first();
-  await expect(alerta).toBeVisible({ timeout: 10000 });
-  await expect(alerta).toContainText('HTTP 400');
+  await page.goto('/panel?vista=catalogo');
+  await page.getByRole('button',{name:'Crear familia'}).click();
+  const editor=page.getByRole('region',{name:'Crear catálogo'});
+  // Manipular el HTML solo en QA demuestra que la API valida aunque el cliente no lo haga.
+  const nombre=editor.getByLabel('Nombre',{exact:true});
+  await nombre.evaluate(el=>(el as HTMLInputElement).removeAttribute('maxlength'));
+  await nombre.fill('X'.repeat(71));
+  await editor.getByRole('button',{name:'Guardar cambios',exact:true}).click();
+  await page.getByRole('alertdialog').getByRole('button',{name:'Guardar cambios',exact:true}).click();
+  const alerta=editor.getByRole('alert');
+  await expect(alerta).toBeVisible();await expect(alerta).toContainText(/70|nombre/i);
   await page.screenshot({
     path: path.join(DIR, 'WEB-20-error-validacion-400.png'),
     fullPage: true,
@@ -191,7 +157,7 @@ test('muestra en la web un 400 al registrar un lote con fecha inválida', async 
       familia: 'QA',
       presentacion: 'Unidad',
       pesoGramos: 250,
-      precioBob: 12,
+      precioBob: 12, validacionComercial: 'VALIDADO',
     },
   });
   expect(producto.status()).toBe(201);
@@ -249,7 +215,7 @@ test('muestra en la web un 409 al intentar liberar un lote ya liberado', async (
       familia: 'QA',
       presentacion: 'Unidad',
       pesoGramos: 250,
-      precioBob: 12,
+      precioBob: 12, validacionComercial: 'VALIDADO',
     },
   });
   expect(producto.status()).toBe(201);

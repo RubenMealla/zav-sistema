@@ -3,9 +3,8 @@ info:
   title: ZAV API
   version: 1.0.0
   description: >
-    Contrato de las rutas públicas de ZAV API 1.0.0, identificado mediante
-    el prefijo /api/v1. La versión del servicio y la versión mayor del
-    contrato evolucionan de forma independiente.
+    Contrato de las rutas públicas de ZAV API 1.0.0, identificado mediante el prefijo /api/v1. La versión del
+    servicio y la versión mayor del contrato evolucionan de forma independiente.
 servers:
   - url: https://zav-api-2026.onrender.com
     description: API pública estable de demostración
@@ -21,10 +20,13 @@ tags:
   - name: Pedidos
   - name: Geografía
   - name: Administración
+  - name: Catálogo público
+  - name: Catálogo
+  - name: Operaciones
 paths:
   /api/v1/salud:
     get:
-      tags: [Salud]
+      tags: [ Salud ]
       security: []
       summary: Comprobar disponibilidad de la API
       responses:
@@ -34,14 +36,14 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [estado]
+                required: [ estado ]
                 properties:
                   estado: { type: string, example: ok }
         '503': { $ref: '#/components/responses/Error503' }
 
   /api/v1/version:
     get:
-      tags: [Salud]
+      tags: [ Salud ]
       security: []
       summary: Consultar versión publicada del servidor
       description: La versión del servicio se diferencia del prefijo mayor del contrato HTTP.
@@ -52,7 +54,7 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [servicio, version, contrato]
+                required: [ servicio, version, contrato ]
                 properties:
                   servicio: { type: string, example: 'ZAV API' }
                   version: { type: string, example: '1.0.0' }
@@ -60,7 +62,7 @@ paths:
 
   /api/v1/auth/login:
     post:
-      tags: [Autenticación]
+      tags: [ Autenticación ]
       security: []
       summary: Iniciar sesión
       requestBody:
@@ -69,7 +71,7 @@ paths:
           application/json:
             schema:
               type: object
-              required: [identificador, contrasena]
+              required: [ identificador, contrasena ]
               properties:
                 identificador: { type: string }
                 contrasena: { type: string, format: password }
@@ -82,7 +84,7 @@ paths:
 
   /api/v1/auth/me:
     get:
-      tags: [Autenticación]
+      tags: [ Autenticación ]
       summary: Consultar usuario autenticado
       responses:
         '200': { description: Perfil actual }
@@ -91,7 +93,7 @@ paths:
 
   /api/v1/productos:
     get:
-      tags: [Productos]
+      tags: [ Productos ]
       summary: Listar productos
       parameters:
         - { in: query, name: q, schema: { type: string } }
@@ -105,7 +107,7 @@ paths:
         '403': { $ref: '#/components/responses/Error403' }
         '500': { $ref: '#/components/responses/Error500' }
     post:
-      tags: [Productos]
+      tags: [ Productos ]
       summary: Registrar producto
       description: Requiere rol ADMINISTRADOR.
       requestBody:
@@ -123,7 +125,7 @@ paths:
 
   /api/v1/productos/{id}:
     get:
-      tags: [Productos]
+      tags: [ Productos ]
       summary: Consultar producto
       parameters: [ { $ref: '#/components/parameters/Id' } ]
       responses:
@@ -133,7 +135,7 @@ paths:
         '404': { $ref: '#/components/responses/Error404' }
         '500': { $ref: '#/components/responses/Error500' }
     patch:
-      tags: [Productos]
+      tags: [ Productos ]
       summary: Editar producto
       description: Requiere rol ADMINISTRADOR.
       parameters: [ { $ref: '#/components/parameters/Id' } ]
@@ -153,7 +155,7 @@ paths:
 
   /api/v1/productos/{id}/baja:
     patch:
-      tags: [Productos]
+      tags: [ Productos ]
       summary: Desactivar producto
       description: Requiere rol ADMINISTRADOR.
       parameters: [ { $ref: '#/components/parameters/Id' } ]
@@ -167,7 +169,7 @@ paths:
 
   /api/v1/lotes:
     get:
-      tags: [Lotes]
+      tags: [ Lotes ]
       summary: Listar lotes
       description: Requiere rol ADMINISTRADOR.
       responses:
@@ -177,7 +179,7 @@ paths:
         '403': { $ref: '#/components/responses/Error403' }
         '500': { $ref: '#/components/responses/Error500' }
     post:
-      tags: [Lotes]
+      tags: [ Lotes ]
       summary: Registrar lote e ingreso inicial
       description: Requiere rol ADMINISTRADOR.
       responses:
@@ -191,7 +193,7 @@ paths:
 
   /api/v1/lotes/{id}:
     get:
-      tags: [Lotes]
+      tags: [ Lotes ]
       summary: Consultar lote
       description: Requiere rol ADMINISTRADOR.
       parameters: [ { $ref: '#/components/parameters/Id' } ]
@@ -205,7 +207,7 @@ paths:
 
   /api/v1/lotes/{id}/liberar:
     post:
-      tags: [Lotes]
+      tags: [ Lotes ]
       summary: Liberar lote
       description: Requiere rol ADMINISTRADOR.
       parameters: [ { $ref: '#/components/parameters/Id' } ]
@@ -220,7 +222,7 @@ paths:
 
   /api/v1/lotes/{id}/bloquear:
     post:
-      tags: [Lotes]
+      tags: [ Lotes ]
       summary: Bloquear lote
       description: Requiere rol ADMINISTRADOR.
       parameters: [ { $ref: '#/components/parameters/Id' } ]
@@ -235,7 +237,7 @@ paths:
 
   /api/v1/lotes/{id}/condiciones:
     get:
-      tags: [Lotes]
+      tags: [ Lotes ]
       summary: Consultar historial de condición del lote
       description: Requiere rol ADMINISTRADOR.
       parameters:
@@ -252,7 +254,7 @@ paths:
 
   /api/v1/movimientos:
     get:
-      tags: [Movimientos]
+      tags: [ Movimientos ]
       summary: Listar movimientos de un lote
       description: Requiere rol ADMINISTRADOR.
       parameters:
@@ -269,7 +271,7 @@ paths:
 
   /api/v1/movimientos/traslado:
     post:
-      tags: [Movimientos]
+      tags: [ Movimientos ]
       summary: Registrar traslado de inventario
       description: Requiere rol ADMINISTRADOR.
       responses:
@@ -283,7 +285,7 @@ paths:
 
   /api/v1/clientes:
     get:
-      tags: [Clientes]
+      tags: [ Clientes ]
       summary: Listar clientes
       description: Requiere rol VENDEDOR.
       responses:
@@ -293,7 +295,7 @@ paths:
         '403': { $ref: '#/components/responses/Error403' }
         '500': { $ref: '#/components/responses/Error500' }
     post:
-      tags: [Clientes]
+      tags: [ Clientes ]
       summary: Registrar cliente georreferenciado
       description: Requiere rol VENDEDOR.
       responses:
@@ -305,7 +307,7 @@ paths:
 
   /api/v1/clientes/{id}:
     get:
-      tags: [Clientes]
+      tags: [ Clientes ]
       summary: Consultar cliente
       description: Requiere rol VENDEDOR.
       parameters: [ { $ref: '#/components/parameters/Id' } ]
@@ -316,7 +318,7 @@ paths:
         '404': { $ref: '#/components/responses/Error404' }
         '500': { $ref: '#/components/responses/Error500' }
     patch:
-      tags: [Clientes]
+      tags: [ Clientes ]
       summary: Editar cliente
       description: Requiere rol VENDEDOR.
       parameters: [ { $ref: '#/components/parameters/Id' } ]
@@ -330,7 +332,7 @@ paths:
 
   /api/v1/clientes/{id}/ubicacion:
     patch:
-      tags: [Clientes]
+      tags: [ Clientes ]
       summary: Actualizar ubicación confirmada del cliente
       description: Requiere rol VENDEDOR.
       parameters: [ { $ref: '#/components/parameters/Id' } ]
@@ -344,7 +346,7 @@ paths:
 
   /api/v1/clientes/{id}/estado:
     patch:
-      tags: [Clientes]
+      tags: [ Clientes ]
       summary: Activar o desactivar cliente
       description: Requiere rol VENDEDOR.
       parameters: [ { $ref: '#/components/parameters/Id' } ]
@@ -358,7 +360,7 @@ paths:
 
   /api/v1/pedidos:
     get:
-      tags: [Pedidos]
+      tags: [ Pedidos ]
       summary: Listar pedidos propios
       description: Requiere rol VENDEDOR.
       parameters:
@@ -372,7 +374,7 @@ paths:
         '403': { $ref: '#/components/responses/Error403' }
         '500': { $ref: '#/components/responses/Error500' }
     post:
-      tags: [Pedidos]
+      tags: [ Pedidos ]
       summary: Registrar pedido
       description: Requiere rol VENDEDOR.
       responses:
@@ -386,7 +388,7 @@ paths:
 
   /api/v1/pedidos/{id}:
     get:
-      tags: [Pedidos]
+      tags: [ Pedidos ]
       summary: Consultar pedido propio
       description: Requiere rol VENDEDOR.
       parameters: [ { $ref: '#/components/parameters/Id' } ]
@@ -397,7 +399,7 @@ paths:
         '404': { $ref: '#/components/responses/Error404' }
         '500': { $ref: '#/components/responses/Error500' }
     patch:
-      tags: [Pedidos]
+      tags: [ Pedidos ]
       summary: Editar pedido antes del retiro
       description: Requiere rol VENDEDOR.
       parameters: [ { $ref: '#/components/parameters/Id' } ]
@@ -412,7 +414,7 @@ paths:
 
   /api/v1/pedidos/{id}/cancelacion:
     post:
-      tags: [Pedidos]
+      tags: [ Pedidos ]
       summary: Anular pedido antes del retiro
       description: Requiere rol VENDEDOR.
       parameters: [ { $ref: '#/components/parameters/Id' } ]
@@ -426,7 +428,7 @@ paths:
 
   /api/v1/pedidos/{id}/retiro:
     post:
-      tags: [Pedidos]
+      tags: [ Pedidos ]
       summary: Retirar pedido para reparto
       description: Requiere rol VENDEDOR.
       parameters: [ { $ref: '#/components/parameters/Id' } ]
@@ -441,7 +443,7 @@ paths:
 
   /api/v1/pedidos/retiros:
     post:
-      tags: [Pedidos]
+      tags: [ Pedidos ]
       summary: Retirar varios pedidos
       description: Requiere rol VENDEDOR.
       responses:
@@ -453,7 +455,7 @@ paths:
 
   /api/v1/pedidos/{id}/entrega:
     post:
-      tags: [Pedidos]
+      tags: [ Pedidos ]
       summary: Confirmar entrega con GPS puntual
       description: Requiere rol VENDEDOR.
       parameters: [ { $ref: '#/components/parameters/Id' } ]
@@ -468,7 +470,7 @@ paths:
 
   /api/v1/pedidos/planificacion:
     post:
-      tags: [Pedidos]
+      tags: [ Pedidos ]
       summary: Sugerir secuencia geográfica de reparto
       description: Requiere rol VENDEDOR. No es optimización vial.
       responses:
@@ -482,7 +484,7 @@ paths:
 
   /api/v1/pedidos/disponibilidad:
     get:
-      tags: [Pedidos]
+      tags: [ Pedidos ]
       summary: Consultar disponibilidad comercial
       description: Requiere rol VENDEDOR.
       responses:
@@ -493,7 +495,7 @@ paths:
 
   /api/v1/admin/pedidos:
     get:
-      tags: [Administración]
+      tags: [ Administración ]
       summary: Auditar pedidos y vendedor responsable
       description: Requiere rol ADMINISTRADOR.
       responses:
@@ -505,7 +507,7 @@ paths:
 
   /api/v1/geografia/geocodificar:
     get:
-      tags: [Geografía]
+      tags: [ Geografía ]
       summary: Buscar direcciones en Tarija mediante Geoapify
       description: Requiere rol VENDEDOR. La clave del proveedor permanece en backend.
       parameters:
@@ -520,7 +522,7 @@ paths:
 
   /api/v1/geografia/autocompletar:
     get:
-      tags: [Geografía]
+      tags: [ Geografía ]
       summary: Autocompletar direcciones en Tarija
       description: Requiere rol VENDEDOR.
       parameters:
@@ -535,7 +537,7 @@ paths:
 
   /api/v1/geografia/reversa:
     get:
-      tags: [Geografía]
+      tags: [ Geografía ]
       summary: Obtener dirección desde coordenadas
       description: Requiere rol VENDEDOR.
       parameters:
@@ -551,7 +553,7 @@ paths:
 
   /api/v1/ubicaciones/venta-despacho:
     get:
-      tags: [Geografía]
+      tags: [ Geografía ]
       summary: Consultar punto de Venta y Despacho
       responses:
         '200': { description: Ubicación }
@@ -562,7 +564,7 @@ paths:
 
   /api/v1/ubicaciones/{id}/georreferencia:
     patch:
-      tags: [Geografía]
+      tags: [ Geografía ]
       summary: Configurar georreferencia física de Venta y Despacho
       description: Requiere rol ADMINISTRADOR.
       parameters: [ { $ref: '#/components/parameters/Id' } ]
@@ -574,6 +576,1016 @@ paths:
         '404': { $ref: '#/components/responses/Error404' }
         '409': { $ref: '#/components/responses/Error409' }
         '500': { $ref: '#/components/responses/Error500' }
+  /api/v1/publico/catalogo:
+    get:
+      summary: Catálogo publicado, sin precios ni inventario interno
+      tags:
+        - Catálogo público
+      responses:
+        "200":
+          description: Consulta correcta.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CatalogoPublico"
+        "400":
+          $ref: "#/components/responses/Error400"
+        "401":
+          $ref: "#/components/responses/Error401"
+        "403":
+          $ref: "#/components/responses/Error403"
+        "404":
+          $ref: "#/components/responses/Error404"
+        "409":
+          $ref: "#/components/responses/Error409"
+      security: []
+  /api/v1/catalogo/familias:
+    get:
+      summary: Listar familias (ADMINISTRADOR)
+      tags:
+        - Catálogo
+      responses:
+        "200":
+          description: Consulta correcta.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - items
+                  - total
+                  - page
+                  - limit
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Familia"
+                  total: &a1
+                    type: integer
+                  page: *a1
+                  limit: *a1
+        "400":
+          $ref: "#/components/responses/Error400"
+        "401":
+          $ref: "#/components/responses/Error401"
+        "403":
+          $ref: "#/components/responses/Error403"
+        "404":
+          $ref: "#/components/responses/Error404"
+        "409":
+          $ref: "#/components/responses/Error409"
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - in: query
+          name: q
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+        - in: query
+          name: activo
+          schema:
+            type: string
+            enum:
+              - "true"
+              - "false"
+        - in: query
+          name: publicado
+          schema:
+            type: string
+            enum:
+              - "true"
+              - "false"
+    post:
+      summary: Crear Familia (ADMINISTRADOR)
+      tags:
+        - Catálogo
+      responses:
+        "201":
+          description: Operación confirmada o resultado anterior de la misma solicitud idempotente.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Familia"
+        "400":
+          $ref: "#/components/responses/Error400"
+        "401":
+          $ref: "#/components/responses/Error401"
+        "403":
+          $ref: "#/components/responses/Error403"
+        "404":
+          $ref: "#/components/responses/Error404"
+        "409":
+          $ref: "#/components/responses/Error409"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FamiliaEntrada"
+  /api/v1/catalogo/familias/{id}:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    get:
+      summary: Consultar Familia (ADMINISTRADOR)
+      tags:
+        - Catálogo
+      responses:
+        "200":
+          description: Consulta correcta.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Familia"
+        "400":
+          $ref: "#/components/responses/Error400"
+        "401":
+          $ref: "#/components/responses/Error401"
+        "403":
+          $ref: "#/components/responses/Error403"
+        "404":
+          $ref: "#/components/responses/Error404"
+        "409":
+          $ref: "#/components/responses/Error409"
+    patch:
+      summary: Editar Familia (ADMINISTRADOR)
+      tags:
+        - Catálogo
+      responses:
+        "200":
+          description: Consulta correcta.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Familia"
+        "400":
+          $ref: "#/components/responses/Error400"
+        "401":
+          $ref: "#/components/responses/Error401"
+        "403":
+          $ref: "#/components/responses/Error403"
+        "404":
+          $ref: "#/components/responses/Error404"
+        "409":
+          $ref: "#/components/responses/Error409"
+      description: Baja lógica mediante activo=false. Publicación independiente del stock. Un SKU es permanente; una
+        identidad con historial requiere un SKU nuevo. Cambiar un precio sin validación explícita lo deja
+        PROVISIONAL.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FamiliaEdicion"
+  /api/v1/catalogo/productos:
+    get:
+      summary: Listar productos (ADMINISTRADOR)
+      tags:
+        - Catálogo
+      responses:
+        "200":
+          description: Consulta correcta.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - items
+                  - total
+                  - page
+                  - limit
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ProductoComercial"
+                  total: &a1
+                    type: integer
+                  page: *a1
+                  limit: *a1
+        "400":
+          $ref: "#/components/responses/Error400"
+        "401":
+          $ref: "#/components/responses/Error401"
+        "403":
+          $ref: "#/components/responses/Error403"
+        "404":
+          $ref: "#/components/responses/Error404"
+        "409":
+          $ref: "#/components/responses/Error409"
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - in: query
+          name: q
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+        - in: query
+          name: activo
+          schema:
+            type: string
+            enum:
+              - "true"
+              - "false"
+        - in: query
+          name: publicado
+          schema:
+            type: string
+            enum:
+              - "true"
+              - "false"
+        - in: query
+          name: familiaId
+          schema:
+            type: string
+            format: uuid
+    post:
+      summary: Crear ProductoComercial (ADMINISTRADOR)
+      tags:
+        - Catálogo
+      responses:
+        "201":
+          description: Operación confirmada o resultado anterior de la misma solicitud idempotente.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductoComercial"
+        "400":
+          $ref: "#/components/responses/Error400"
+        "401":
+          $ref: "#/components/responses/Error401"
+        "403":
+          $ref: "#/components/responses/Error403"
+        "404":
+          $ref: "#/components/responses/Error404"
+        "409":
+          $ref: "#/components/responses/Error409"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductoComercialEntrada"
+  /api/v1/catalogo/productos/{id}:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    get:
+      summary: Consultar ProductoComercial (ADMINISTRADOR)
+      tags:
+        - Catálogo
+      responses:
+        "200":
+          description: Consulta correcta.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductoComercial"
+        "400":
+          $ref: "#/components/responses/Error400"
+        "401":
+          $ref: "#/components/responses/Error401"
+        "403":
+          $ref: "#/components/responses/Error403"
+        "404":
+          $ref: "#/components/responses/Error404"
+        "409":
+          $ref: "#/components/responses/Error409"
+    patch:
+      summary: Editar ProductoComercial (ADMINISTRADOR)
+      tags:
+        - Catálogo
+      responses:
+        "200":
+          description: Consulta correcta.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductoComercial"
+        "400":
+          $ref: "#/components/responses/Error400"
+        "401":
+          $ref: "#/components/responses/Error401"
+        "403":
+          $ref: "#/components/responses/Error403"
+        "404":
+          $ref: "#/components/responses/Error404"
+        "409":
+          $ref: "#/components/responses/Error409"
+      description: Baja lógica mediante activo=false. Publicación independiente del stock. Un SKU es permanente; una
+        identidad con historial requiere un SKU nuevo. Cambiar un precio sin validación explícita lo deja
+        PROVISIONAL.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductoComercialEdicion"
+  /api/v1/catalogo/presentaciones:
+    get:
+      summary: Listar presentaciones (ADMINISTRADOR)
+      tags:
+        - Catálogo
+      responses:
+        "200":
+          description: Consulta correcta.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - items
+                  - total
+                  - page
+                  - limit
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Presentacion"
+                  total: &a1
+                    type: integer
+                  page: *a1
+                  limit: *a1
+        "400":
+          $ref: "#/components/responses/Error400"
+        "401":
+          $ref: "#/components/responses/Error401"
+        "403":
+          $ref: "#/components/responses/Error403"
+        "404":
+          $ref: "#/components/responses/Error404"
+        "409":
+          $ref: "#/components/responses/Error409"
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - in: query
+          name: q
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+        - in: query
+          name: activo
+          schema:
+            type: string
+            enum:
+              - "true"
+              - "false"
+        - in: query
+          name: familiaId
+          schema: &a2
+            type: string
+            format: uuid
+        - in: query
+          name: productoComercialId
+          schema: *a2
+    post:
+      summary: Crear Presentacion (ADMINISTRADOR)
+      tags:
+        - Catálogo
+      responses:
+        "201":
+          description: Operación confirmada o resultado anterior de la misma solicitud idempotente.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Presentacion"
+        "400":
+          $ref: "#/components/responses/Error400"
+        "401":
+          $ref: "#/components/responses/Error401"
+        "403":
+          $ref: "#/components/responses/Error403"
+        "404":
+          $ref: "#/components/responses/Error404"
+        "409":
+          $ref: "#/components/responses/Error409"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PresentacionEntrada"
+  /api/v1/catalogo/presentaciones/{id}:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    get:
+      summary: Consultar Presentacion (ADMINISTRADOR)
+      tags:
+        - Catálogo
+      responses:
+        "200":
+          description: Consulta correcta.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Presentacion"
+        "400":
+          $ref: "#/components/responses/Error400"
+        "401":
+          $ref: "#/components/responses/Error401"
+        "403":
+          $ref: "#/components/responses/Error403"
+        "404":
+          $ref: "#/components/responses/Error404"
+        "409":
+          $ref: "#/components/responses/Error409"
+    patch:
+      summary: Editar Presentacion (ADMINISTRADOR)
+      tags:
+        - Catálogo
+      responses:
+        "200":
+          description: Consulta correcta.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Presentacion"
+        "400":
+          $ref: "#/components/responses/Error400"
+        "401":
+          $ref: "#/components/responses/Error401"
+        "403":
+          $ref: "#/components/responses/Error403"
+        "404":
+          $ref: "#/components/responses/Error404"
+        "409":
+          $ref: "#/components/responses/Error409"
+      description: Baja lógica mediante activo=false. Publicación independiente del stock. Un SKU es permanente; una
+        identidad con historial requiere un SKU nuevo. Cambiar un precio sin validación explícita lo deja
+        PROVISIONAL.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PresentacionEdicion"
+  /api/v1/catalogo/imagenes:
+    post:
+      summary: Cargar fotografía persistente (ADMINISTRADOR)
+      tags:
+        - Catálogo
+      responses:
+        "201":
+          description: Operación confirmada o resultado anterior de la misma solicitud idempotente.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  ancho: &a1
+                    type: integer
+                  alto: *a1
+                  url:
+                    type: string
+                additionalProperties: false
+        "400":
+          $ref: "#/components/responses/Error400"
+        "401":
+          $ref: "#/components/responses/Error401"
+        "403":
+          $ref: "#/components/responses/Error403"
+        "404":
+          $ref: "#/components/responses/Error404"
+        "409":
+          $ref: "#/components/responses/Error409"
+      description: PNG/JPEG/WebP, máximo 5 MiB y 4096 × 4096, sin animación. Validación por decodificación completa;
+        salida PNG sin metadatos, almacenada en PostgreSQL.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                archivo:
+                  type: string
+                  format: binary
+              required:
+                - archivo
+              additionalProperties: false
+  /api/v1/catalogo/imagenes/{id}:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    get:
+      summary: Fotografía privada (ADMINISTRADOR)
+      tags:
+        - Catálogo
+      responses:
+        "200":
+          description: Contenido validado PNG.
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+        "404":
+          $ref: "#/components/responses/Error404"
+  /api/v1/publico/catalogo/imagenes/{id}:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    get:
+      summary: Fotografía vinculada a catálogo publicado
+      tags:
+        - Catálogo
+      security: []
+      responses:
+        "200":
+          description: Contenido validado PNG.
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+        "404":
+          $ref: "#/components/responses/Error404"
+  /api/v1/operaciones/salidas-directas:
+    post:
+      summary: Registrar venta directa
+      tags:
+        - Operaciones
+      responses:
+        "201":
+          description: Operación confirmada o resultado anterior de la misma solicitud idempotente.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Operacion"
+        "400":
+          $ref: "#/components/responses/Error400"
+        "401":
+          $ref: "#/components/responses/Error401"
+        "403":
+          $ref: "#/components/responses/Error403"
+        "404":
+          $ref: "#/components/responses/Error404"
+        "409":
+          $ref: "#/components/responses/Error409"
+      description: "JWT obligatorio. Responsable obtenido del token. La misma operacionClave y el mismo contenido
+        recuperan la operación previa sin nuevos movimientos; reutilizarla con otro contenido o actor devuelve
+        409. Ante timeout, 5xx o pérdida de respuesta, conservar contenido y clave. Transacción única, FEFO,
+        fecha civil de Bolivia, stock libre y lotes liberados vigentes. No registra pagos ni facturas.
+        ADMINISTRADOR: despacho y coordenadas configuradas. VENDEDOR: exclusivamente su custodia libre
+        recibida; GPS puntual obligatorio."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: "#/components/schemas/SalidaMostradorEntrada"
+                - $ref: "#/components/schemas/SalidaVendedorEntrada"
+  /api/v1/operaciones/cargas:
+    post:
+      summary: Asignar carga libre a Vendedor
+      tags:
+        - Operaciones
+      responses:
+        "201":
+          description: Operación confirmada o resultado anterior de la misma solicitud idempotente.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Operacion"
+        "400":
+          $ref: "#/components/responses/Error400"
+        "401":
+          $ref: "#/components/responses/Error401"
+        "403":
+          $ref: "#/components/responses/Error403"
+        "404":
+          $ref: "#/components/responses/Error404"
+        "409":
+          $ref: "#/components/responses/Error409"
+      description: JWT obligatorio. Responsable obtenido del token. La misma operacionClave y el mismo contenido
+        recuperan la operación previa sin nuevos movimientos; reutilizarla con otro contenido o actor devuelve
+        409. Ante timeout, 5xx o pérdida de respuesta, conservar contenido y clave. Transacción única, FEFO,
+        fecha civil de Bolivia, stock libre y lotes liberados vigentes. No registra pagos ni facturas. Solo
+        ADMINISTRADOR. Traslado despacho → distribución; PENDIENTE_RECEPCION hasta la confirmación del
+        destinatario.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CargaEntrada"
+  /api/v1/operaciones/devoluciones:
+    post:
+      summary: Solicitar devolución de sobrantes
+      tags:
+        - Operaciones
+      responses:
+        "201":
+          description: Operación confirmada o resultado anterior de la misma solicitud idempotente.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Operacion"
+        "400":
+          $ref: "#/components/responses/Error400"
+        "401":
+          $ref: "#/components/responses/Error401"
+        "403":
+          $ref: "#/components/responses/Error403"
+        "404":
+          $ref: "#/components/responses/Error404"
+        "409":
+          $ref: "#/components/responses/Error409"
+      description: JWT obligatorio. Responsable obtenido del token. La misma operacionClave y el mismo contenido
+        recuperan la operación previa sin nuevos movimientos; reutilizarla con otro contenido o actor devuelve
+        409. Ante timeout, 5xx o pérdida de respuesta, conservar contenido y clave. Transacción única, FEFO,
+        fecha civil de Bolivia, stock libre y lotes liberados vigentes. No registra pagos ni facturas. Solo
+        VENDEDOR, lotes propios libres. Aparta cantidades; no cambia destino físico hasta recepción
+        administrativa.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DevolucionEntrada"
+  /api/v1/operaciones/{id}/recepcion:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    post:
+      summary: Confirmar recepción de carga propia (VENDEDOR)
+      tags:
+        - Operaciones
+      responses:
+        "201":
+          description: Operación confirmada o resultado anterior de la misma solicitud idempotente.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Operacion"
+        "400":
+          $ref: "#/components/responses/Error400"
+        "401":
+          $ref: "#/components/responses/Error401"
+        "403":
+          $ref: "#/components/responses/Error403"
+        "404":
+          $ref: "#/components/responses/Error404"
+        "409":
+          $ref: "#/components/responses/Error409"
+      description: JWT obligatorio. Responsable obtenido del token. La misma operacionClave y el mismo contenido
+        recuperan la operación previa sin nuevos movimientos; reutilizarla con otro contenido o actor devuelve
+        409. Ante timeout, 5xx o pérdida de respuesta, conservar contenido y clave. Transacción única, FEFO,
+        fecha civil de Bolivia, stock libre y lotes liberados vigentes. No registra pagos ni facturas. Nunca
+        elimina el historial ni devuelve automáticamente al despacho vendible.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecepcionEntrada"
+  /api/v1/operaciones/{id}/recibir-devolucion:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    post:
+      summary: Recibir físicamente devolución en inspección (ADMINISTRADOR)
+      tags:
+        - Operaciones
+      responses:
+        "201":
+          description: Operación confirmada o resultado anterior de la misma solicitud idempotente.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Operacion"
+        "400":
+          $ref: "#/components/responses/Error400"
+        "401":
+          $ref: "#/components/responses/Error401"
+        "403":
+          $ref: "#/components/responses/Error403"
+        "404":
+          $ref: "#/components/responses/Error404"
+        "409":
+          $ref: "#/components/responses/Error409"
+      description: JWT obligatorio. Responsable obtenido del token. La misma operacionClave y el mismo contenido
+        recuperan la operación previa sin nuevos movimientos; reutilizarla con otro contenido o actor devuelve
+        409. Ante timeout, 5xx o pérdida de respuesta, conservar contenido y clave. Transacción única, FEFO,
+        fecha civil de Bolivia, stock libre y lotes liberados vigentes. No registra pagos ni facturas. Nunca
+        elimina el historial ni devuelve automáticamente al despacho vendible.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecepcionEntrada"
+  /api/v1/operaciones/{id}/reversion:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    post:
+      summary: Revertir salida con devolución física completa a inspección (ADMINISTRADOR)
+      tags:
+        - Operaciones
+      responses:
+        "201":
+          description: Operación confirmada o resultado anterior de la misma solicitud idempotente.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Operacion"
+        "400":
+          $ref: "#/components/responses/Error400"
+        "401":
+          $ref: "#/components/responses/Error401"
+        "403":
+          $ref: "#/components/responses/Error403"
+        "404":
+          $ref: "#/components/responses/Error404"
+        "409":
+          $ref: "#/components/responses/Error409"
+      description: JWT obligatorio. Responsable obtenido del token. La misma operacionClave y el mismo contenido
+        recuperan la operación previa sin nuevos movimientos; reutilizarla con otro contenido o actor devuelve
+        409. Ante timeout, 5xx o pérdida de respuesta, conservar contenido y clave. Transacción única, FEFO,
+        fecha civil de Bolivia, stock libre y lotes liberados vigentes. No registra pagos ni facturas. Nunca
+        elimina el historial ni devuelve automáticamente al despacho vendible.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReversionEntrada"
+  /api/v1/operaciones:
+    get:
+      summary: Historial general o propio según JWT
+      tags:
+        - Operaciones
+      responses:
+        "200":
+          description: Consulta correcta.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - items
+                  - total
+                  - page
+                  - limit
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/OperacionResumen"
+                  total: &a1
+                    type: integer
+                  page: *a1
+                  limit: *a1
+        "400":
+          $ref: "#/components/responses/Error400"
+        "401":
+          $ref: "#/components/responses/Error401"
+        "403":
+          $ref: "#/components/responses/Error403"
+        "404":
+          $ref: "#/components/responses/Error404"
+        "409":
+          $ref: "#/components/responses/Error409"
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - in: query
+          name: tipo
+          schema:
+            type: string
+            enum:
+              - SALIDA_DIRECTA
+              - CARGA
+              - DEVOLUCION
+              - REVERSION
+        - in: query
+          name: estado
+          schema:
+            type: string
+            enum:
+              - CONFIRMADA
+              - PENDIENTE_RECEPCION
+  /api/v1/operaciones/{id}:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    get:
+      summary: Detalle con lotes, movimientos y datos históricos; ajeno devuelve 404
+      tags:
+        - Operaciones
+      responses:
+        "200":
+          description: Consulta correcta.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Operacion"
+        "400":
+          $ref: "#/components/responses/Error400"
+        "401":
+          $ref: "#/components/responses/Error401"
+        "403":
+          $ref: "#/components/responses/Error403"
+        "404":
+          $ref: "#/components/responses/Error404"
+        "409":
+          $ref: "#/components/responses/Error409"
+  /api/v1/operaciones/disponibilidad:
+    get:
+      summary: Stock libre de despacho o propio según JWT
+      tags:
+        - Operaciones
+      responses:
+        "200":
+          description: Consulta correcta.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DisponibilidadLibre"
+        "400":
+          $ref: "#/components/responses/Error400"
+        "401":
+          $ref: "#/components/responses/Error401"
+        "403":
+          $ref: "#/components/responses/Error403"
+        "404":
+          $ref: "#/components/responses/Error404"
+        "409":
+          $ref: "#/components/responses/Error409"
+  /api/v1/operaciones/custodia:
+    get:
+      summary: Custodia física, libre y comprometida por Vendedor y lote
+      tags:
+        - Operaciones
+      responses:
+        "200":
+          description: Consulta correcta.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Custodia"
+        "400":
+          $ref: "#/components/responses/Error400"
+        "401":
+          $ref: "#/components/responses/Error401"
+        "403":
+          $ref: "#/components/responses/Error403"
+        "404":
+          $ref: "#/components/responses/Error404"
+        "409":
+          $ref: "#/components/responses/Error409"
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - in: query
+          name: vendedorId
+          schema:
+            type: string
+            format: uuid
+      description: ADMINISTRADOR puede filtrar Vendedor. VENDEDOR solo ve custodia propia; solicitar otro
+        destinatario devuelve 403.
+  /api/v1/operaciones/vendedores:
+    get:
+      summary: Vendedores activos para carga (ADMINISTRADOR)
+      tags:
+        - Operaciones
+      responses:
+        "200":
+          description: Consulta correcta.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        nombre:
+                          type: string
+                      additionalProperties: false
+                required:
+                  - items
+                additionalProperties: false
+        "400":
+          $ref: "#/components/responses/Error400"
+        "401":
+          $ref: "#/components/responses/Error401"
+        "403":
+          $ref: "#/components/responses/Error403"
+        "404":
+          $ref: "#/components/responses/Error404"
+        "409":
+          $ref: "#/components/responses/Error409"
+  /api/v1/operaciones/conciliacion:
+    get:
+      summary: Conciliar distribución física y custodia (ADMINISTRADOR)
+      tags:
+        - Operaciones
+      responses:
+        "200":
+          description: Consulta correcta.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  conciliado:
+                    type: boolean
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        loteId:
+                          type: string
+                          format: uuid
+                        codigo:
+                          type: string
+                        fisico: &a1
+                          type: integer
+                        custodia: *a1
+                        sinResponsable: *a1
+                        diferencia: *a1
+                      additionalProperties: false
+                required:
+                  - items
+                  - conciliado
+                additionalProperties: false
+        "400":
+          $ref: "#/components/responses/Error400"
+        "401":
+          $ref: "#/components/responses/Error401"
+        "403":
+          $ref: "#/components/responses/Error403"
+        "404":
+          $ref: "#/components/responses/Error404"
+        "409":
+          $ref: "#/components/responses/Error409"
 
 components:
   securitySchemes:
@@ -597,9 +1609,15 @@ components:
         presentacion: { type: string }
         pesoGramos: { type: integer, minimum: 1 }
         precioBob: { type: number, minimum: 0 }
+        validacionComercial:
+          type: string
+          enum:
+            - PROVISIONAL
+            - VALIDADO
+          default: PROVISIONAL
     ApiError:
       type: object
-      required: [statusCode, error, message, path, timestamp]
+      required: [ statusCode, error, message, path, timestamp ]
       properties:
         statusCode: { type: integer }
         error: { type: string }
@@ -609,6 +1627,751 @@ components:
             - { type: array, items: { type: string } }
         path: { type: string }
         timestamp: { type: string, format: date-time }
+    FamiliaEntrada:
+      type: object
+      properties:
+        nombre:
+          type: string
+          minLength: 1
+          maxLength: 70
+        descripcion:
+          type: string
+          maxLength: 1500
+        imagenId:
+          type: string
+          format: uuid
+          nullable: true
+        activo: &a1
+          type: boolean
+        publicado: *a1
+        orden:
+          type: integer
+          minimum: 0
+          maximum: 100000
+      required:
+        - nombre
+      additionalProperties: false
+    ProductoComercialEntrada:
+      type: object
+      properties:
+        nombre:
+          type: string
+          minLength: 1
+          maxLength: 120
+        descripcion:
+          type: string
+          maxLength: 1500
+        imagenId:
+          type: string
+          format: uuid
+          nullable: true
+        activo: &a1
+          type: boolean
+        publicado: *a1
+        orden:
+          type: integer
+          minimum: 0
+          maximum: 100000
+        familiaId:
+          type: string
+          format: uuid
+        caracteristicas:
+          type: string
+          maxLength: 2000
+      required:
+        - nombre
+        - familiaId
+      additionalProperties: false
+    PresentacionEntrada:
+      type: object
+      properties:
+        codigo:
+          type: string
+          maxLength: 40
+        productoComercialId:
+          type: string
+          format: uuid
+        presentacion:
+          type: string
+          maxLength: 100
+        tipoEmpaque:
+          type: string
+          maxLength: 100
+        pesoGramos:
+          type: integer
+          minimum: 1
+        precioBob:
+          oneOf:
+            - type: string
+              pattern: ^[0-9]{1,10}(\.[0-9]{1,2})?$
+            - type: number
+              minimum: 0
+          description: Se recomienda enviar decimal como texto. Se conserva con NUMERIC; nunca publicar un valor
+            provisional.
+        activo:
+          type: boolean
+        validacionComercial:
+          type: string
+          enum:
+            - PROVISIONAL
+            - VALIDADO
+          default: PROVISIONAL
+      required:
+        - codigo
+        - productoComercialId
+        - presentacion
+        - tipoEmpaque
+        - pesoGramos
+        - precioBob
+      additionalProperties: false
+    FamiliaEdicion:
+      type: object
+      properties:
+        nombre:
+          type: string
+          minLength: 1
+          maxLength: 70
+        descripcion:
+          type: string
+          maxLength: 1500
+        imagenId:
+          type: string
+          format: uuid
+          nullable: true
+        activo: &a1
+          type: boolean
+        publicado: *a1
+        orden:
+          type: integer
+          minimum: 0
+          maximum: 100000
+      additionalProperties: false
+      minProperties: 1
+    Familia:
+      type: object
+      properties:
+        nombre:
+          type: string
+          minLength: 1
+          maxLength: 70
+        descripcion:
+          type: string
+          maxLength: 1500
+        imagenId:
+          type: string
+          format: uuid
+          nullable: true
+        activo: &a1
+          type: boolean
+        publicado: *a1
+        orden:
+          type: integer
+          minimum: 0
+          maximum: 100000
+        id:
+          type: string
+          format: uuid
+        creadoEn: &a2
+          type: string
+          format: date-time
+        actualizadoEn: *a2
+        imagen:
+          type: string
+          nullable: true
+        imagenOriginal:
+          type: string
+          nullable: true
+    ProductoComercialEdicion:
+      type: object
+      properties:
+        nombre:
+          type: string
+          minLength: 1
+          maxLength: 120
+        descripcion:
+          type: string
+          maxLength: 1500
+        imagenId:
+          type: string
+          format: uuid
+          nullable: true
+        activo: &a1
+          type: boolean
+        publicado: *a1
+        orden:
+          type: integer
+          minimum: 0
+          maximum: 100000
+        familiaId:
+          type: string
+          format: uuid
+        caracteristicas:
+          type: string
+          maxLength: 2000
+      additionalProperties: false
+      minProperties: 1
+    ProductoComercial:
+      type: object
+      properties:
+        nombre:
+          type: string
+          minLength: 1
+          maxLength: 120
+        descripcion:
+          type: string
+          maxLength: 1500
+        imagenId:
+          type: string
+          format: uuid
+          nullable: true
+        activo: &a1
+          type: boolean
+        publicado: *a1
+        orden:
+          type: integer
+          minimum: 0
+          maximum: 100000
+        familiaId: &a2
+          type: string
+          format: uuid
+        caracteristicas:
+          type: string
+          maxLength: 2000
+        id: *a2
+        creadoEn: &a3
+          type: string
+          format: date-time
+        actualizadoEn: *a3
+        imagen:
+          type: string
+          nullable: true
+        imagenOriginal:
+          type: string
+          nullable: true
+    PresentacionEdicion:
+      type: object
+      properties:
+        codigo:
+          type: string
+          maxLength: 40
+        productoComercialId:
+          type: string
+          format: uuid
+        presentacion:
+          type: string
+          maxLength: 100
+        tipoEmpaque:
+          type: string
+          maxLength: 100
+        pesoGramos:
+          type: integer
+          minimum: 1
+        precioBob:
+          oneOf:
+            - type: string
+              pattern: ^[0-9]{1,10}(\.[0-9]{1,2})?$
+            - type: number
+              minimum: 0
+          description: Se recomienda enviar decimal como texto. Se conserva con NUMERIC; nunca publicar un valor
+            provisional.
+        activo:
+          type: boolean
+        validacionComercial:
+          type: string
+          enum:
+            - PROVISIONAL
+            - VALIDADO
+          default: PROVISIONAL
+      additionalProperties: false
+      minProperties: 1
+    Presentacion:
+      type: object
+      properties:
+        codigo:
+          type: string
+          maxLength: 40
+        productoComercialId: &a1
+          type: string
+          format: uuid
+        presentacion:
+          type: string
+          maxLength: 100
+        tipoEmpaque:
+          type: string
+          maxLength: 100
+        pesoGramos:
+          type: integer
+          minimum: 1
+        precioBob:
+          type: string
+          pattern: ^[0-9]+\.[0-9]{2}$
+          example: "30.20"
+        activo:
+          type: boolean
+        validacionComercial:
+          type: string
+          enum:
+            - PROVISIONAL
+            - VALIDADO
+            - LEGADO
+        id: *a1
+        creadoEn: &a2
+          type: string
+          format: date-time
+        actualizadoEn: *a2
+        validadoEn:
+          type: string
+          format: date-time
+          nullable: true
+        validadoPor:
+          type: string
+          format: uuid
+          nullable: true
+    ProductoPublico:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        nombre: &a1
+          type: string
+        descripcion: *a1
+        caracteristicas: *a1
+        orden:
+          type: integer
+        imagen:
+          type: string
+          nullable: true
+      required:
+        - id
+        - nombre
+        - descripcion
+        - caracteristicas
+        - orden
+        - imagen
+      additionalProperties: false
+    FamiliaPublica:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        slug: &a1
+          type: string
+        nombre: *a1
+        descripcion: *a1
+        orden:
+          type: integer
+        imagen:
+          type: string
+          nullable: true
+        productos:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProductoPublico"
+      required:
+        - id
+        - slug
+        - nombre
+        - descripcion
+        - orden
+        - imagen
+        - productos
+      additionalProperties: false
+    CatalogoPublico:
+      type: object
+      properties:
+        familias:
+          type: array
+          items:
+            $ref: "#/components/schemas/FamiliaPublica"
+      required:
+        - familias
+      additionalProperties: false
+    SalidaMostradorEntrada:
+      type: object
+      properties:
+        operacionClave: &a1
+          type: string
+          format: uuid
+        detalles:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items:
+            type: object
+            properties:
+              productoId: *a1
+              cantidad:
+                type: integer
+                minimum: 1
+            required:
+              - productoId
+              - cantidad
+            additionalProperties: false
+      required:
+        - operacionClave
+        - detalles
+      additionalProperties: false
+    SalidaVendedorEntrada:
+      type: object
+      properties:
+        operacionClave: &a1
+          type: string
+          format: uuid
+        detalles:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items:
+            type: object
+            properties:
+              productoId: *a1
+              cantidad:
+                type: integer
+                minimum: 1
+            required:
+              - productoId
+              - cantidad
+            additionalProperties: false
+        latitud:
+          type: number
+          minimum: -90
+          maximum: 90
+        longitud:
+          type: number
+          minimum: -180
+          maximum: 180
+        precisionMetros:
+          type: number
+          minimum: 0
+          maximum: 100000
+      required:
+        - operacionClave
+        - detalles
+        - latitud
+        - longitud
+        - precisionMetros
+      additionalProperties: false
+    CargaEntrada:
+      type: object
+      properties:
+        operacionClave: &a1
+          type: string
+          format: uuid
+        detalles:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items:
+            type: object
+            properties:
+              productoId: *a1
+              cantidad:
+                type: integer
+                minimum: 1
+            required:
+              - productoId
+              - cantidad
+            additionalProperties: false
+        vendedorId: *a1
+      required:
+        - operacionClave
+        - detalles
+        - vendedorId
+      additionalProperties: false
+    DevolucionEntrada:
+      type: object
+      properties:
+        operacionClave: &a1
+          type: string
+          format: uuid
+        motivo:
+          type: string
+          minLength: 1
+          maxLength: 300
+        lotes:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items:
+            type: object
+            properties:
+              loteId: *a1
+              cantidad:
+                type: integer
+                minimum: 1
+            required:
+              - loteId
+              - cantidad
+            additionalProperties: false
+      required:
+        - operacionClave
+        - motivo
+        - lotes
+      additionalProperties: false
+    RecepcionEntrada:
+      type: object
+      properties:
+        operacionClave:
+          type: string
+          format: uuid
+      required:
+        - operacionClave
+      additionalProperties: false
+    ReversionEntrada:
+      type: object
+      properties:
+        operacionClave:
+          type: string
+          format: uuid
+        motivo:
+          type: string
+          minLength: 1
+          maxLength: 300
+        recepcionFisicaConfirmada:
+          type: boolean
+          enum:
+            - true
+      required:
+        - operacionClave
+        - motivo
+        - recepcionFisicaConfirmada
+      additionalProperties: false
+    OperacionResumen:
+      type: object
+      properties:
+        id: &a1
+          type: string
+          format: uuid
+        tipo:
+          type: string
+          enum:
+            - SALIDA_DIRECTA
+            - CARGA
+            - DEVOLUCION
+            - REVERSION
+        estado:
+          type: string
+          enum:
+            - CONFIRMADA
+            - PENDIENTE_RECEPCION
+        creadoEn:
+          type: string
+          format: date-time
+        usuarioId: *a1
+        vendedorId:
+          type: string
+          format: uuid
+          nullable: true
+        responsable:
+          type: string
+        vendedorNombre:
+          type: string
+          nullable: true
+        unidades:
+          type: integer
+        reversionId:
+          type: string
+          format: uuid
+          nullable: true
+    ProductoHistorico:
+      type: object
+      properties:
+        codigo: &a1
+          type: string
+        nombre: *a1
+        familia: *a1
+        presentacion: *a1
+        pesoGramos:
+          type: integer
+        tipoEmpaque: *a1
+        validacionComercial: *a1
+      additionalProperties: false
+    DetalleOperacion:
+      type: object
+      properties:
+        id: &a1
+          type: string
+          format: uuid
+        operacionId: *a1
+        productoId: *a1
+        cantidad: &a2
+          type: integer
+        productoHistorico:
+          $ref: "#/components/schemas/ProductoHistorico"
+        precioUnitarioBob:
+          type: string
+          pattern: ^[0-9]+\.[0-9]{2}$
+          example: "30.20"
+          nullable: true
+        lotes:
+          type: array
+          items:
+            type: object
+            properties:
+              loteId: *a1
+              codigo: &a3
+                type: string
+              cantidad: *a2
+              condicionAlRegistrar: *a3
+              movimientoId:
+                type: string
+                format: uuid
+                nullable: true
+            additionalProperties: false
+    Operacion:
+      type: object
+      required:
+        - id
+        - operacionClave
+        - tipo
+        - estado
+        - detalles
+        - eventos
+      properties:
+        id: &a1
+          type: string
+          format: uuid
+        tipo:
+          type: string
+          enum:
+            - SALIDA_DIRECTA
+            - CARGA
+            - DEVOLUCION
+            - REVERSION
+        estado:
+          type: string
+          enum:
+            - CONFIRMADA
+            - PENDIENTE_RECEPCION
+        creadoEn: &a3
+          type: string
+          format: date-time
+        usuarioId: *a1
+        vendedorId:
+          type: string
+          format: uuid
+          nullable: true
+        responsable: &a2
+          type: string
+        vendedorNombre:
+          type: string
+          nullable: true
+        unidades:
+          type: integer
+        reversionId:
+          type: string
+          format: uuid
+          nullable: true
+        operacionClave: *a1
+        clienteId:
+          type: string
+          format: uuid
+          nullable: true
+        clienteNombre:
+          type: string
+          nullable: true
+        latitud:
+          type: string
+          nullable: true
+        longitud:
+          type: string
+          nullable: true
+        precisionM:
+          type: string
+          nullable: true
+        solicitud:
+          type: object
+        motivo:
+          type: string
+          nullable: true
+        revierteId:
+          type: string
+          format: uuid
+          nullable: true
+        detalles:
+          type: array
+          items:
+            $ref: "#/components/schemas/DetalleOperacion"
+        eventos:
+          type: array
+          items:
+            type: object
+            properties:
+              accion: *a2
+              usuarioId: *a1
+              responsable: *a2
+              solicitud:
+                type: object
+              creadoEn: *a3
+    DisponibilidadLibre:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              productoId:
+                type: string
+                format: uuid
+              codigo: &a1
+                type: string
+              nombre: *a1
+              presentacion: *a1
+              cantidadDisponible: &a2
+                type: integer
+              cantidadComprometida: *a2
+      required:
+        - items
+      additionalProperties: false
+    Custodia:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              vendedorId:
+                type: string
+                format: uuid
+                nullable: true
+              vendedorNombre:
+                type: string
+                nullable: true
+              loteId: &a1
+                type: string
+                format: uuid
+              loteCodigo: &a2
+                type: string
+              productoId: *a1
+              nombre: *a2
+              codigo: *a2
+              presentacion: *a2
+              condicion: *a2
+              venceEl:
+                type: string
+                format: date
+              finalidad:
+                type: string
+                enum:
+                  - LIBRE
+                  - PEDIDO
+              cantidad: &a3
+                type: integer
+              libre: *a3
+              pendiente: *a3
+              elegible:
+                type: boolean
+        page: *a3
+        limit: *a3
+      required:
+        - items
+        - page
+        - limit
+      additionalProperties: false
   responses:
     Error400:
       description: Entrada inválida

@@ -167,7 +167,7 @@ test.describe.serial('Evidencias verificables de Swagger UI', () => {
       familia: 'QA',
       presentacion: 'Unidad',
       pesoGramos: 250,
-      precioBob: 19.5,
+      precioBob: 19.5, validacionComercial: 'VALIDADO',
     }, null, 2));
     await ejecutar(producto);
     await esperarCodigo(producto, '201');
@@ -204,7 +204,7 @@ test.describe.serial('Evidencias verificables de Swagger UI', () => {
         familia: 'QA',
         presentacion: 'Unidad',
         pesoGramos: 250,
-        precioBob: 18.5,
+        precioBob: 18.5, validacionComercial: 'VALIDADO',
       });
 
     const prepararStock = async (sufijo: string, cantidad = 20) => {
@@ -388,7 +388,7 @@ test.describe.serial('Evidencias verificables de Swagger UI', () => {
       familia: 'QA',
       presentacion: 'Unidad',
       pesoGramos: 250,
-      precioBob: 15,
+      precioBob: 15, validacionComercial: 'VALIDADO',
     });
 
     await autorizar(page, admin);
@@ -556,7 +556,7 @@ test.describe.serial('Evidencias verificables de Swagger UI', () => {
         familia: 'QA',
         presentacion: 'Unidad',
         pesoGramos: 250,
-        precioBob: 10,
+        precioBob: 10, validacionComercial: 'VALIDADO',
       },
     });
     expect(creado.status()).toBe(201);
@@ -578,7 +578,7 @@ test.describe.serial('Evidencias verificables de Swagger UI', () => {
       familia: 'QA',
       presentacion: 'Unidad',
       pesoGramos: 250,
-      precioBob: 10,
+      precioBob: 10, validacionComercial: 'VALIDADO',
     }, null, 2));
     await ejecutar(producto409);
     await esperarCodigo(producto409, '409');

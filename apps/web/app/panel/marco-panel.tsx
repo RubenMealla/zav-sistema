@@ -6,10 +6,13 @@ import { BotonEnviar } from '../componentes/interacciones';
 import { Marca } from '../componentes/marca';
 import { VERSION_WEB } from '../lib/version';
 
-export type Vista = 'resumen' | 'productos' | 'lotes' | 'condiciones' | 'movimientos' | 'pedidos' | 'distribucion';
+export type Vista = 'catalogo' | 'venta-directa' | 'custodia' | 'resumen' | 'productos' | 'lotes' | 'condiciones' | 'movimientos' | 'pedidos' | 'distribucion';
 type VistaConfig = { titulo: string; descripcion: string; icono: 'inicio' | 'producto' | 'lote' | 'condicion' | 'movimiento' | 'ubicacion' };
 export const vistas: Record<Vista, VistaConfig> = {
   resumen: { titulo: 'Resumen', descripcion: 'Inventario, condición y configuración operativa.', icono: 'inicio' },
+  catalogo: {titulo:'Catálogo',descripcion:'Familias, productos, presentaciones y publicación.',icono:'producto'},
+  'venta-directa': {titulo:'Venta directa',descripcion:'Entregas de mostrador a Consumidor final.',icono:'movimiento'},
+  custodia: {titulo:'Mercancía en distribución',descripcion:'Cargas, custodia por vendedor y devoluciones.',icono:'lote'},
   productos: { titulo: 'Productos', descripcion: 'Presentaciones comerciales registradas.', icono: 'producto' },
   lotes: { titulo: 'Lotes', descripcion: 'Existencias, condición y vencimientos.', icono: 'lote' },
   condiciones: { titulo: 'Condiciones', descripcion: 'Liberación, bloqueo y auditoría.', icono: 'condicion' },
@@ -25,7 +28,7 @@ export function MarcoPanel({ vista, perfil, children }: {
 }) {
   const inicial = perfil.nombre?.trim().charAt(0).toUpperCase() || 'A';
 
-  const enlaces = (Object.entries(vistas) as Array<[Vista, VistaConfig]>).map(([clave, item]) => (
+  const enlaces = (Object.entries(vistas) as Array<[Vista, VistaConfig]>).filter(([clave])=>clave!=='productos').map(([clave, item]) => (
     <Link
       key={clave}
       href={`/panel?vista=${clave}`}

@@ -1,3 +1,4 @@
+import { crearPresentacionWeb } from './soporte-catalogo';
 import { expect, test, type Page } from '@playwright/test';
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
@@ -42,7 +43,7 @@ test('muestra una portada profesional y protege el panel sin sesion', async ({ p
 
   await expect(page.getByRole('heading', { name: /Fiambres y embutidos ZAV/ })).toBeVisible();
   await expect(page.getByRole('link', { name: /Acceso interno/ }).first()).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Siete familias de productos ZAV.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '7 familias de productos ZAV.' })).toBeVisible();
   await captura(page, '01-inicio-redisenado.png');
 
   await page.goto('/panel');
@@ -75,45 +76,16 @@ test('permite gestionar inventario desde módulos, modales y notificaciones', as
   await captura(page, '03-dashboard-administrativo.png');
   await expect(page.getByText(/Lotes consultados:/)).toBeVisible();
 
-  await modulos.getByRole('link', { name: 'Productos', exact: true }).click();
-  await expect(page).toHaveURL(/\/panel\?vista=productos$/);
-  await expect(page.getByRole('heading', { name: 'Productos', exact: true })).toBeVisible();
-  await expect(page.getByRole('table', { name: 'Productos registrados' })).toBeVisible();
-  await captura(page, 'identidad-productos-listado.png');
-
-  await page.getByRole('button', { name: 'Nuevo producto' }).click();
-  const modalProducto = page.getByRole('dialog');
-  await expect(modalProducto.getByRole('heading', { name: 'Registrar producto' })).toBeVisible();
-  await expect(modalProducto).toHaveAccessibleName('Registrar producto');
-  await page.keyboard.press('Escape');
-  await expect(page.getByRole('button', { name: 'Nuevo producto' })).toBeFocused();
-  await page.getByRole('button', { name: 'Nuevo producto' }).click();
-  await captura(page, '04-modal-producto.png');
-
-  const codigoProductoCampo = modalProducto.getByLabel('Código');
-  await modalProducto.getByLabel('Familia').fill('Salchichas');
-  await expect(codigoProductoCampo).toHaveValue(/^SAL-\d{3,}$/);
-  await codigoProductoCampo.fill(productoCodigo);
-  await modalProducto.getByLabel('Nombre').fill('Producto QA UI');
-  await modalProducto.getByLabel('Presentación').fill('Paquete de prueba');
-  await modalProducto.getByLabel('Peso (gramos)').fill('250');
-  await modalProducto.getByLabel('Precio (Bs)').fill('18.50');
-  await modalProducto.getByRole('button', { name: 'Guardar producto' }).click();
-  await confirmar(page, 'Sí, registrar producto');
-
-  await expect(page).toHaveURL(/\/panel\?vista=productos&mensaje=producto$/);
-  await expect(page.getByRole('status')).toContainText('Producto registrado correctamente');
-  await expect(page.getByRole('cell', { name: productoCodigo })).toBeVisible();
-  await captura(page, '05-producto-registrado.png');
-  await page.getByRole('button', { name: 'Cerrar notificación' }).click();
-  await expect(page.getByRole('status')).toHaveCount(0);
+  await crearPresentacionWeb(page,{codigo:productoCodigo,nombre:'Producto QA UI '+ejecucion});
+  await expect(page.getByRole('heading',{name:'Catálogo',exact:true})).toBeVisible();
+  await captura(page,'05-producto-registrado.png');
 
   await modulos.getByRole('link', { name: 'Lotes', exact: true }).click();
   await page.getByRole('button', { name: 'Nuevo lote' }).click();
   const modalLote = page.getByRole('dialog');
   const hoy = fechaBolivia();
   const manana = fechaBolivia(1);
-  await modalLote.getByLabel('Producto').selectOption({ label: `${productoCodigo} · Producto QA UI` });
+  await modalLote.getByLabel('Producto').selectOption({ label: `${productoCodigo} · Producto QA UI ${ejecucion}` });
   const codigoLoteCampo = modalLote.getByLabel('Código de lote');
   await expect(codigoLoteCampo).toHaveValue(new RegExp(`^TJ-ZAV-${productoCodigo}-${hoy.replaceAll('-', '')}-\\d{2,}$`));
   // Las fechas pueden recalcular el código sugerido; se fija el código QA al

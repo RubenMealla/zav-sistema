@@ -4,6 +4,7 @@
 @import "./estilos/panel.css";
 @import "./estilos/controles.css";
 @import "./estilos/responsive.css";
+@import "./estilos/gestion.css";
 
 :root {
   color-scheme: light;
