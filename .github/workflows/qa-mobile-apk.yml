@@ -20,6 +20,13 @@ on:
       - "pnpm-workspace.yaml"
       - ".github/workflows/qa-mobile-apk.yml"
   workflow_dispatch:
+    inputs:
+      canal:
+        description: Canal de compilación (no cambia la rama ni despliega la API)
+        type: choice
+        options: [qa, release]
+        default: qa
+        required: true
 
 concurrency:
   group: apk-mobile-${{ github.ref }}
@@ -31,9 +38,9 @@ jobs:
     runs-on: ubuntu-latest
     env:
       CI: 1
-      BUILD_CHANNEL: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && 'release' || 'qa' }}
-      EXPO_PUBLIC_BUILD_CHANNEL: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && 'release' || 'qa' }}
-      EXPO_PUBLIC_API_BASE_URL: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && 'https://zav-api-2026.onrender.com' || (vars.ZAV_QA_API_BASE_URL || 'http://10.0.2.2:3001') }}
+      BUILD_CHANNEL: ${{ github.event_name == 'workflow_dispatch' && inputs.canal || (github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && 'release' || 'qa') }}
+      EXPO_PUBLIC_BUILD_CHANNEL: ${{ github.event_name == 'workflow_dispatch' && inputs.canal || (github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && 'release' || 'qa') }}
+      EXPO_PUBLIC_API_BASE_URL: ${{ ((github.event_name == 'workflow_dispatch' && inputs.canal == 'release') || (github.event_name == 'push' && github.ref == 'refs/heads/main')) && 'https://zav-api-2026.onrender.com' || (vars.ZAV_QA_API_BASE_URL || 'http://10.0.2.2:3001') }}
       EXPO_PUBLIC_MAP_STYLE_URL: https://tiles.openfreemap.org/styles/liberty
       ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
       ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -231,7 +238,7 @@ jobs:
   verificar-hora-android:
     name: Verificar hora QA en Android
     needs: construir-apk
-    if: github.ref != 'refs/heads/main' || github.event_name == 'pull_request'
+    if: (github.event_name == 'workflow_dispatch' && inputs.canal == 'qa') || (github.event_name != 'workflow_dispatch' && (github.ref != 'refs/heads/main' || github.event_name == 'pull_request'))
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:

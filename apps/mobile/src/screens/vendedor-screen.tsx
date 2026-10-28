@@ -1,3 +1,5 @@
+import { VentasDirectas } from '@/components/ventas-directas';
+import { capturarUbicacionPuntual } from '@/lib/ubicacion-puntual';
 import * as Location from 'expo-location';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -51,7 +53,7 @@ import {
   SelectorProductosPedidoModal,
 } from '@/components/selectores-pedido';
 
-type Seccion = 'pedidos' | 'nuevo' | 'clientes';
+type Seccion = 'pedidos' | 'nuevo' | 'clientes' | 'venta-directa';
 
 type Props = {
   sesion: Sesion;
@@ -80,7 +82,7 @@ function mensajeError(error: unknown) {
     }
     return `${codigo} · ${error.message}`;
   }
-  return 'ERROR LOCAL · Ocurrió un error inesperado.';
+  return error instanceof Error ? `ERROR LOCAL · ${error.message}` : 'ERROR LOCAL · Ocurrió un error inesperado.';
 }
 
 export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
@@ -787,21 +789,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
     setError('');
     setAviso('');
     try {
-      const servicios = await Location.hasServicesEnabledAsync();
-      if (!servicios) {
-        setError('ERROR LOCAL · Activa la ubicación del teléfono y vuelve a intentar la entrega.');
-        return;
-      }
-
-      const permiso = await Location.requestForegroundPermissionsAsync();
-      if (permiso.status !== 'granted') {
-        setError('ERROR LOCAL · La entrega no se registró porque no se autorizó la ubicación puntual.');
-        return;
-      }
-
-      const posicion = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-      });
+      const posicion = await capturarUbicacionPuntual(Location);
 
       const distancia = pedido.destinoGps
         ? distanciaMetros(
@@ -1210,6 +1198,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
           texto="Clientes"
           onPress={() => setSeccion('clientes')}
         />
+        <Tab activo={seccion === 'venta-directa'} texto="Venta directa" onPress={() => setSeccion('venta-directa')} />
       </View>
 
       {error || aviso ? (
@@ -1229,6 +1218,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
           <RefreshControl refreshing={actualizando} onRefresh={() => void refrescar()} />
         }
       >
+        {seccion === 'venta-directa' ? <VentasDirectas sesion={sesion} /> : null}
         {seccion === 'pedidos' ? (
           <Pedidos
             pedidos={pedidos}
