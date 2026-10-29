@@ -80,6 +80,10 @@ Normalización de nombres acentuados; retorno SQL de UPDATE; tipos SQL de operac
 
 Copia `backups/catalogo-salidas-20261028/production-previa.dump`, SHA-256 `e84df3bad5a9a18ca3bf718ec1045fd5e512c63d7c1b390ded29382b35a579c1`. Restaurada realmente en PostgreSQL 18.6; fuente estable y huellas coincidentes. Se conserva también la copia del 12/10. [Evidencia sanitizada](../evidencias/catalogo-salidas-20261028.json); dumps y datos privados no se suben a GitHub.
 
+Actualización 29/10 a las 13:14:54 UTC: nueva copia `backups/catalogo-salidas-20261029/production-previa.dump`, SHA-256 `d725a3b818f56aa6578f33a7e7cfe2072c890ca226a8368f2774b571e0094962`, restaurada en `zav_restore_catalogo_20261029`. Fuente estable y restauración coincidente. Las cuatro migraciones también pasaron sobre esta copia: huellas actuales preservadas, cero negativos, cero SKU sin relación, siete familias y trece productos publicados.
+
+**Cambio externo detectado:** la base identificada previamente como producción contiene ahora 13 SKU, 13 lotes y 23 movimientos. Los 13 IDs de SKU son nuevos frente al respaldo del 28/10 y sus altas comparten `2026-10-29T08:22:07.779Z` (04:22 Bolivia). Esta implementación no ejecutó ese reemplazo. Se conservan ambas copias y se solicitó aclaración sobre su origen antes de modificar producción. Preservar la copia actual en el ensayo no demuestra que el historial anterior siga presente en producción.
+
 ## 16. Recuperación
 
 [Runbook](../operacion/catalogo-salidas-recuperacion.md): detener escrituras, conservar copia posterior al incidente, resolver/inmovilizar custodia pendiente, volver al despliegue/SHA anterior manteniendo esquema e historial. Si se recuperan datos, restaurar a otra base y conciliar escrituras posteriores antes de cambiar conexiones. No confundir rollback de código con restauración de PostgreSQL.
@@ -88,6 +92,7 @@ Copia `backups/catalogo-salidas-20261028/production-previa.dump`, SHA-256 `e84df
 
 - El recorrido instalado Android ya está aprobado, incluyendo permiso denegado y respuesta incierta. La release final debe conservar su enlace/hash de compilación; no se utiliza para ventas nuevas contra la API antigua.
 - Recuperar acceso administrativo a Render/Vercel para contrastar versión y base actuales; preparar QA conectado, promover y verificar endpoints desplegados. No se ejecutó migración productiva sin ese control.
+- Aclarar el reemplazo externo de IDs detectado entre los respaldos del 28 y 29/10 y decidir la conciliación del historial. No reasignar ni borrar registros para resolverlo automáticamente.
 - Validar comercialmente pesos, empaques y precios nuevos; configurar coordenadas reales de despacho. Los valores sintéticos no son oficiales.
 - Confirmar Trello cuando vuelva a estar disponible; issue y PR sí actualizados.
 - La API anterior no administra cargas/devoluciones nuevas ni valida comercialmente los SKU nuevos; el retorno requiere el procedimiento documentado.

@@ -23,10 +23,13 @@ Los archivos contienen datos empresariales y permanecen en `backups/`, excluido 
 |---|---|---|
 | `catalogo-salidas-20261012/production-previa.dump` | `622c172c99ce5d41c6d2720201698136c78bc19df7c22470ae1423d65cdaa662` | `zav_restore_catalogo_20261012` |
 | `catalogo-salidas-20261028/production-previa.dump` | `e84df3bad5a9a18ca3bf718ec1045fd5e512c63d7c1b390ded29382b35a579c1` | `zav_restore_catalogo_20261028` |
+| `catalogo-salidas-20261029/production-previa.dump` | `d725a3b818f56aa6578f33a7e7cfe2072c890ca226a8368f2774b571e0094962` | `zav_restore_catalogo_20261029` |
 
 La segunda copia se tomó a `2026-10-28T20:58:58.123Z`, mediante `respaldo-verificable.mjs`: formato custom de PostgreSQL, conexión directa, creación de una base local nueva y comparación de huellas antes/después/restauradas para las diez tablas originales. `sourceStable=true`, `matches=true`. Informes privados `verificacion.json`, `migracion-restauracion.json` y `migracion-neon-ensayo.json` en la carpeta de la copia. Las cuatro migraciones conservaron las huellas históricas, sin saldos negativos ni SKU sin relación; siete familias y trece productos publicados. Una futura ventana productiva requiere otra copia reciente si hubo escrituras desde esta captura.
 
 ## Secuencia de implantación pendiente
+
+Control adicional del 29/10: la copia nueva contiene 13 SKU con IDs diferentes de los 11 del día anterior, creados juntos a las 04:22 Bolivia. El agente no ejecutó ese reemplazo. El ensayo sobre la restauración nueva conserva el estado actual, pero antes de implantar se debe aclarar el origen y conciliar qué historial debe permanecer. No sobrescribir la copia anterior ni restaurarla encima de las operaciones nuevas sin análisis.
 
 1. Obtener de los servicios las versiones, ramas, endpoints y destinos de variables; registrar identificadores sin publicar secretos. Contrastarlos con Neon. QA debe usar la rama de ensayo, nunca producción. Registrar el valor esperado de los hosts por entorno.
 2. Desplegar la API de esta rama en un servicio QA aislado y la web Preview con `API_BASE_URL` de esa API. Comprobar autenticación, catálogo público, ventas, recepción y devolución. Las pruebas destructivas automatizadas siguen limitadas a PostgreSQL local `zav_test`.
