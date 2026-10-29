@@ -67,6 +67,12 @@ def adb(*args):
     return subprocess.check_output(['adb', '-s', SERIAL, *args], timeout=45).decode('utf8', errors='replace').strip()
 
 
+def iniciar_app():
+    actividad = adb('shell','cmd','package','resolve-activity','--brief',PACKAGE).splitlines()[-1]
+    assert actividad.startswith(PACKAGE+'/')
+    adb('shell','am','start','-W','-n',actividad)
+
+
 def api(ruta, datos=None, token=None, metodo=None):
     headers = {'Content-Type': 'application/json'}
     if token:
@@ -186,7 +192,8 @@ try:
     adb('shell','pm','grant',PACKAGE,'android.permission.ACCESS_COARSE_LOCATION')
     adb('shell','settings','put','secure','location_mode','3')
     adb('emu','geo','fix','-64.73','-21.53')
-    adb('shell','monkey','-p',PACKAGE,'-c','android.intent.category.LAUNCHER','1')
+    iniciar_app()
+    esperar('Acceso del Vendedor')
     tocar('Configurar API de mi computadora')
     escribir('Dirección de la API de pruebas','http://10.0.2.2:3003')
     tocar('Probar y guardar servidor')
@@ -204,7 +211,8 @@ try:
     for permiso in permisos:
         adb('shell','pm','revoke',PACKAGE,permiso)
         adb('shell','pm','set-permission-flags',PACKAGE,permiso,'user-fixed')
-    adb('shell','monkey','-p',PACKAGE,'-c','android.intent.category.LAUNCHER','1')
+    iniciar_app()
+    esperar('Pedidos')
     tocar('Venta directa')
     escribir('Cantidad '+codigo,'2')
     tocar('Obtener GPS y revisar entrega')
@@ -216,7 +224,8 @@ try:
         adb('shell','pm','clear-permission-flags',PACKAGE,permiso,'user-fixed','user-set')
         adb('shell','pm','grant',PACKAGE,permiso)
     adb('shell','am','force-stop',PACKAGE)
-    adb('shell','monkey','-p',PACKAGE,'-c','android.intent.category.LAUNCHER','1')
+    iniciar_app()
+    esperar('Pedidos')
     tocar('Venta directa')
     tocar('Nueva venta')
     escribir('Cantidad '+codigo,'2')
@@ -230,7 +239,8 @@ try:
     captura('03-respuesta-incierta')
     assert len(api('operaciones?tipo=SALIDA_DIRECTA',token=vt)['items']) == 1
     adb('shell','am','force-stop',PACKAGE)
-    adb('shell','monkey','-p',PACKAGE,'-c','android.intent.category.LAUNCHER','1')
+    iniciar_app()
+    esperar('Pedidos')
     tocar('Venta directa')
     esperar('Pendiente de verificar', desplazar=True)
     tocar('Verificar / reintentar')

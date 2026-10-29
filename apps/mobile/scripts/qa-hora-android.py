@@ -75,7 +75,9 @@ try:
         adb('shell', 'am', 'force-stop', PACKAGE)
         adb('shell', 'cmd', 'alarm', 'set-timezone', zona)
         assert adb('shell', 'getprop', 'persist.sys.timezone') == zona
-        adb('shell', 'monkey', '-p', PACKAGE, '-c', 'android.intent.category.LAUNCHER', '1')
+        actividad = adb('shell', 'cmd', 'package', 'resolve-activity', '--brief', PACKAGE).splitlines()[-1]
+        assert actividad.startswith(PACKAGE + '/')
+        adb('shell', 'am', 'start', '-W', '-n', actividad)
         tocar(esperar('Configurar API de mi computadora'))
         tocar(esperar('Dirección de la API de pruebas', 'content-desc'))
         adb('shell', 'input', 'keycombination', '113', '29')  # Ctrl+A
