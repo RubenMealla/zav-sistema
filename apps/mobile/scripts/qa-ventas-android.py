@@ -50,12 +50,20 @@ def layout():
 
 
 def encontrar(texto, exacto=True, clase=None):
-    for nodo in layout().iter('node'):
+    try:
+        raiz = layout()
+    except (subprocess.CalledProcessError, ET.ParseError):
+        # El primer frame del arranque todavía puede no tener raíz accesible.
+        return None
+    for nodo in raiz.iter('node'):
         if clase and nodo.get('class') != clase:
             continue
+        limites = list(map(int, re.findall(r'\d+', nodo.get('bounds', ''))))
+        if len(limites) != 4 or limites[2] <= limites[0] or limites[3] <= limites[1]:
+            continue
         for atributo in ('text', 'content-desc'):
-            valor = nodo.get(atributo, '')
-            if (valor == texto if exacto else texto in valor):
+            valor = nodo.get(atributo, '').casefold()
+            if (valor == texto.casefold() if exacto else texto.casefold() in valor):
                 return nodo
     return None
 

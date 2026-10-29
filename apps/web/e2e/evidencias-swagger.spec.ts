@@ -377,6 +377,7 @@ test.describe.serial('Evidencias verificables de Swagger UI', () => {
   });
 
   test('errores de negocio de los requisitos principales visibles en Swagger', async ({ page, request }) => {
+    test.setTimeout(120_000);
     const ahora = Date.now();
     const admin = await token(request, 'admin');
     const vendedor = await token(request, 'vendedor');

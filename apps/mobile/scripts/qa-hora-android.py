@@ -28,7 +28,12 @@ def layout():
 def esperar(texto, atributo='text', exacto=False):
     limite = time.monotonic() + 50
     while time.monotonic() < limite:
-        raiz = layout()
+        try:
+            raiz = layout()
+        except (subprocess.CalledProcessError, ET.ParseError):
+            # El emulador puede arrancar antes del primer árbol accesible de la app.
+            time.sleep(1)
+            continue
         for nodo in raiz.iter('node'):
             valor = nodo.get(atributo, '')
             coincide = valor == texto if exacto else texto in valor
