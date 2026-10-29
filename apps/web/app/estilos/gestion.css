@@ -1,5 +1,6 @@
 .gestion-modulo {
   display: grid;
+  min-width: 0;
   gap: 20px;
   color: var(--tinta);
   font-size: 14px;

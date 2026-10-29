@@ -240,8 +240,8 @@ export default async function Panel({
   }
   if (perfil.datos.rol !== 'ADMINISTRADOR') redirect('/acceso?error=permisos&codigo=403');
 
-  if(vista==='catalogo'||vista==='productos') return <MarcoPanel vista="catalogo" perfil={perfil.datos}><CatalogoPanel/></MarcoPanel>;
-  if(vista==='venta-directa'||vista==='custodia') return <MarcoPanel vista={vista} perfil={perfil.datos}><OperacionesPanel modo={vista} usuario={perfil.datos.identificador}/></MarcoPanel>;
+  if(vista==='catalogo'||vista==='productos') return <MarcoPanel vista="catalogo" perfil={perfil.datos}><div className="vista-contenido vista-catalogo"><CatalogoPanel/></div></MarcoPanel>;
+  if(vista==='venta-directa'||vista==='custodia') return <MarcoPanel vista={vista} perfil={perfil.datos}><div className={`vista-contenido vista-${vista}`}><OperacionesPanel modo={vista} usuario={perfil.datos.identificador}/></div></MarcoPanel>;
 
   const itemsProductos = productos.datos?.items ?? [];
   const itemsLotes = lotes.datos?.items ?? [];

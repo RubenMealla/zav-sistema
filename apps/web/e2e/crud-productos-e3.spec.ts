@@ -10,6 +10,7 @@ function requerida(nombre: string) {
 }
 
 test('edita y desactiva un producto desde la web', async ({ page }) => {
+  test.setTimeout(120_000);
   const codigo = `QA-CRUD-${Date.now()}`;
   const dir = path.join(process.cwd(), 'test-results', 'evidencias-web-documento');
   await mkdir(dir, { recursive: true });

@@ -37,7 +37,7 @@ export async function crearPresentacionWeb(
     .click();
   let editor = page.getByRole("region", { name: "Crear catálogo" });
   await editor
-    .getByLabel("Familia", { exact: true })
+    .getByRole("combobox", { name: "Familia", exact: true })
     .selectOption({ label: "Salchichas" });
   await editor.getByLabel("Nombre", { exact: true }).fill(nombre);
   await guardarCatalogo(page);
@@ -49,10 +49,10 @@ export async function crearPresentacionWeb(
     .click();
   editor = page.getByRole("region", { name: "Crear catálogo" });
   await editor
-    .getByLabel("Familia", { exact: true })
+    .getByRole("combobox", { name: "Familia", exact: true })
     .selectOption({ label: "Salchichas" });
   await editor
-    .getByLabel("Producto comercial", { exact: true })
+    .getByRole("combobox", { name: "Producto comercial", exact: true })
     .selectOption({ label: nombre });
   await editor.getByLabel("Código SKU", { exact: true }).fill(codigo);
   await editor
@@ -64,7 +64,7 @@ export async function crearPresentacionWeb(
   await editor.getByLabel("Peso (gramos)", { exact: true }).fill(peso);
   await editor.getByLabel("Precio (Bs)", { exact: true }).fill(precio);
   await editor
-    .getByLabel("Validación comercial", { exact: true })
+    .getByRole("combobox", { name: "Validación comercial", exact: true })
     .selectOption("VALIDADO");
   await guardarCatalogo(page);
   await page.getByLabel("Buscar", { exact: true }).fill(codigo);

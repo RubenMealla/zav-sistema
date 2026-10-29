@@ -132,6 +132,12 @@ async function desautorizar(page: Page) {
 
 test.describe.serial('Evidencias verificables de Swagger UI', () => {
   test.beforeEach(async ({ page }) => {
+    // Las pruebas interactivas deben usar la API del entorno local, nunca producción.
+    const contrato = await page.request.get('/openapi-zav.yaml');
+    const yaml = await contrato.text();
+    expect(yaml).toContain('url: /api/swagger/proxy');
+    expect(yaml).not.toContain('url: https://zav-api-2026.onrender.com');
+    await page.route('https://zav-api-2026.onrender.com/**', route => route.abort('blockedbyclient'));
     await page.goto('/swagger');
     await expect(page.getByText('ZAV · Swagger API')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'ZAV API' })).toBeVisible({ timeout: 15000 });

@@ -4,7 +4,7 @@ import { MIGRACIONES_ZAV } from './migraciones.mjs';
 
 const url=new URL(process.env.DATABASE_URL??'');
 const ensayo='ep-tiny-butterfly-b6lxt7mt.c-2.sa-east-1.aws.neon.tech';
-const local=['127.0.0.1','localhost'].includes(url.hostname)&&url.pathname==='/zav_restore_catalogo_20261012';
+const local=['127.0.0.1','localhost'].includes(url.hostname)&&['/zav_restore_catalogo_20261012','/zav_restore_catalogo_20261028'].includes(url.pathname);
 if(!local&&url.hostname!==ensayo.replace('.c-2','-pooler.c-2')&&url.hostname!==ensayo) throw new Error('Solo se admite la rama Neon de ensayo verificada o la restauración local.');
 if(!local)url.hostname=ensayo;
 const db=new DataSource({type:'postgres',url:url.href,migrations:MIGRACIONES_ZAV,migrationsTableName:'typeorm_migraciones',migrationsTransactionMode:'all',synchronize:false,logging:false});
@@ -33,8 +33,9 @@ try {
     (SELECT count(*)::int FROM familia WHERE publicado AND activo) AS familias_publicadas,
     (SELECT count(*)::int FROM producto_comercial c JOIN familia f ON f.id=c.familia_id WHERE c.publicado AND c.activo AND f.publicado AND f.activo) AS productos_publicados`);
   const informe={fecha:new Date().toISOString(),host:url.hostname,base:url.pathname,ejecutadas:ejecutadas.map(m=>m.name),preservado,antes,despues,integridad};
-  await mkdir('../../backups/catalogo-salidas-20261012',{recursive:true});
-  await writeFile(`../../backups/catalogo-salidas-20261012/migracion-${local?'restauracion':'neon-ensayo'}.json`,JSON.stringify(informe,null,2));
+  const carpeta=process.env.EVIDENCIA_ENSAYO_DIR??'../../backups/catalogo-salidas-20261012';
+  await mkdir(carpeta,{recursive:true});
+  await writeFile(`${carpeta}/migracion-${local?'restauracion':'neon-ensayo'}.json`,JSON.stringify(informe,null,2));
   console.log(JSON.stringify({ejecutadas:informe.ejecutadas,preservado,integridad}));
   if(!preservado||integridad.saldos_negativos||integridad.sku_sin_relacion)throw new Error('La verificación de integridad no pasó.');
 } finally {if(db.isInitialized)await db.destroy();}

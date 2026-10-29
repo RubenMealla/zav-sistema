@@ -447,7 +447,7 @@ paths:
       summary: Retirar varios pedidos
       description: Requiere rol VENDEDOR.
       responses:
-        '201': { description: Resultado completo, parcial o sin cambios }
+        '201': { description: 'Resultado completo, parcial o sin cambios' }
         '400': { $ref: '#/components/responses/Error400' }
         '401': { $ref: '#/components/responses/Error401' }
         '403': { $ref: '#/components/responses/Error403' }

@@ -1,0 +1,4 @@
+$kind: collection
+description: Comprobaciones de solo lectura para catálogo público y separación del inventario. Contrato en docs/api/openapi-e3.yaml.
+variables:
+  baseUrl: http://127.0.0.1:3001
