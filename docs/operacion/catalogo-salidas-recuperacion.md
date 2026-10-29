@@ -13,7 +13,7 @@ Estado al 28/10/2026: código en rama de desarrollo; producción no migrada ni p
 | Vercel producción | Proyecto `prj_RVYDJQxTxfCmFe3ak2AXgcpwuHwL`; despliegue previo `dpl_928EeqAEWwUUuZdzNoRXrvEreHxh`, commit base; registro GitHub `7025576853` |
 | Android producción / QA | `bo.zav.gestion.vendedor` / `bo.zav.gestion.vendedor.qa`; versión nueva 1.1.0, build 10100 |
 
-Los conectores administrativos Render, Vercel, Neon y Trello dejaron de estar disponibles en la continuación. Hay acceso GitHub mediante el gestor local de credenciales y acceso SQL previamente configurado a Neon. La API pública responde, pero eso no prueba qué base usa el servicio ni su commit actual. Falta refrescar desde la configuración administrativa los despliegues, variables y conexiones antes de promover código o migrar producción. Es un impedimento técnico de acceso, no una solicitud adicional de autorización.
+Los plugins Render, Neon y Vercel vuelven a figurar instalados el 29/10, pero sus herramientas administrativas no están expuestas a esta sesión. El acceso alternativo al navegador tampoco está disponible. Hay acceso GitHub mediante el gestor local de credenciales y acceso SQL previamente configurado a Neon. La API pública responde, pero eso no prueba qué base usa el servicio ni su commit actual. Falta refrescar desde la configuración administrativa los despliegues, variables y conexiones antes de promover código o migrar producción. Es un impedimento técnico de acceso, no una solicitud adicional de autorización. Trello no está accesible durante esta continuación.
 
 ## Copias de datos verificadas
 

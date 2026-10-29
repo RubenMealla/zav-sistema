@@ -79,4 +79,14 @@ Documentos asociados: [matriz](matriz-catalogo-salidas.md), [recuperación](../o
 
 Intentos Android conservados: 40804309883 falló por tocar etiqueta en lugar del EditText; 40832832649 falló porque el primer frame aún no tenía árbol accesible. Se corrigen selección/foco y espera acotada; no se omite ningún paso del flujo.
 
-La APK release se compiló y firmó en [40804411892](https://github.com/RubenMealla/zav-sistema/actions/runs/40804411892), hash `a1e305ae38e031ce08d129868402853cd1aea703e99c0c2e1e9960ce2f86149a`; no implica promoción de la API productiva. Se amplía ahora la prueba instalada para denegación real del permiso GPS y un 503 de intermediario después de confirmar la venta en el backend, seguido de reapertura y reintento con la misma solicitud. Estos dos escenarios adicionales todavía no se declaran aprobados.
+La APK release se compiló y firmó en [40804411892](https://github.com/RubenMealla/zav-sistema/actions/runs/40804411892), hash `a1e305ae38e031ce08d129868402853cd1aea703e99c0c2e1e9960ce2f86149a`; no implica promoción de la API productiva. La ampliación posterior de pruebas instaladas se acredita a continuación.
+
+### Cierre de QA de código cbe774e
+
+Los cuatro workflows de este head terminaron correctamente: [API](https://github.com/RubenMealla/zav-sistema/actions/runs/40835458249), [web](https://github.com/RubenMealla/zav-sistema/actions/runs/40835458273), [móvil](https://github.com/RubenMealla/zav-sistema/actions/runs/40835458243) y [APK QA](https://github.com/RubenMealla/zav-sistema/actions/runs/40835458262). Web 37/37 en 2,1 min. Android confirma permiso GPS denegado sin escritura, 503 posterior al registro real, cierre/reapertura y reintento con solicitud idéntica sin duplicar venta. Cinco unidades cargadas, dos vendidas, una devuelta a inspección y dos libres; conciliación correcta.
+
+[Capturas, XML y resultados Android](https://github.com/RubenMealla/zav-sistema/actions/runs/40835458262/artifacts/12881407870). APK QA SHA-256 `0dcadda60dc23aabb13c5f264e626310c4a4bf452f7b0f425ecf612a5f9e86af`. El SHA de ejecución `01304f5ccd8d6b88420a44b48b500d8f08f0345b` es la referencia temporal del PR utilizada por Actions, no un merge en main.
+
+El intento ampliado 40834771252 terminó en la pantalla de configuración al arrancar con monkey; se reemplazó por resolución de actividad y `am start -W`, sin eventos táctiles aleatorios, y se comprobó el flujo completo.
+
+Comprobación pública del 29/10: salud API productiva 200; catálogo nuevo 404, coherente con la API antigua sin promover. Vercel Preview genera despliegues exitosos, pero su URL redirige al acceso protegido. Los plugins Render/Neon/Vercel figuran nuevamente instalados; todavía no se exponen sus herramientas administrativas en esta sesión. Esto sustituye la descripción anterior de plugins no instalados y mantiene pendiente el control productivo.

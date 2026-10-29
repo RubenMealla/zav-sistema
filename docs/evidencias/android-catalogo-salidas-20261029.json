@@ -1,0 +1,17 @@
+{
+  "apk": "ZAV-Vendedor-1.1.0-build10100-qa.apk",
+  "apkSha256": "0dcadda60dc23aabb13c5f264e626310c4a4bf452f7b0f425ecf612a5f9e86af",
+  "apkRunId": "40835458262",
+  "pruebaCommit": "01304f5ccd8d6b88420a44b48b500d8f08f0345b",
+  "carga": "5d42a37d-2c63-450f-a91e-f26a0d64af73",
+  "venta": "c11d7cc3-e9dd-4cac-b53e-426da2d797c2",
+  "devolucion": "51cbc8cf-fa47-4c05-9b2d-8ccb4f51f120",
+  "stockLibreFinal": 2,
+  "gpsPuntual": true,
+  "permisoDenegadoSinSalida": true,
+  "respuestaInciertaRecuperadaTrasReabrir": true,
+  "reintentoMismaSolicitud": true,
+  "conciliado": true,
+  "api": "local",
+  "base": "zav_test"
+}
