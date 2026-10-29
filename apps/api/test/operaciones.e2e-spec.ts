@@ -53,7 +53,7 @@ describe('Salidas directas y custodia: HTTP y PostgreSQL real', () => {
       const {
         rows: [l],
       } = await db.query(
-        `INSERT INTO lote(codigo,producto_id,elaborado_el,vence_el,condicion) VALUES($1,$2,CURRENT_DATE-1,CURRENT_DATE+$3::int,'LIBERADO') RETURNING id`,
+        `INSERT INTO lote(codigo,producto_id,elaborado_el,vence_el,condicion) VALUES($1,$2,(CURRENT_TIMESTAMP AT TIME ZONE 'America/La_Paz')::date-1,(CURRENT_TIMESTAMP AT TIME ZONE 'America/La_Paz')::date+$3::int,'LIBERADO') RETURNING id`,
         [`${codigo}-${dias}`, p.id, dias],
       );
       await db.query(
@@ -498,7 +498,7 @@ describe('Salidas directas y custodia: HTTP y PostgreSQL real', () => {
     }).expect(409);
     const vencido = await stock(5);
     await db.query(
-      'UPDATE lote SET elaborado_el=CURRENT_DATE-10,vence_el=CURRENT_DATE-1 WHERE producto_id=$1',
+      `UPDATE lote SET elaborado_el=(CURRENT_TIMESTAMP AT TIME ZONE 'America/La_Paz')::date-10,vence_el=(CURRENT_TIMESTAMP AT TIME ZONE 'America/La_Paz')::date-1 WHERE producto_id=$1`,
       [vencido.id],
     );
     await post('operaciones/salidas-directas', salida(vencido.id, 1)).expect(

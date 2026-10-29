@@ -190,6 +190,8 @@ test.describe.serial('Evidencias verificables de Swagger UI', () => {
   });
 
   test('ejecuciones correctas de los flujos principales desde Swagger', async ({ page, request }) => {
+    // Recorrido serial con varios formularios y capturas; cada aserción conserva su timeout.
+    test.setTimeout(120_000);
     const ahora = Date.now();
     const admin = await token(request, 'admin');
     const vendedor = await token(request, 'vendedor');

@@ -27,6 +27,11 @@ on:
         options: [qa, release]
         default: qa
         required: true
+      apk_qa_run_id:
+        description: ID de una ejecución previa de este repositorio para repetir QA sobre su APK (vacío compila)
+        type: string
+        default: ''
+        required: false
 
 concurrency:
   group: apk-mobile-${{ github.ref }}
@@ -34,6 +39,7 @@ concurrency:
 
 jobs:
   construir-apk:
+    if: github.event_name != 'workflow_dispatch' || inputs.apk_qa_run_id == ''
     name: Construir APK Android autónomo
     runs-on: ubuntu-latest
     env:
@@ -238,14 +244,16 @@ jobs:
   verificar-hora-android:
     name: Verificar hora QA en Android
     needs: construir-apk
-    if: (github.event_name == 'workflow_dispatch' && inputs.canal == 'qa') || (github.event_name != 'workflow_dispatch' && (github.ref != 'refs/heads/main' || github.event_name == 'pull_request'))
+    if: always() && (needs.construir-apk.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.canal == 'qa' && inputs.apk_qa_run_id != '')) && ((github.event_name == 'workflow_dispatch' && inputs.canal == 'qa') || (github.event_name != 'workflow_dispatch' && (github.ref != 'refs/heads/main' || github.event_name == 'pull_request')))
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
-          pattern: ZAV-Vendedor-*-qa-run-${{ github.run_number }}
+          pattern: ZAV-Vendedor-*-qa-run-*
+          run-id: ${{ inputs.apk_qa_run_id || github.run_id }}
+          github-token: ${{ github.token }}
           path: apk-qa
           merge-multiple: true
       - name: Habilitar aceleración del emulador
@@ -273,7 +281,7 @@ jobs:
   verificar-ventas-android:
     name: Verificar venta directa en APK y PostgreSQL
     needs: construir-apk
-    if: (github.event_name == 'workflow_dispatch' && inputs.canal == 'qa') || (github.event_name != 'workflow_dispatch' && (github.ref != 'refs/heads/main' || github.event_name == 'pull_request'))
+    if: always() && (needs.construir-apk.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.canal == 'qa' && inputs.apk_qa_run_id != '')) && ((github.event_name == 'workflow_dispatch' && inputs.canal == 'qa') || (github.event_name != 'workflow_dispatch' && (github.ref != 'refs/heads/main' || github.event_name == 'pull_request')))
     runs-on: ubuntu-latest
     timeout-minutes: 25
     services:
@@ -296,6 +304,7 @@ jobs:
       QA_VENDEDOR_IDENTIFICADOR: vendedor@zav.test
       QA_VENDEDOR_PASSWORD: Vendedor-QA-2026-Pruebas!
       PORT: '3001'
+      QA_APK_RUN_ID: ${{ inputs.apk_qa_run_id || github.run_id }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -307,7 +316,9 @@ jobs:
           cache: pnpm
       - uses: actions/download-artifact@v4
         with:
-          pattern: ZAV-Vendedor-*-qa-run-${{ github.run_number }}
+          pattern: ZAV-Vendedor-*-qa-run-*
+          run-id: ${{ inputs.apk_qa_run_id || github.run_id }}
+          github-token: ${{ github.token }}
           path: apk-qa
           merge-multiple: true
       - name: Preparar API y PostgreSQL de ensayo

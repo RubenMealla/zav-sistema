@@ -37,7 +37,7 @@ describe('Regresiones de auditoría integral', () => {
     const cliente = await db.query(`INSERT INTO cliente (nombre,direccion,latitud,longitud)
       VALUES ('Cliente auditoría','Dirección sintética',-21.5355,-64.7302) RETURNING id`);
     const filas = await db.query(`INSERT INTO lote (codigo,producto_id,elaborado_el,vence_el,condicion)
-      SELECT $1 || '-' || n,$2::uuid,CURRENT_DATE,CURRENT_DATE+30,'LIBERADO'
+      SELECT $1 || '-' || n,$2::uuid,(CURRENT_TIMESTAMP AT TIME ZONE 'America/La_Paz')::date,(CURRENT_TIMESTAMP AT TIME ZONE 'America/La_Paz')::date+30,'LIBERADO'
       FROM generate_series(1,$3::int) n RETURNING id`, [codigo, producto.rows[0].id, lotes]);
     await db.query(`INSERT INTO movimiento (operacion_clave,lote_id,tipo,destino_id,cantidad,usuario_id)
       SELECT gen_random_uuid(),l.id,'INGRESO',u.id,10,$2::uuid FROM lote l CROSS JOIN ubicacion u
@@ -121,7 +121,7 @@ describe('Regresiones de auditoría integral', () => {
   it('no sobreestima la capacidad de edición cuando parte del stock vence', async () => {
     const datos = await preparar(2);
     const pedido = await crear(datos.clienteId, datos.productoId, 15).expect(201);
-    await db.query("UPDATE lote SET elaborado_el=CURRENT_DATE-30, vence_el=CURRENT_DATE-1 WHERE id=$1", [datos.lotes[0]]);
+    await db.query("UPDATE lote SET elaborado_el=(CURRENT_TIMESTAMP AT TIME ZONE 'America/La_Paz')::date-30, vence_el=(CURRENT_TIMESTAMP AT TIME ZONE 'America/La_Paz')::date-1 WHERE id=$1", [datos.lotes[0]]);
     const editar = (cantidad: number) => request(app.getHttpServer()).patch(`/api/v1/pedidos/${pedido.body.id}`)
       .set('Authorization', `Bearer ${vendedor}`)
       .send({ clienteId: datos.clienteId, detalles: [{ productoId: datos.productoId, cantidad }] });

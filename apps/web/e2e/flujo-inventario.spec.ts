@@ -190,12 +190,14 @@ test('permite gestionar inventario desde módulos, modales y notificaciones', as
   const zoomMapa = page.locator('.leaflet-bottom.leaflet-right .leaflet-control-zoom');
   await expect(zoomMapa).toBeVisible();
   await expect(page.locator('.leaflet-top.leaflet-left .leaflet-control-zoom')).toHaveCount(0);
-  const cajaMapa = await page.getByRole('application', { name: 'Mapa para seleccionar la ubicación de Venta y Despacho' }).boundingBox();
-  const cajaZoom = await zoomMapa.boundingBox();
-  expect(cajaMapa).not.toBeNull();
-  expect(cajaZoom).not.toBeNull();
-  expect(cajaZoom!.x).toBeGreaterThan(cajaMapa!.x + cajaMapa!.width / 2);
-  expect(cajaZoom!.y).toBeGreaterThan(cajaMapa!.y + cajaMapa!.height / 2);
+  // Leaflet carga sus estilos de forma asíncrona: visible no implica posición final.
+  await expect.poll(async () => {
+    const cajaMapa = await page.getByRole('application', { name: 'Mapa para seleccionar la ubicación de Venta y Despacho' }).boundingBox();
+    const cajaZoom = await zoomMapa.boundingBox();
+    return Boolean(cajaMapa && cajaZoom
+      && cajaZoom.x > cajaMapa.x + cajaMapa.width / 2
+      && cajaZoom.y > cajaMapa.y + cajaMapa.height / 2);
+  }, { message: 'Zoom situado en el cuadrante inferior derecho del mapa' }).toBe(true);
   await captura(page, '11-distribucion-mapa.png');
 
   await modulos.getByRole('link', { name: 'Resumen', exact: true }).click();

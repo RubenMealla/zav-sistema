@@ -1,5 +1,6 @@
 """Ejecuta el APK QA contra NestJS/PostgreSQL locales; nunca usa producción."""
 import glob
+import hashlib
 import json
 import os
 import re
@@ -41,11 +42,17 @@ def api(ruta, datos=None, token=None, metodo=None):
 
 def layout():
     adb('shell', 'uiautomator', 'dump', '/sdcard/zav-ventas.xml')
-    return ET.fromstring(adb('shell', 'cat', '/sdcard/zav-ventas.xml'))
+    contenido = adb('shell', 'cat', '/sdcard/zav-ventas.xml')
+    # Android puede serializar caracteres de control de campos de contraseña.
+    contenido = re.sub(r'&#(?:x(?:0[0-8bcef]|1[0-9a-f])|(?:[0-8]|11|12|1[4-9]|2[0-9]|3[01]));', '', contenido, flags=re.I)
+    contenido = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', '', contenido)
+    return ET.fromstring(contenido)
 
 
-def encontrar(texto, exacto=True):
+def encontrar(texto, exacto=True, clase=None):
     for nodo in layout().iter('node'):
+        if clase and nodo.get('class') != clase:
+            continue
         for atributo in ('text', 'content-desc'):
             valor = nodo.get(atributo, '')
             if (valor == texto if exacto else texto in valor):
@@ -53,11 +60,11 @@ def encontrar(texto, exacto=True):
     return None
 
 
-def esperar(texto, exacto=True, desplazar=False):
+def esperar(texto, exacto=True, desplazar=False, clase=None):
     limite = time.monotonic() + 45
     intentos = 0
     while time.monotonic() < limite:
-        nodo = encontrar(texto, exacto)
+        nodo = encontrar(texto, exacto, clase)
         if nodo is not None:
             return nodo
         if desplazar:
@@ -78,7 +85,13 @@ def tocar(texto, exacto=True, desplazar=True):
 
 
 def escribir(etiqueta, valor):
-    tocar(etiqueta)
+    # La etiqueta visible TextView no transfiere foco; seleccionar el EditText accesible.
+    nodo = esperar(etiqueta, desplazar=True, clase='android.widget.EditText')
+    x1, y1, x2, y2 = map(int, re.findall(r'\d+', nodo.get('bounds', '')))
+    adb('shell', 'input', 'tap', str((x1+x2)//2), str((y1+y2)//2))
+    hasta(lambda: any(n.get('class') == 'android.widget.EditText'
+                     and n.get('content-desc') == etiqueta and n.get('focused') == 'true'
+                     for n in layout().iter('node')))
     adb('shell', 'input', 'keycombination', '113', '29')
     adb('shell', 'input', 'text', valor)
     adb('shell', 'input', 'keyevent', '4')
@@ -166,7 +179,7 @@ try:
     assert api('operaciones/conciliacion',token=at)['conciliado']
     tocar('Actualizar datos')
     captura('04-devolucion-recibida')
-    resultado={'apk':Path(apk[0]).name,'carga':carga['id'],'venta':venta['id'],'devolucion':devolucion['id'],'stockLibreFinal':saldo(vt,p['id']),'gpsPuntual':True,'conciliado':True,'api':'local','base':'zav_test'}
+    resultado={'apk':Path(apk[0]).name,'apkSha256':hashlib.sha256(Path(apk[0]).read_bytes()).hexdigest(),'apkRunId':os.environ.get('QA_APK_RUN_ID'),'pruebaCommit':os.environ.get('GITHUB_SHA'),'carga':carga['id'],'venta':venta['id'],'devolucion':devolucion['id'],'stockLibreFinal':saldo(vt,p['id']),'gpsPuntual':True,'conciliado':True,'api':'local','base':'zav_test'}
     (SALIDA/'resultado.json').write_text(json.dumps(resultado,indent=2)+'\n',encoding='utf8')
     print(json.dumps(resultado))
 finally:

@@ -2116,6 +2116,9 @@ components:
         operacionClave:
           type: string
           format: uuid
+        observacion:
+          type: string
+          maxLength: 300
       required:
         - operacionClave
       additionalProperties: false
