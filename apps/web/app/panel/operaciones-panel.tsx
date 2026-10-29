@@ -602,7 +602,7 @@ export function OperacionesPanel({
           {detalle.eventos.map((e, i) => (
             <p key={i}>
               {e.accion}: {e.responsable} ·{" "}
-              {new Date(e.creadoEn).toLocaleString("es-BO")}
+              {new Date(e.creadoEn).toLocaleString("es-BO", { timeZone: "America/La_Paz" })}
             </p>
           ))}
           {detalle.tipo === "DEVOLUCION" &&

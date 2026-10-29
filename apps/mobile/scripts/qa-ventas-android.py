@@ -1,15 +1,18 @@
 """Ejecuta el APK QA contra NestJS/PostgreSQL locales; nunca usa producción."""
 import glob
 import hashlib
+import http.client
 import json
 import os
 import re
 import subprocess
+import threading
 import time
 import urllib.request
 import uuid
 import xml.etree.ElementTree as ET
 from datetime import date, timedelta
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 PACKAGE = 'bo.zav.gestion.vendedor.qa'
@@ -23,6 +26,41 @@ if not SERIAL:
     assert len(encontrados) == 1, 'Se requiere un único emulador QA.'
     SERIAL = encontrados[0]
 assert SERIAL.startswith('emulator-'), 'No se permite ejecutar en teléfonos personales.'
+
+
+class RespuestaIncierta(BaseHTTPRequestHandler):
+    """Proxy local de QA: pierde una respuesta exitosa, conserva el backend real."""
+    intentos_venta = []
+
+    def reenviar(self):
+        cuerpo = self.rfile.read(int(self.headers.get('Content-Length', '0')))
+        conexion = http.client.HTTPConnection('127.0.0.1', 3001, timeout=30)
+        headers = {'Content-Type': 'application/json'}
+        if self.headers.get('Authorization'):
+            headers['Authorization'] = self.headers['Authorization']
+        try:
+            conexion.request(self.command, self.path, body=cuerpo or None, headers=headers)
+            respuesta = conexion.getresponse()
+            contenido, estado = respuesta.read(), respuesta.status
+            if self.command == 'POST' and self.path == '/api/v1/operaciones/salidas-directas':
+                self.intentos_venta.append(json.loads(cuerpo))
+                if len(self.intentos_venta) == 1 and estado == 201:
+                    # El servidor confirmó; la app recibe un fallo de intermediario.
+                    estado = 503
+                    contenido = b'{"message":"QA: respuesta de confirmacion no disponible"}'
+            self.send_response(estado)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Content-Length', str(len(contenido)))
+            self.end_headers()
+            self.wfile.write(contenido)
+        finally:
+            conexion.close()
+
+    do_GET = reenviar
+    do_POST = reenviar
+
+    def log_message(self, *_args):
+        pass  # No registrar JWT, credenciales ni cuerpos.
 
 
 def adb(*args):
@@ -124,9 +162,12 @@ def hasta(condicion):
     raise AssertionError('La API no confirmó el resultado esperado.')
 
 
+proxy = None
 try:
     assert os.environ.get('NODE_ENV') == 'test'
     assert re.fullmatch(r'postgresql://[^@]+@127\.0\.0\.1:5432/zav_test', os.environ.get('DATABASE_URL', '')), 'Solo PostgreSQL QA de Actions.'
+    proxy = ThreadingHTTPServer(('0.0.0.0', 3003), RespuestaIncierta)
+    threading.Thread(target=proxy.serve_forever, daemon=True).start()
     admin = api('auth/login', {'identificador': os.environ['QA_ADMIN_IDENTIFICADOR'], 'contrasena': os.environ['QA_ADMIN_PASSWORD']})
     vendedor = api('auth/login', {'identificador': os.environ['QA_VENDEDOR_IDENTIFICADOR'], 'contrasena': os.environ['QA_VENDEDOR_PASSWORD']})
     at, vt = admin['accessToken'], vendedor['accessToken']
@@ -147,7 +188,7 @@ try:
     adb('emu','geo','fix','-64.73','-21.53')
     adb('shell','monkey','-p',PACKAGE,'-c','android.intent.category.LAUNCHER','1')
     tocar('Configurar API de mi computadora')
-    escribir('Dirección de la API de pruebas','http://10.0.2.2:3001')
+    escribir('Dirección de la API de pruebas','http://10.0.2.2:3003')
     tocar('Probar y guardar servidor')
     esperar('Servidor de pruebas conectado.')
     escribir('Identificador',os.environ['QA_VENDEDOR_IDENTIFICADOR'])
@@ -159,6 +200,24 @@ try:
     tocar('Recibí la carga')
     hasta(lambda:saldo(vt,p['id'])==5)
     captura('01-carga-recibida')
+    permisos = ['android.permission.ACCESS_FINE_LOCATION', 'android.permission.ACCESS_COARSE_LOCATION']
+    for permiso in permisos:
+        adb('shell','pm','revoke',PACKAGE,permiso)
+        adb('shell','pm','set-permission-flags',PACKAGE,permiso,'user-fixed')
+    adb('shell','monkey','-p',PACKAGE,'-c','android.intent.category.LAUNCHER','1')
+    tocar('Venta directa')
+    escribir('Cantidad '+codigo,'2')
+    tocar('Obtener GPS y revisar entrega')
+    esperar('No se registró la entrega: falta autorizar la ubicación puntual.',desplazar=True)
+    assert saldo(vt,p['id'])==5
+    assert len(api('operaciones?tipo=SALIDA_DIRECTA',token=vt)['items'])==0
+    captura('02-permiso-gps-denegado')
+    for permiso in reversed(permisos):
+        adb('shell','pm','clear-permission-flags',PACKAGE,permiso,'user-fixed','user-set')
+        adb('shell','pm','grant',PACKAGE,permiso)
+    adb('shell','am','force-stop',PACKAGE)
+    adb('shell','monkey','-p',PACKAGE,'-c','android.intent.category.LAUNCHER','1')
+    tocar('Venta directa')
     tocar('Nueva venta')
     escribir('Cantidad '+codigo,'2')
     adb('emu','geo','fix','-64.73','-21.53')
@@ -167,6 +226,18 @@ try:
     captura('02-confirmacion-gps')
     tocar('Confirmar entrega')
     hasta(lambda:saldo(vt,p['id'])==3)
+    esperar('Pendiente de verificar', desplazar=True)
+    captura('03-respuesta-incierta')
+    assert len(api('operaciones?tipo=SALIDA_DIRECTA',token=vt)['items']) == 1
+    adb('shell','am','force-stop',PACKAGE)
+    adb('shell','monkey','-p',PACKAGE,'-c','android.intent.category.LAUNCHER','1')
+    tocar('Venta directa')
+    esperar('Pendiente de verificar', desplazar=True)
+    tocar('Verificar / reintentar')
+    esperar('Confirmado por el servidor:',exacto=False,desplazar=True)
+    assert len(RespuestaIncierta.intentos_venta) == 2
+    assert RespuestaIncierta.intentos_venta[0] == RespuestaIncierta.intentos_venta[1], 'El reintento debe conservar todos los datos y la clave.'
+    assert saldo(vt,p['id'])==3
     tocar('Historial')
     esperar('SALIDA_DIRECTA',exacto=False,desplazar=True)
     captura('03-venta-confirmada')
@@ -187,10 +258,12 @@ try:
     assert api('operaciones/conciliacion',token=at)['conciliado']
     tocar('Actualizar datos')
     captura('04-devolucion-recibida')
-    resultado={'apk':Path(apk[0]).name,'apkSha256':hashlib.sha256(Path(apk[0]).read_bytes()).hexdigest(),'apkRunId':os.environ.get('QA_APK_RUN_ID'),'pruebaCommit':os.environ.get('GITHUB_SHA'),'carga':carga['id'],'venta':venta['id'],'devolucion':devolucion['id'],'stockLibreFinal':saldo(vt,p['id']),'gpsPuntual':True,'conciliado':True,'api':'local','base':'zav_test'}
+    resultado={'apk':Path(apk[0]).name,'apkSha256':hashlib.sha256(Path(apk[0]).read_bytes()).hexdigest(),'apkRunId':os.environ.get('QA_APK_RUN_ID'),'pruebaCommit':os.environ.get('GITHUB_SHA'),'carga':carga['id'],'venta':venta['id'],'devolucion':devolucion['id'],'stockLibreFinal':saldo(vt,p['id']),'gpsPuntual':True,'permisoDenegadoSinSalida':True,'respuestaInciertaRecuperadaTrasReabrir':True,'reintentoMismaSolicitud':True,'conciliado':True,'api':'local','base':'zav_test'}
     (SALIDA/'resultado.json').write_text(json.dumps(resultado,indent=2)+'\n',encoding='utf8')
     print(json.dumps(resultado))
 finally:
+    if proxy:
+        proxy.shutdown()
     try:
         captura('estado-final')
         (SALIDA/'logcat.log').write_text(adb('logcat','-d','-t','500'),encoding='utf8')

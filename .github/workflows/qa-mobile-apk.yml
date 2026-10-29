@@ -39,7 +39,7 @@ concurrency:
 
 jobs:
   construir-apk:
-    if: github.event_name != 'workflow_dispatch' || inputs.apk_qa_run_id == ''
+    if: github.event_name != 'workflow_dispatch' || inputs.apk_qa_run_id == '' || inputs.canal == 'release'
     name: Construir APK Android autónomo
     runs-on: ubuntu-latest
     env:

@@ -69,3 +69,14 @@ El respaldo del 12/13 de octubre y el ensayo Neon son evidencias históricas, no
 La nueva copia sustituye la advertencia de respaldo antiguo para la revisión del 28/10; una ventana posterior requiere refrescarla si hubo cambios. La pérdida de acceso a conectores administrativos impide confirmar el destino actual de Render/Vercel y ejecutar su promoción de forma verificable. No se aplicaron migraciones productivas.
 
 Documentos asociados: [matriz](matriz-catalogo-salidas.md), [recuperación](../operacion/catalogo-salidas-recuperacion.md), [guía](../operacion/catalogo-salidas-guia.md).
+
+
+## Verificaciones del 29 de octubre
+
+[API CI 40832809516](https://github.com/RubenMealla/zav-sistema/actions/runs/40832809516), [móvil CI 40832809337](https://github.com/RubenMealla/zav-sistema/actions/runs/40832809337) y [web CI 40832809694](https://github.com/RubenMealla/zav-sistema/actions/runs/40832809694) aprobados. Web: **37/37, 2,0 min, sin flaky**. API conserva 60 E2E y 26 unitarias. La repetición local Swagger completa terminó **7/7, 5,9 min**; se conservaron dos intentos anteriores que agotaron 45 segundos globales en recorridos seriales con múltiples formularios/capturas. Ambos recorridos tienen ahora 120 segundos globales y mantienen sus aserciones HTTP.
+
+[Android instalado 40833529972](https://github.com/RubenMealla/zav-sistema/actions/runs/40833529972) **aprobado**: APK QA compilada en 40804309883 (hash `ac6bef51e36a4fe3fd901cc7ca8183283229c512738e2fefe3f2ba43a990dc21`), prueba del commit `397acc9`. Carga 5 → recepción → venta 2 con GPS → devolución 1 recibida en inspección → saldo libre 2 y conciliación correcta. Hora boliviana también aprobada con Android UTC/Tokio. [Artefacto de ventas](https://github.com/RubenMealla/zav-sistema/actions/runs/40833529972/artifacts/12879488539), copia local `backups/android-ventas-aprobado`. Se inspeccionaron las capturas de confirmación GPS y devolución. La barra de estado blanca sobre fondo claro se corrige a iconos oscuros; el historial nuevo reutiliza fecha boliviana del módulo de distribución.
+
+Intentos Android conservados: 40804309883 falló por tocar etiqueta en lugar del EditText; 40832832649 falló porque el primer frame aún no tenía árbol accesible. Se corrigen selección/foco y espera acotada; no se omite ningún paso del flujo.
+
+La APK release se compiló y firmó en [40804411892](https://github.com/RubenMealla/zav-sistema/actions/runs/40804411892), hash `a1e305ae38e031ce08d129868402853cd1aea703e99c0c2e1e9960ce2f86149a`; no implica promoción de la API productiva. Se amplía ahora la prueba instalada para denegación real del permiso GPS y un 503 de intermediario después de confirmar la venta en el backend, seguido de reapertura y reintento con la misma solicitud. Estos dos escenarios adicionales todavía no se declaran aprobados.

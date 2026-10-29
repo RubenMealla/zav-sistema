@@ -19,6 +19,7 @@ import {
   leerOperacionPendiente,
 } from "@/lib/operacion-pendiente";
 import { capturarUbicacionPuntual } from "@/lib/ubicacion-puntual";
+import { fechaCorta } from "@/lib/distribucion";
 import type {
   CustodiaLibre,
   OperacionDetalle,
@@ -479,7 +480,7 @@ export function VentasDirectas({ sesion }: { sesion: Sesion }) {
                 {o.tipo} · {o.estado}
               </Text>
               <Text>
-                {new Date(o.creadoEn).toLocaleString("es-BO")} · {o.unidades}{" "}
+                {fechaCorta(o.creadoEn)} · {o.unidades}{" "}
                 unidades
               </Text>
               <Boton
