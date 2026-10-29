@@ -53,6 +53,9 @@ firebase-adminsdk*.json
 
 backups/
 dumps/
+__pycache__/
+*.pyc
+evidencias-ventas-android/
 
 
 # =========================================================

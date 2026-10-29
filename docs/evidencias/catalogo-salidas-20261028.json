@@ -1,0 +1,85 @@
+{
+  "respaldo": {
+    "fechaUtc": "2026-10-28T20:58:58.123Z",
+    "sha256": "e84df3bad5a9a18ca3bf718ec1045fd5e512c63d7c1b390ded29382b35a579c1",
+    "baseRestaurada": "zav_restore_catalogo_20261028",
+    "fuenteEstable": true,
+    "coincide": true,
+    "archivoPrivado": "backups/catalogo-salidas-20261028/production-previa.dump",
+    "conteos": {
+      "cliente": 10,
+      "detalle_pedido": 10,
+      "lote": 10,
+      "lote_condicion_historial": 10,
+      "movimiento": 10,
+      "pedido": 10,
+      "producto": 11,
+      "typeorm_migraciones": 7,
+      "ubicacion": 10,
+      "usuario": 2
+    }
+  },
+  "ensayos": [
+    {
+      "fecha": "2026-10-28T20:59:51.699Z",
+      "host": "127.0.0.1",
+      "base": "/zav_restore_catalogo_20261028",
+      "ejecutadas": [
+        "CatalogoAdministrable1791856800000",
+        "NormalizacionCatalogoCompatible1791856860000",
+        "OperacionesCustodia1791856920000",
+        "GuardasOperativasCompatibles1791856980000"
+      ],
+      "preservado": true,
+      "integridad": {
+        "saldos_negativos": 0,
+        "sku_sin_relacion": 0,
+        "familias_publicadas": 7,
+        "productos_publicados": 13
+      }
+    },
+    {
+      "fecha": "2026-10-28T21:04:30.957Z",
+      "host": "ep-tiny-butterfly-b6lxt7mt.c-2.sa-east-1.aws.neon.tech",
+      "base": "/neondb",
+      "ejecutadas": [],
+      "preservado": true,
+      "integridad": {
+        "saldos_negativos": 0,
+        "sku_sin_relacion": 0,
+        "familias_publicadas": 7,
+        "productos_publicados": 13
+      }
+    }
+  ],
+  "compatibilidadApiAnterior": {
+    "fecha": "2026-10-29T02:15:03.083Z",
+    "codigoAnterior": "e9dc1a40476a72034f38e4dabb0e178c62af0066",
+    "base": "zav_compat_catalogo_20261028",
+    "migraciones": 11,
+    "datos": "Sintéticos, exclusivamente en copia local; respaldo certificado sin modificaciones",
+    "pedido": [
+      "REGISTRADO",
+      "EN_DISTRIBUCION",
+      "ENTREGADO"
+    ],
+    "idempotenciaRetiroEntrega": true,
+    "movimientos": [
+      {
+        "tipo": "ENTREGA",
+        "total": 1
+      },
+      {
+        "tipo": "INGRESO",
+        "total": 1
+      },
+      {
+        "tipo": "RETIRO",
+        "total": 1
+      }
+    ],
+    "saldoFinal": 7,
+    "resultado": "APROBADO",
+    "alcance": "API anterior y esquema ampliado: login, cliente, pedido, retiro, entrega GPS y reintentos. No certifica un retorno con nuevas operaciones pendientes."
+  }
+}

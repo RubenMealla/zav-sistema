@@ -14,6 +14,16 @@ import type {
 
 import { obtenerDireccionApi } from './configuracion-api';
 import { registrarSolicitudQa } from './diagnostico-qa';
+import type { CustodiaLibre,OperacionDetalle,OperacionResumen,StockLibre } from './operaciones-tipos';
+
+export function consultarStockLibre(token:string) {return solicitud<{items:StockLibre[]}>('/api/v1/operaciones/disponibilidad',{},token);}
+export function consultarCustodia(token:string,page=1) {return solicitud<{items:CustodiaLibre[]}>('/api/v1/operaciones/custodia?limit=50&page='+page,{},token);}
+export function consultarOperaciones(token:string,page=1) {return solicitud<{items:OperacionResumen[];total:number}>('/api/v1/operaciones?limit=20&page='+page,{},token);}
+export function consultarOperacion(token:string,id:string) {return solicitud<OperacionDetalle>('/api/v1/operaciones/'+encodeURIComponent(id),{},token);}
+export function enviarOperacion(token:string,ruta:string,datos:Record<string,unknown>) {
+  if(!/^operaciones\/(salidas-directas|devoluciones|[a-f0-9-]{36}\/recepcion)$/.test(ruta)) throw new Error('Operación móvil no permitida.');
+  return solicitud<OperacionDetalle>('/api/v1/'+ruta,{method:'POST',body:JSON.stringify(datos)},token);
+}
 
 export class ApiError extends Error {
   constructor(

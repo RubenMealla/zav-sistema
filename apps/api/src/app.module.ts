@@ -19,6 +19,8 @@ import { DetallePedidoEntity } from './database/entities/detalle-pedido.entity.j
 import { AuthModule } from './auth/auth.module.js';
 import { InventarioModule } from './inventario/inventario.module.js';
 import { PedidosModule } from './pedidos/pedidos.module.js';
+import { CatalogoModule } from './catalogo/catalogo.module.js';
+import { OperacionesModule } from './operaciones/operaciones.module.js';
 
 @Module({
   imports: [
@@ -29,6 +31,8 @@ import { PedidosModule } from './pedidos/pedidos.module.js';
     AuthModule,
     InventarioModule,
     PedidosModule,
+    CatalogoModule,
+    OperacionesModule,
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
@@ -59,6 +63,8 @@ import { PedidosModule } from './pedidos/pedidos.module.js';
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(RegistroHttpMiddleware, CorsMiddleware).forRoutes('{*splat}');
+    consumer
+      .apply(RegistroHttpMiddleware, CorsMiddleware)
+      .forRoutes('{*splat}');
   }
 }

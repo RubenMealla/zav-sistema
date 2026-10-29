@@ -43,7 +43,11 @@ type FilaUbicacion = {
   nombre: string;
 };
 
-function textoOpcional(valor: unknown, campo: string, maximo: number): string | null {
+function textoOpcional(
+  valor: unknown,
+  campo: string,
+  maximo: number,
+): string | null {
   if (valor === undefined || valor === null) return null;
   return texto(valor, campo, maximo);
 }
@@ -60,16 +64,18 @@ export class MovimientosService {
        WHERE s.lote_id = $1::uuid
        ORDER BY u.codigo`,
       [loteId],
-    ) as Promise<Array<{
-      codigo: string;
-      nombre: string;
-      cantidad_fisica: number;
-      cantidad_comprometida: number;
-    }>>;
+    ) as Promise<
+      Array<{
+        codigo: string;
+        nombre: string;
+        cantidad_fisica: number;
+        cantidad_comprometida: number;
+      }>
+    >;
   }
 
   private async detalleMovimiento(id: string) {
-    const filas = await this.db.query(
+    const filas = (await this.db.query(
       `SELECT m.id, m.operacion_clave, m.lote_id, m.tipo, m.cantidad,
               m.referencia, m.motivo, m.creado_en,
               o.codigo AS origen_codigo, o.nombre AS origen_nombre,
@@ -81,7 +87,7 @@ export class MovimientosService {
        JOIN usuario us ON us.id = m.usuario_id
        WHERE m.id = $1::uuid`,
       [id],
-    ) as Array<{
+    )) as Array<{
       id: string;
       operacion_clave: string;
       lote_id: string;
@@ -135,13 +141,22 @@ export class MovimientosService {
     const motivo = textoOpcional(datos.motivo, 'motivo', 250);
 
     if (origenCodigo === destinoCodigo) {
-      throw new BadRequestException('La ubicacion de origen y destino deben ser diferentes.');
+      throw new BadRequestException(
+        'La ubicacion de origen y destino deben ser diferentes.',
+      );
+    }
+    if (origenCodigo === 'DEVOLUCIONES_INSPECCION' && !motivo) {
+      throw new BadRequestException(
+        'Registre el resultado de la inspección antes de reincorporar una devolución.',
+      );
     }
 
     const movimientoId = await this.db.transaction(async (manager) => {
-      await manager.query('SELECT pg_advisory_xact_lock(hashtext($1::text))', [operacionClave]);
+      await manager.query('SELECT pg_advisory_xact_lock(hashtext($1::text))', [
+        operacionClave,
+      ]);
 
-      const repetido = await manager.query(
+      const repetido = (await manager.query(
         `SELECT m.id, m.lote_id, m.tipo, m.cantidad, m.usuario_id, m.referencia, m.motivo,
                 o.codigo AS origen_codigo, d.codigo AS destino_codigo
          FROM movimiento m
@@ -149,7 +164,7 @@ export class MovimientosService {
          LEFT JOIN ubicacion d ON d.id = m.destino_id
          WHERE m.operacion_clave = $1::uuid`,
         [operacionClave],
-      ) as FilaReenvio[];
+      )) as FilaReenvio[];
 
       if (repetido.length > 0) {
         const previo = repetido[0];
@@ -163,42 +178,66 @@ export class MovimientosService {
           previo.referencia !== referencia ||
           previo.motivo !== motivo
         ) {
-          throw new ConflictException('La clave de operacion ya se utilizo con otros datos.');
+          throw new ConflictException(
+            'La clave de operacion ya se utilizo con otros datos.',
+          );
         }
         return previo.id;
       }
 
-      const referencias = await manager.query(
+      const referencias = (await manager.query(
         'SELECT producto_id FROM lote WHERE id = $1::uuid',
         [loteId],
-      ) as Array<{ producto_id: string }>;
-      if (!referencias.length) throw new NotFoundException('Lote no encontrado.');
+      )) as Array<{ producto_id: string }>;
+      if (!referencias.length)
+        throw new NotFoundException('Lote no encontrado.');
 
       // Los pedidos y los movimientos que afectan venta se serializan por producto.
-      await manager.query('SELECT pg_advisory_xact_lock(hashtext($1::text))', [`producto:${referencias[0].producto_id}`]);
-      await manager.query('SELECT pg_advisory_xact_lock(hashtext($1::text))', [`lote:${loteId}`]);
+      await manager.query('SELECT pg_advisory_xact_lock(hashtext($1::text))', [
+        `producto:${referencias[0].producto_id}`,
+      ]);
+      await manager.query('SELECT pg_advisory_xact_lock(hashtext($1::text))', [
+        `lote:${loteId}`,
+      ]);
 
       // La condición puede cambiar mientras se espera el bloqueo del producto.
-      const lotes = await manager.query(
+      const lotes = (await manager.query(
         `SELECT id, producto_id, condicion, (vence_el >= ${FECHA_HOY_BOLIVIA_SQL}) AS vigente
          FROM lote WHERE id = $1::uuid`,
         [loteId],
-      ) as Array<{ id: string; producto_id: string; condicion: string; vigente: boolean }>;
+      )) as Array<{
+        id: string;
+        producto_id: string;
+        condicion: string;
+        vigente: boolean;
+      }>;
       if (!lotes.length) throw new NotFoundException('Lote no encontrado.');
       const lote = lotes[0];
+      if (
+        origenCodigo === 'DEVOLUCIONES_INSPECCION' &&
+        (lote.condicion !== 'LIBERADO' || !lote.vigente)
+      ) {
+        throw new ConflictException(
+          'La devolución requiere lote liberado y vigente tras la inspección.',
+        );
+      }
 
-      const ubicaciones = await manager.query(
+      const ubicaciones = (await manager.query(
         `SELECT id, codigo, nombre
          FROM ubicacion
          WHERE codigo = ANY($1::text[]) AND activa = TRUE AND clase = 'AREA_FISICA'`,
         [[origenCodigo, destinoCodigo]],
-      ) as FilaUbicacion[];
+      )) as FilaUbicacion[];
 
-      const porCodigo = new Map(ubicaciones.map((ubicacion) => [ubicacion.codigo, ubicacion]));
+      const porCodigo = new Map(
+        ubicaciones.map((ubicacion) => [ubicacion.codigo, ubicacion]),
+      );
       const origen = porCodigo.get(origenCodigo);
       const destino = porCodigo.get(destinoCodigo);
       if (!origen || !destino) {
-        throw new NotFoundException('Ubicacion de origen o destino no disponible.');
+        throw new NotFoundException(
+          'Ubicacion de origen o destino no disponible.',
+        );
       }
 
       if (
@@ -235,12 +274,12 @@ export class MovimientosService {
         }
       }
 
-      const saldosOrigen = await manager.query(
+      const saldosOrigen = (await manager.query(
         `SELECT cantidad_fisica, cantidad_comprometida
          FROM saldo_inventario
          WHERE lote_id = $1::uuid AND ubicacion_id = $2::uuid`,
         [loteId, origen.id],
-      ) as Array<{ cantidad_fisica: number; cantidad_comprometida: number }>;
+      )) as Array<{ cantidad_fisica: number; cantidad_comprometida: number }>;
 
       const saldoOrigen = saldosOrigen[0];
       const disponible = saldoOrigen
@@ -248,16 +287,27 @@ export class MovimientosService {
         : 0;
 
       if (!saldoOrigen || disponible < cantidad) {
-        throw new ConflictException('Saldo disponible insuficiente en la ubicacion de origen.');
+        throw new ConflictException(
+          'Saldo disponible insuficiente en la ubicacion de origen.',
+        );
       }
 
-      const nuevos = await manager.query(
+      const nuevos = (await manager.query(
         `INSERT INTO movimiento
            (operacion_clave, lote_id, tipo, origen_id, destino_id, cantidad, usuario_id, referencia, motivo)
          VALUES ($1::uuid, $2::uuid, 'TRASLADO', $3::uuid, $4::uuid, $5, $6::uuid, $7, $8)
          RETURNING id`,
-        [operacionClave, loteId, origen.id, destino.id, cantidad, usuarioId, referencia, motivo],
-      ) as { id: string }[];
+        [
+          operacionClave,
+          loteId,
+          origen.id,
+          destino.id,
+          cantidad,
+          usuarioId,
+          referencia,
+          motivo,
+        ],
+      )) as { id: string }[];
 
       return nuevos[0].id;
     });
@@ -272,10 +322,10 @@ export class MovimientosService {
     const { page, limit } = paginacion(consulta, ['loteId', 'page', 'limit']);
     const loteId = uuid(consulta.loteId, 'loteId');
 
-    const lotes = await this.db.query(
+    const lotes = (await this.db.query(
       'SELECT id FROM lote WHERE id = $1::uuid',
       [loteId],
-    ) as { id: string }[];
+    )) as { id: string }[];
     if (!lotes.length) throw new NotFoundException('Lote no encontrado.');
 
     const [items, total] = await Promise.all([
@@ -293,22 +343,24 @@ export class MovimientosService {
          ORDER BY m.creado_en DESC, m.id DESC
          LIMIT $2 OFFSET $3`,
         [loteId, limit, (page - 1) * limit],
-      ) as Promise<Array<{
-        id: string;
-        operacion_clave: string;
-        lote_id: string;
-        tipo: string;
-        cantidad: number;
-        referencia: string | null;
-        motivo: string | null;
-        creado_en: Date;
-        origen_codigo: string | null;
-        origen_nombre: string | null;
-        destino_codigo: string | null;
-        destino_nombre: string | null;
-        identificador: string;
-        usuario_nombre: string;
-      }>>,
+      ) as Promise<
+        Array<{
+          id: string;
+          operacion_clave: string;
+          lote_id: string;
+          tipo: string;
+          cantidad: number;
+          referencia: string | null;
+          motivo: string | null;
+          creado_en: Date;
+          origen_codigo: string | null;
+          origen_nombre: string | null;
+          destino_codigo: string | null;
+          destino_nombre: string | null;
+          identificador: string;
+          usuario_nombre: string;
+        }>
+      >,
       this.db.query(
         'SELECT count(*)::int AS total FROM movimiento WHERE lote_id = $1::uuid',
         [loteId],

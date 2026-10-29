@@ -1,0 +1,162 @@
+.gestion-modulo {
+  display: grid;
+  min-width: 0;
+  gap: 20px;
+  color: var(--tinta);
+  font-size: 14px;
+}
+.gestion-tabs,
+.gestion-barra {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.gestion-barra {
+  justify-content: space-between;
+}
+.gestion-barra .campo {
+  flex: 1;
+  min-width: 140px;
+}
+.gestion-editor {
+  background: var(--papel);
+  border: 1px solid var(--gris-200);
+  padding: 22px;
+  border-radius: var(--radio);
+  display: grid;
+  gap: 16px;
+}
+.gestion-editor h2 {
+  font-size: 20px;
+  font-weight: 650;
+}
+.gestion-editor h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 10px 0;
+}
+.gestion-formulario {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+.gestion-ancho {
+  grid-column: 1/-1;
+}
+.gestion-fieldset {
+  border: 0;
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+}
+.gestion-check {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  min-height: 42px;
+}
+.gestion-check input {
+  width: 18px;
+  height: 18px;
+}
+.gestion-formulario textarea {
+  min-height: 90px;
+  padding: 10px;
+  border: 1px solid var(--gris-300);
+  border-radius: var(--radio);
+  background: #fff;
+  font-weight: 400;
+  resize: vertical;
+}
+.gestion-tabla {
+  overflow: auto;
+  border: 1px solid var(--gris-200);
+  background: var(--papel);
+}
+.gestion-tabla table {
+  width: 100%;
+  text-align: left;
+  border-collapse: collapse;
+}
+.gestion-tabla th {
+  background: var(--gris-100);
+  font-size: 12px;
+  text-transform: uppercase;
+}
+.gestion-tabla th,
+.gestion-tabla td {
+  padding: 14px;
+  border-bottom: 1px solid var(--gris-200);
+  vertical-align: top;
+}
+.gestion-tabla td p,
+.gestion-tabla small {
+  margin-top: 5px;
+  color: var(--gris-600);
+}
+.gestion-bloque {
+  display: block;
+}
+.gestion-foto {
+  max-width: 160px;
+  height: 110px;
+  object-fit: contain;
+}
+.gestion-error {
+  color: var(--rojo);
+  background: var(--rojo-fondo);
+  border: 1px solid #e4b9b5;
+  padding: 14px;
+}
+.gestion-exito {
+  color: var(--verde);
+  background: var(--verde-fondo);
+  padding: 14px;
+}
+.gestion-seleccion {
+  display: grid;
+  max-height: 440px;
+  overflow: auto;
+  border: 1px solid var(--gris-200);
+}
+.gestion-linea {
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  padding: 14px;
+  border-bottom: 1px solid var(--gris-200);
+  align-items: center;
+}
+.gestion-linea small {
+  display: block;
+  margin-top: 4px;
+  color: var(--gris-600);
+}
+.gestion-linea .campo {
+  width: 100px;
+  flex-shrink: 0;
+}
+.gestion-resumen {
+  padding: 16px;
+  background: var(--gris-50);
+}
+.gestion-modulo ul {
+  padding-left: 20px;
+  list-style: disc;
+}
+.gestion-modulo code {
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+@media (max-width: 650px) {
+  .gestion-formulario {
+    grid-template-columns: 1fr;
+  }
+  .gestion-editor {
+    padding: 15px;
+  }
+  .gestion-barra {
+    align-items: stretch;
+  }
+}

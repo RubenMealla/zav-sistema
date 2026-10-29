@@ -51,6 +51,7 @@ describe('Pedidos y distribucion E3 (e2e)', () => {
         presentacion: 'Unidad de prueba',
         pesoGramos: 200,
         precioBob: 25,
+        validacionComercial: 'VALIDADO',
       })
       .expect(201);
 

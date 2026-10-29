@@ -88,7 +88,12 @@ export function BotonEnviar({
             className={confirmacion.variante === 'peligro' ? 'boton boton-primario boton-peligro' : 'boton boton-primario'}
             disabled={pending}
             aria-busy={pending}
-            onClick={() => formularioRef.current?.requestSubmit()}
+            onClick={() => {
+              const formulario = formularioRef.current;
+              if (!formulario || !formulario.reportValidity()) return;
+              cerrarConfirmacion();
+              formulario.requestSubmit();
+            }}
           >
             {pending ? pendiente : (confirmacion.confirmar ?? 'Confirmar')}
           </button>

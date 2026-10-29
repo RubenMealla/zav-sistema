@@ -109,7 +109,7 @@ async function crearProducto(request: APIRequestContext, token: string, sufijo: 
       familia: 'QA FINAL E3',
       presentacion: 'Unidad de prueba',
       pesoGramos: 250,
-      precioBob: 21.5,
+      precioBob: 21.5, validacionComercial: 'VALIDADO',
     },
   });
   expect(respuesta.status()).toBe(201);
@@ -275,7 +275,7 @@ test.describe.serial('QA final E3 · evidencias para apartado 2.8', () => {
     const producto = await crearProducto(request, tokenAdmin, 'CRUD');
     const editado = await request.patch(`${API}/api/v1/productos/${producto.body.id}`, {
       headers: { Authorization: `Bearer ${tokenAdmin}` },
-      data: { nombre: 'Producto QA final actualizado', precioBob: 22.75 },
+      data: { nombre: 'Producto QA final actualizado', precioBob: 22.75, validacionComercial: 'VALIDADO' },
     });
     expect(editado.status()).toBe(200);
     const baja = await request.patch(`${API}/api/v1/productos/${producto.body.id}/baja`, {
@@ -303,7 +303,7 @@ test.describe.serial('QA final E3 · evidencias para apartado 2.8', () => {
         familia: 'QA FINAL E3',
         presentacion: 'Unidad',
         pesoGramos: 250,
-        precioBob: 10,
+        precioBob: 10, validacionComercial: 'VALIDADO',
       },
     });
     expect(duplicado.status()).toBe(409);

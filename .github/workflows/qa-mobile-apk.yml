@@ -20,6 +20,18 @@ on:
       - "pnpm-workspace.yaml"
       - ".github/workflows/qa-mobile-apk.yml"
   workflow_dispatch:
+    inputs:
+      canal:
+        description: Canal de compilación (no cambia la rama ni despliega la API)
+        type: choice
+        options: [qa, release]
+        default: qa
+        required: true
+      apk_qa_run_id:
+        description: ID de una ejecución previa de este repositorio para repetir QA sobre su APK (vacío compila)
+        type: string
+        default: ''
+        required: false
 
 concurrency:
   group: apk-mobile-${{ github.ref }}
@@ -27,13 +39,14 @@ concurrency:
 
 jobs:
   construir-apk:
+    if: github.event_name != 'workflow_dispatch' || inputs.apk_qa_run_id == '' || inputs.canal == 'release'
     name: Construir APK Android autónomo
     runs-on: ubuntu-latest
     env:
       CI: 1
-      BUILD_CHANNEL: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && 'release' || 'qa' }}
-      EXPO_PUBLIC_BUILD_CHANNEL: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && 'release' || 'qa' }}
-      EXPO_PUBLIC_API_BASE_URL: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && 'https://zav-api-2026.onrender.com' || (vars.ZAV_QA_API_BASE_URL || 'http://10.0.2.2:3001') }}
+      BUILD_CHANNEL: ${{ github.event_name == 'workflow_dispatch' && inputs.canal || (github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && 'release' || 'qa') }}
+      EXPO_PUBLIC_BUILD_CHANNEL: ${{ github.event_name == 'workflow_dispatch' && inputs.canal || (github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && 'release' || 'qa') }}
+      EXPO_PUBLIC_API_BASE_URL: ${{ ((github.event_name == 'workflow_dispatch' && inputs.canal == 'release') || (github.event_name == 'push' && github.ref == 'refs/heads/main')) && 'https://zav-api-2026.onrender.com' || (vars.ZAV_QA_API_BASE_URL || 'http://10.0.2.2:3001') }}
       EXPO_PUBLIC_MAP_STYLE_URL: https://tiles.openfreemap.org/styles/liberty
       ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
       ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -231,14 +244,16 @@ jobs:
   verificar-hora-android:
     name: Verificar hora QA en Android
     needs: construir-apk
-    if: github.ref != 'refs/heads/main' || github.event_name == 'pull_request'
+    if: always() && (needs.construir-apk.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.canal == 'qa' && inputs.apk_qa_run_id != '')) && ((github.event_name == 'workflow_dispatch' && inputs.canal == 'qa') || (github.event_name != 'workflow_dispatch' && (github.ref != 'refs/heads/main' || github.event_name == 'pull_request')))
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
-          pattern: ZAV-Vendedor-*-qa-run-${{ github.run_number }}
+          pattern: ZAV-Vendedor-*-qa-run-*
+          run-id: ${{ inputs.apk_qa_run_id || github.run_id }}
+          github-token: ${{ github.token }}
           path: apk-qa
           merge-multiple: true
       - name: Habilitar aceleración del emulador
@@ -261,4 +276,82 @@ jobs:
         with:
           name: hora-bolivia-android-${{ github.run_number }}
           path: evidencias-hora-android/
+          retention-days: 30
+
+  verificar-ventas-android:
+    name: Verificar venta directa en APK y PostgreSQL
+    needs: construir-apk
+    if: always() && (needs.construir-apk.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.canal == 'qa' && inputs.apk_qa_run_id != '')) && ((github.event_name == 'workflow_dispatch' && inputs.canal == 'qa') || (github.event_name != 'workflow_dispatch' && (github.ref != 'refs/heads/main' || github.event_name == 'pull_request')))
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: zav_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d zav_test"
+          --health-interval 10s --health-timeout 5s --health-retries 5
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/zav_test
+      JWT_SECRET: zav-qa-jwt-secret-solo-pruebas-2026-0123456789abcdef
+      QA_ADMIN_IDENTIFICADOR: admin@zav.test
+      QA_ADMIN_PASSWORD: Admin-QA-2026-Pruebas!
+      QA_VENDEDOR_IDENTIFICADOR: vendedor@zav.test
+      QA_VENDEDOR_PASSWORD: Vendedor-QA-2026-Pruebas!
+      PORT: '3001'
+      QA_APK_RUN_ID: ${{ inputs.apk_qa_run_id || github.run_id }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.4.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: ZAV-Vendedor-*-qa-run-*
+          run-id: ${{ inputs.apk_qa_run_id || github.run_id }}
+          github-token: ${{ github.token }}
+          path: apk-qa
+          merge-multiple: true
+      - name: Preparar API y PostgreSQL de ensayo
+        run: |
+          pnpm install --frozen-lockfile
+          node -e "import('./apps/api/test/global-setup-e2e.mjs').then(m => m.default())"
+          pnpm --filter @zav/api build
+          pnpm --filter @zav/api start:prod > "$RUNNER_TEMP/api-ventas-qa.log" 2>&1 &
+          for intento in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:3001/api/v1/salud; then exit 0; fi
+            sleep 1
+          done
+          exit 1
+      - name: Habilitar aceleración del emulador
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Carga, recepción, venta con GPS y devolución con conciliación
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_2
+          disable-animations: true
+          script: python3 apps/mobile/scripts/qa-ventas-android.py
+      - name: Conservar resultados reales del APK
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ventas-directas-android-${{ github.run_number }}
+          path: |
+            evidencias-ventas-android/
+            ${{ runner.temp }}/api-ventas-qa.log
           retention-days: 30

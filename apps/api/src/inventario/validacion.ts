@@ -1,11 +1,19 @@
 import { BadRequestException } from '@nestjs/common';
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const UUID =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const CODIGO = /^[A-Z0-9][A-Z0-9._-]*$/;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
-export function objeto(entrada: unknown, permitidos: readonly string[]): Record<string, unknown> {
-  if (entrada === null || typeof entrada !== 'object' || Array.isArray(entrada)) {
+export function objeto(
+  entrada: unknown,
+  permitidos: readonly string[],
+): Record<string, unknown> {
+  if (
+    entrada === null ||
+    typeof entrada !== 'object' ||
+    Array.isArray(entrada)
+  ) {
     throw new BadRequestException('El cuerpo debe ser un objeto JSON.');
   }
   const datos = entrada as Record<string, unknown>;
@@ -16,8 +24,14 @@ export function objeto(entrada: unknown, permitidos: readonly string[]): Record<
 }
 
 export function texto(valor: unknown, campo: string, maximo: number): string {
-  if (typeof valor !== 'string' || !valor.trim() || valor.trim().length > maximo) {
-    throw new BadRequestException(`${campo} debe tener entre 1 y ${maximo} caracteres.`);
+  if (
+    typeof valor !== 'string' ||
+    !valor.trim() ||
+    valor.trim().length > maximo
+  ) {
+    throw new BadRequestException(
+      `${campo} debe tener entre 1 y ${maximo} caracteres.`,
+    );
   }
   return valor.trim();
 }
@@ -25,7 +39,9 @@ export function texto(valor: unknown, campo: string, maximo: number): string {
 export function codigo(valor: unknown, campo: string, maximo: number): string {
   const normalizado = texto(valor, campo, maximo).toUpperCase();
   if (normalizado.length < 2 || !CODIGO.test(normalizado)) {
-    throw new BadRequestException(`${campo} debe contener entre 2 y ${maximo} caracteres: letras, numeros, puntos, guiones o guion bajo.`);
+    throw new BadRequestException(
+      `${campo} debe contener entre 2 y ${maximo} caracteres: letras, numeros, puntos, guiones o guion bajo.`,
+    );
   }
   return normalizado;
 }
@@ -38,7 +54,12 @@ export function uuid(valor: unknown, campo: string): string {
 }
 
 export function enteroPositivo(valor: unknown, campo: string): number {
-  if (typeof valor !== 'number' || !Number.isInteger(valor) || valor < 1 || valor > 2147483647) {
+  if (
+    typeof valor !== 'number' ||
+    !Number.isInteger(valor) ||
+    valor < 1 ||
+    valor > 2147483647
+  ) {
     throw new BadRequestException(`${campo} debe ser un entero positivo.`);
   }
   return valor;
@@ -46,13 +67,18 @@ export function enteroPositivo(valor: unknown, campo: string): number {
 
 export function precio(valor: unknown): string {
   if (typeof valor !== 'string' && typeof valor !== 'number') {
-    throw new BadRequestException('precioBob debe ser un importe decimal valido.');
+    throw new BadRequestException(
+      'precioBob debe ser un importe decimal valido.',
+    );
   }
   const cadena = String(valor);
   if (!/^\d{1,10}(\.\d{1,2})?$/.test(cadena)) {
-    throw new BadRequestException('precioBob debe ser no negativo, con hasta 10 enteros y 2 decimales.');
+    throw new BadRequestException(
+      'precioBob debe ser no negativo, con hasta 10 enteros y 2 decimales.',
+    );
   }
-  return Number(cadena).toFixed(2);
+  const [entero, decimales = ''] = cadena.split('.');
+  return `${BigInt(entero)}.${decimales.padEnd(2, '0')}`;
 }
 
 export function fechaIso(valor: unknown, campo: string): string {
@@ -60,7 +86,10 @@ export function fechaIso(valor: unknown, campo: string): string {
     throw new BadRequestException(`${campo} debe tener formato YYYY-MM-DD.`);
   }
   const fecha = new Date(`${valor}T00:00:00.000Z`);
-  if (Number.isNaN(fecha.getTime()) || fecha.toISOString().slice(0, 10) !== valor) {
+  if (
+    Number.isNaN(fecha.getTime()) ||
+    fecha.toISOString().slice(0, 10) !== valor
+  ) {
     throw new BadRequestException(`${campo} no es una fecha valida.`);
   }
   return valor;
@@ -68,7 +97,8 @@ export function fechaIso(valor: unknown, campo: string): string {
 
 // Vigencia de lotes por día civil boliviano, independiente de TimeZone PostgreSQL.
 // El lote continúa vigente durante toda su fecha venceEl (Bolivia).
-export const FECHA_HOY_BOLIVIA_SQL = "(CURRENT_TIMESTAMP AT TIME ZONE 'America/La_Paz')::date";
+export const FECHA_HOY_BOLIVIA_SQL =
+  "(CURRENT_TIMESTAMP AT TIME ZONE 'America/La_Paz')::date";
 
 export function fechaHoyBolivia(fecha = new Date()): string {
   const partes = new Intl.DateTimeFormat('en-US', {
@@ -81,11 +111,19 @@ export function fechaHoyBolivia(fecha = new Date()): string {
   return `${porTipo.get('year')}-${porTipo.get('month')}-${porTipo.get('day')}`;
 }
 
-export function paginacion(consulta: Record<string, unknown>, permitidos: readonly string[]) {
+export function paginacion(
+  consulta: Record<string, unknown>,
+  permitidos: readonly string[],
+) {
   if (Object.keys(consulta).some((clave) => !permitidos.includes(clave))) {
     throw new BadRequestException('Parametro de consulta no permitido.');
   }
-  const validar = (valor: unknown, nombre: string, maximo: number, defecto: number): number => {
+  const validar = (
+    valor: unknown,
+    nombre: string,
+    maximo: number,
+    defecto: number,
+  ): number => {
     if (valor === undefined) return defecto;
     if (typeof valor !== 'string' || !/^[1-9]\d*$/.test(valor)) {
       throw new BadRequestException(`${nombre} debe ser un entero positivo.`);
@@ -102,9 +140,17 @@ export function paginacion(consulta: Record<string, unknown>, permitidos: readon
   };
 }
 
-export function consultaTexto(valor: unknown, campo: string, maximo: number): string | undefined {
+export function consultaTexto(
+  valor: unknown,
+  campo: string,
+  maximo: number,
+): string | undefined {
   if (valor === undefined) return undefined;
-  if (typeof valor !== 'string' || valor.trim().length === 0 || valor.trim().length > maximo) {
+  if (
+    typeof valor !== 'string' ||
+    valor.trim().length === 0 ||
+    valor.trim().length > maximo
+  ) {
     throw new BadRequestException(`${campo} no es valido.`);
   }
   return valor.trim();
@@ -117,7 +163,9 @@ export function activoFiltro(valor: unknown): boolean | undefined {
   throw new BadRequestException('activo debe ser true o false.');
 }
 
-export function vigenciaFiltro(valor: unknown): 'vigente' | 'vencido' | undefined {
+export function vigenciaFiltro(
+  valor: unknown,
+): 'vigente' | 'vencido' | undefined {
   if (valor === undefined) return undefined;
   if (valor === 'vigente' || valor === 'vencido') return valor;
   throw new BadRequestException('vigencia debe ser vigente o vencido.');

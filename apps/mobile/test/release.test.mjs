@@ -54,7 +54,7 @@ test('configuración Expo mantiene nombres, paquetes, versión y permisos separa
     assert.equal(resultado.name, canal === 'qa' ? 'ZAV Vendedor QA' : 'ZAV Vendedor');
     assert.equal(resultado.android.package, 'bo.zav.gestion.vendedor' + (canal === 'qa' ? '.qa' : ''));
     assert.equal(resultado.plugins.includes('./plugins/with-qa-local-network'), canal === 'qa');
-    assert.equal(resultado.version, '1.0.0');
-    assert.equal(resultado.android.versionCode, 10000);
+    assert.equal(resultado.version, '1.1.0');
+    assert.equal(resultado.android.versionCode, 10100);
   }
 });
