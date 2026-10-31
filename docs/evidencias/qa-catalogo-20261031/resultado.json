@@ -1,0 +1,126 @@
+{
+  "fecha": "2026-10-31T20:10:45.121Z",
+  "api": "https://zav-api-catalogo-qa.onrender.com/api/v1/",
+  "web": "https://zav-sistema-qqtlx18z8-dariomealla24-6763.vercel.app",
+  "codigo": "QA-REMOTO-0E065782",
+  "productoId": "711e4d67-604b-4308-8fd3-ddd35b26cbc4",
+  "loteId": "a96954fd-2c2d-47f4-8d6e-e072368df8c6",
+  "ventaAdmin": "954df2b4-d30e-4f6f-808d-f31238a57dd8",
+  "ventaVendedor": "38470527-9b14-4bb3-82b6-7227a889d3f9",
+  "carga": "ef18e742-ad01-4f3d-ab93-668c196b4435",
+  "devolucion": "32066c89-51e0-4aaf-b0ad-7ee632e6200a",
+  "stockLibreFinal": 2,
+  "conciliado": true,
+  "loginWeb": true,
+  "ventaWebConfirmada": true,
+  "stockDespachoFinal": 4,
+  "publicacionDinamica": true,
+  "ocultacionDinamica": true,
+  "anchoMovil": 390,
+  "resultados": [
+    {
+      "ruta": "auth/login",
+      "estado": 200
+    },
+    {
+      "ruta": "auth/login",
+      "estado": 200
+    },
+    {
+      "ruta": "publico/catalogo",
+      "estado": 200
+    },
+    {
+      "ruta": "catalogo/familias",
+      "estado": 401
+    },
+    {
+      "ruta": "catalogo/familias",
+      "estado": 403
+    },
+    {
+      "ruta": "catalogo/presentaciones",
+      "estado": 201
+    },
+    {
+      "ruta": "catalogo/presentaciones/711e4d67-604b-4308-8fd3-ddd35b26cbc4",
+      "estado": 200
+    },
+    {
+      "ruta": "lotes",
+      "estado": 201
+    },
+    {
+      "ruta": "lotes/a96954fd-2c2d-47f4-8d6e-e072368df8c6/liberar",
+      "estado": 201
+    },
+    {
+      "ruta": "movimientos/traslado",
+      "estado": 201
+    },
+    {
+      "ruta": "ubicaciones/venta-despacho",
+      "estado": 200
+    },
+    {
+      "ruta": "ubicaciones/6ce130cb-2b36-440a-a92d-ef6a3cf4a738/georreferencia",
+      "estado": 200
+    },
+    {
+      "ruta": "operaciones/salidas-directas",
+      "estado": 201
+    },
+    {
+      "ruta": "operaciones/salidas-directas",
+      "estado": 201
+    },
+    {
+      "ruta": "operaciones/salidas-directas",
+      "estado": 409
+    },
+    {
+      "ruta": "operaciones/cargas",
+      "estado": 201
+    },
+    {
+      "ruta": "operaciones/ef18e742-ad01-4f3d-ab93-668c196b4435/recepcion",
+      "estado": 201
+    },
+    {
+      "ruta": "operaciones/salidas-directas",
+      "estado": 400
+    },
+    {
+      "ruta": "operaciones/salidas-directas",
+      "estado": 201
+    },
+    {
+      "ruta": "operaciones/devoluciones",
+      "estado": 201
+    },
+    {
+      "ruta": "operaciones/32066c89-51e0-4aaf-b0ad-7ee632e6200a/recibir-devolucion",
+      "estado": 201
+    },
+    {
+      "ruta": "operaciones/disponibilidad",
+      "estado": 200
+    },
+    {
+      "ruta": "operaciones/conciliacion",
+      "estado": 200
+    },
+    {
+      "ruta": "catalogo/familias?q=QA%20publicaci%C3%B3n%20remota%201793477426531",
+      "estado": 200
+    },
+    {
+      "ruta": "catalogo/familias/5f28f467-1680-4e9a-97f7-beff247f0451",
+      "estado": 200
+    },
+    {
+      "ruta": "operaciones/disponibilidad",
+      "estado": 200
+    }
+  ]
+}

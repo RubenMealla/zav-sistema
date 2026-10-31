@@ -25,9 +25,9 @@ Problema confirmado: catálogo público fijo y ausencia de registro específico 
 | Auditoría / reversión | Snapshots, eventos, movimientos inmutables; recepción física a inspección | E2E guardas SQL y reversión | Verificado |
 | Autorización | JWT y roles backend; listado propio, no confía en usuario del cuerpo | E2E permisos y stock ajeno; Postman 401 | Verificado |
 | Regresión anterior | Clientes, pedidos, retiro individual/múltiple, distribución, entrega, lotes, traslados | Suites existentes conservadas; API antigua contra esquema nuevo | Verificado local/CI dentro de casos existentes |
-| Android QA/release | Paquetes distintos, versión 1.1.0/build10100, firma y restricción HTTP | Workflow APK, pruebas móvil y recorrido Android completo | QA final aprobada; release histórica compilada, recompilación final en seguimiento |
+| Android QA/release | Paquetes distintos, versión 1.1.0/build10100, firma y restricción HTTP | QA 40880804616 intento 2; release final 40878996274 | QA aprobada y release final compilada; hashes en informe 31/10 |
 | Respaldo y recuperación | Dump custom, hash, restauración nueva, huellas; retorno de código separado de datos | Copias 12/10 y 28/10; runbook | Restauración local comprobada; conmutación productiva no ejecutada |
-| Producción y entornos | Identidades documentadas, ensayo Neon aislado | Lecturas SQL y salud; metadatos históricos | Pendiente acceso administrativo actual Render/Vercel y despliegue |
-| Git y gestión | Commits progresivos, main intacta, PR abierto sin merge | GitHub commits/Actions/PR | Verificado; Trello sin acceso durante continuación |
+| Producción y entornos | QA Render + Vercel + base nueva Neon separada | 26 comprobaciones HTTP, login y venta web remota; informe 31/10 | QA integrado verificado. Producción pendiente de aclarar historial y seleccionar commit/configuración de Render |
+| Git y gestión | Commits progresivos, main intacta, PR abierto sin merge | GitHub commits/Actions/PR; tarjeta Trello actualizada 31/10 | Verificado; no se declara aceptación productiva |
 
 Los resultados detallados y los intentos fallidos se conservan en [Verificación](catalogo-salidas-directas.md). Procedimiento de retorno: [Recuperación](../operacion/catalogo-salidas-recuperacion.md). Prueba manual: [Guía](../operacion/catalogo-salidas-guia.md). La monografía académica final no fue editada.

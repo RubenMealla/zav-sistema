@@ -1,6 +1,6 @@
 # Prueba funcional de la ampliación
 
-La ampliación está en el [PR 74](https://github.com/RubenMealla/zav-sistema/pull/74), todavía sin integrar. Producción conserva la versión anterior. Utilizar el entorno local o el QA que se configure con la base aislada; no realizar ventas ficticias en producción.
+La ampliación está en el [PR 74](https://github.com/RubenMealla/zav-sistema/pull/74), todavía sin integrar. Producción conserva la versión anterior. QA remoto verificado el 31/10: [web Preview](https://zav-sistema-qqtlx18z8-dariomealla24-6763.vercel.app), API `https://zav-api-catalogo-qa.onrender.com`. El Preview requiere la sesión de Vercel. Cuentas e instrucciones de acceso en el [informe actualizado](../informes/catalogo-salidas-20261031.md#18-prueba-del-usuario-y-reproducción). No realizar ventas ficticias en producción.
 
 ## Administrador
 

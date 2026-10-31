@@ -1,5 +1,7 @@
 # Informe de implementación — catálogo y salidas directas
 
+**Actualización posterior:** consultar la [continuación del 31/10](catalogo-salidas-20261031.md): accesos recuperados, QA Render/Neon/Vercel integrado, venta web remota comprobada y release final compilada. Este documento conserva el estado histórico del 29/10.
+
 Fecha: 29/10/2026. Estado: implementación y QA aprobados en la rama; despliegue productivo pendiente de acceso técnico. **No constituye aceptación productiva completa.** Las limitaciones se detallan en el punto 17.
 
 ## 1. Rama y base
