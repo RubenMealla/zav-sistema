@@ -4,7 +4,8 @@ import { MIGRACIONES_ZAV } from './migraciones.mjs';
 
 const url=new URL(process.env.DATABASE_URL??'');
 const ensayo='ep-tiny-butterfly-b6lxt7mt.c-2.sa-east-1.aws.neon.tech';
-const local=['127.0.0.1','localhost'].includes(url.hostname)&&['/zav_restore_catalogo_20261012','/zav_restore_catalogo_20261028','/zav_restore_catalogo_20261029'].includes(url.pathname);
+// Admite nuevas copias fechadas del mismo clúster aislado, sin ampliar el destino a otras bases.
+const local=['127.0.0.1','localhost'].includes(url.hostname)&&url.port==='55433'&&/^\/zav_restore_catalogo_\d{8}$/.test(url.pathname);
 if(!local&&url.hostname!==ensayo.replace('.c-2','-pooler.c-2')&&url.hostname!==ensayo) throw new Error('Solo se admite la rama Neon de ensayo verificada o la restauración local.');
 if(!local)url.hostname=ensayo;
 const db=new DataSource({type:'postgres',url:url.href,migrations:MIGRACIONES_ZAV,migrationsTableName:'typeorm_migraciones',migrationsTransactionMode:'all',synchronize:false,logging:false});

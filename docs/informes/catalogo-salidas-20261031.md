@@ -2,6 +2,18 @@
 
 **QA remoto operativo; producción pendiente.** Este informe actualiza el [informe del 29/10](catalogo-salidas-20261029.md), conserva sus antecedentes y distingue las verificaciones nuevas. No acredita finalización productiva.
 
+## Actualización del 01/11/2026
+
+Las cuatro ejecuciones de Actions del commit `5524233174e0e13d499e60fca21045ca7e30d83a` terminaron en success: [API 41238029140](https://github.com/RubenMealla/zav-sistema/actions/runs/41238029140), [web 41238029056](https://github.com/RubenMealla/zav-sistema/actions/runs/41238029056), [móvil 41238029138](https://github.com/RubenMealla/zav-sistema/actions/runs/41238029138) y [Android 41238029096](https://github.com/RubenMealla/zav-sistema/actions/runs/41238029096). Android volvió a aprobar GPS denegado, respuesta incierta, reapertura/reintento, devolución y conciliación.
+
+[APK QA con destino remoto configurado](https://github.com/RubenMealla/zav-sistema/actions/runs/41238029096/artifacts/13056976203): SHA-256 comprobado tras descargar `0983317ae8efeb026336af34d02fecabf50970f6a06268b579936045a1cf1c04`. Copia local `backups/apk-qa-357/ZAV-Vendedor-1.1.0-build10100-qa.apk`. La prueba del APK cambia explícitamente al backend local de Actions; no ejecuta sus datos sintéticos contra producción ni contra la base QA remota.
+
+Respaldo actualizado: `backups/catalogo-salidas-20261101-verificado/production-previa.dump`, a las 18:57:41 UTC, SHA-256 `c12eeb1230f30463dd71bc489a231b012ebc11819ff9ec59efe29e13fae2cbdd`. Se restauró realmente en `zav_restore_catalogo_20261101`: fuente estable, diez tablas coincidentes y huellas idénticas a las del 29/10. Las cuatro migraciones pasaron sobre esta copia; datos preservados, cero negativos, cero SKU sin relación y catálogo 7/13. [Evidencia sanitizada](../evidencias/catalogo-salidas-20261101.json).
+
+El primer pg_dump falló por falta de raíces TLS locales. Se conservó la carpeta del intento y se configuró un archivo con las raíces públicas incluidas en Node; la segunda copia usó `verify-full`, sin desactivar la verificación del certificado. El script de ensayo ahora admite restauraciones fechadas `zav_restore_catalogo_YYYYMMDD` únicamente en localhost:55433, además del host Neon de ensayo ya autorizado. Tras verificar la restauración se apagó ordenadamente el clúster local iniciado para esta tarea.
+
+Producción continúa sin cambios. Render sigue apuntando a main y sus herramientas disponibles no permiten seleccionar el commit ni consultar sus variables. Se solicitó acceso por navegador conectado o CLI autenticada; no una nueva autorización de desarrollo. Sigue pendiente aclarar el cambio externo de SKU del 29/10.
+
 ## 1. Rama y base
 
 `desarrollo/ventas-directas-catalogo`. Base `e9dc1a40476a72034f38e4dabb0e178c62af0066`. Fetch del 31/10 confirma main y origin/main en ese SHA. Código desplegado en QA: `0fbbee401595c9ab816d5bc13b5c827c55e25a8a`. No se modificó main ni se fusionó el PR.

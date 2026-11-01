@@ -1,5 +1,7 @@
 # Implantación y recuperación de catálogo y salidas
 
+Actualización 01/11: nuevo respaldo `backups/catalogo-salidas-20261101-verificado/production-previa.dump`, SHA-256 `c12eeb1230f30463dd71bc489a231b012ebc11819ff9ec59efe29e13fae2cbdd`. Restaurado en `zav_restore_catalogo_20261101`; diez tablas coincidentes, fuente estable y cuatro migraciones ensayadas con datos preservados. Conexión de respaldo con TLS verify-full y raíces públicas explícitas. [Evidencia](../evidencias/catalogo-salidas-20261101.json). QA remoto ya está operativo; producción sigue pendiente de la aclaración de historial y de verificar/seleccionar configuración y commit productivos de Render. Las referencias anteriores se conservan como antecedente.
+
 Estado al 28/10/2026: código en rama de desarrollo; producción no migrada ni promovida. No ejecutar este procedimiento suponiendo que los identificadores históricos siguen vigentes.
 
 ## Identificación y controles previos
