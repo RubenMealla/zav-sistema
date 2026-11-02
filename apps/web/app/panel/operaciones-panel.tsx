@@ -98,7 +98,7 @@ export function OperacionesPanel({
     { id: string; nombre: string }[]
   >([]);
   const [vendedor, setVendedor] = useState("");
-  const [seleccion, setSeleccion] = useState<Record<string, number>>({});
+  const [seleccion, setSeleccion] = useState<Record<string, string>>({});
   const [busqueda, setBusqueda] = useState("");
   const [historial, setHistorial] = useState<Operacion[]>([]);
   const [detalle, setDetalle] = useState<Detalle | null>(null);
@@ -219,15 +219,19 @@ export function OperacionesPanel({
     }
   }
   const elegidos = disponibles.filter(
-    (p) => (seleccion[p.productoId] ?? 0) > 0,
+    (p) =>
+      /^\d+$/.test(seleccion[p.productoId] ?? "") &&
+      Number(seleccion[p.productoId]) > 0,
   );
   const errorSeleccion = (() => {
-    for (const [id, cantidad] of Object.entries(seleccion)) {
-      if (cantidad === 0) continue;
+    for (const [id, escrito] of Object.entries(seleccion)) {
+      if (escrito === "" || /^0+$/.test(escrito)) continue;
+      const cantidad = Number(escrito);
       const p = disponibles.find((p) => p.productoId === id);
       if (!p)
         return "Un producto seleccionado dejó de estar disponible. Actualiza la lista y revisa la selección.";
       if (
+        !/^\d+$/.test(escrito) ||
         !Number.isSafeInteger(cantidad) ||
         cantidad < 0 ||
         cantidad > 2147483647
@@ -263,7 +267,7 @@ export function OperacionesPanel({
         operacionClave: crypto.randomUUID(),
         detalles: elegidos.map((p) => ({
           productoId: p.productoId,
-          cantidad: seleccion[p.productoId],
+          cantidad: Number(seleccion[p.productoId]),
         })),
         ...(modo === "custodia" ? { vendedorId: vendedor } : {}),
       },
@@ -381,16 +385,17 @@ export function OperacionesPanel({
                       Cantidad
                       <input
                         aria-label={`Cantidad ${p.codigo}`}
-                        type="number"
-                        min="0"
-                        max={p.cantidadDisponible}
-                        step="1"
-                        value={seleccion[p.productoId] ?? 0}
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        data-validacion="Ingresa unidades enteras, sin signos ni decimales."
+                        placeholder="0"
+                        value={seleccion[p.productoId] ?? ""}
                         disabled={p.cantidadDisponible === 0}
                         onChange={(e) =>
                           setSeleccion((s) => ({
                             ...s,
-                            [p.productoId]: Number(e.target.value),
+                            [p.productoId]: e.target.value,
                           }))
                         }
                       />
@@ -432,7 +437,10 @@ export function OperacionesPanel({
                 <p>Selecciona cantidades para continuar.</p>
               )}
               <p>
-                {elegidos.reduce((s, p) => s + seleccion[p.productoId], 0)}{" "}
+                {elegidos.reduce(
+                  (s, p) => s + Number(seleccion[p.productoId]),
+                  0,
+                )}{" "}
                 unidades. Los lotes se asignan por vencimiento al confirmar.
               </p>
             </div>

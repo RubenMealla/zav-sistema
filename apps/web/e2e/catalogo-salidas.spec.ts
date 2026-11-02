@@ -125,6 +125,17 @@ test("venta directa web, respuesta perdida, reintento y carga a Vendedor", async
   expect(configurada.status()).toBe(200);
   await page.goto("/panel?vista=venta-directa");
   await page.getByLabel("Buscar producto o presentación").fill(codigo);
+  const cantidad = page.getByLabel(`Cantidad ${codigo}`, { exact: true });
+  await cantidad.pressSequentially("-3");
+  await expect(cantidad).toHaveValue("-3");
+  await expect(
+    page.getByRole("alert").filter({ hasText: "unidades enteras" }),
+  ).toBeVisible();
+  await cantidad.fill("1e1");
+  await expect(cantidad).toHaveValue("1e1");
+  await expect(
+    page.getByRole("button", { name: "Confirmar entrega", exact: true }),
+  ).toBeDisabled();
   await page.getByLabel(`Cantidad ${codigo}`, { exact: true }).fill("1.5");
   await expect(
     page.getByRole("alert").filter({ hasText: "unidades enteras" }),
