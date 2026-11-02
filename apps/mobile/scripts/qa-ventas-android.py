@@ -202,7 +202,8 @@ try:
     escribir('Contraseña',os.environ['QA_VENDEDOR_PASSWORD'])
     tocar('Iniciar sesión')
     tocar('Venta directa')
-    tocar('Cargas y devolución')
+    tocar('Mi mercancía')
+    tocar('Recibir cargas')
     tocar('Confirmar recepción')
     tocar('Recibí la carga')
     hasta(lambda:saldo(vt,p['id'])==5)
@@ -215,7 +216,7 @@ try:
     esperar('Pedidos')
     tocar('Venta directa')
     escribir('Cantidad '+codigo,'2')
-    tocar('Obtener GPS y revisar entrega')
+    tocar('Obtener ubicación y continuar')
     esperar('No se registró la entrega: falta autorizar la ubicación puntual.',desplazar=True)
     assert saldo(vt,p['id'])==5
     assert len(api('operaciones?tipo=SALIDA_DIRECTA',token=vt)['items'])==0
@@ -227,10 +228,9 @@ try:
     iniciar_app()
     esperar('Pedidos')
     tocar('Venta directa')
-    tocar('Nueva venta')
     escribir('Cantidad '+codigo,'2')
     adb('emu','geo','fix','-64.73','-21.53')
-    tocar('Obtener GPS y revisar entrega')
+    tocar('Obtener ubicación y continuar')
     esperar('Confirmar venta directa')
     captura('02-confirmacion-gps')
     tocar('Confirmar entrega')
@@ -244,19 +244,26 @@ try:
     tocar('Venta directa')
     esperar('Pendiente de verificar', desplazar=True)
     tocar('Verificar / reintentar')
-    esperar('Confirmado por el servidor:',exacto=False,desplazar=True)
+    esperar('Venta registrada correctamente.',exacto=False,desplazar=True)
     assert len(RespuestaIncierta.intentos_venta) == 2
     assert RespuestaIncierta.intentos_venta[0] == RespuestaIncierta.intentos_venta[1], 'El reintento debe conservar todos los datos y la clave.'
     assert saldo(vt,p['id'])==3
     tocar('Historial')
-    esperar('SALIDA_DIRECTA',exacto=False,desplazar=True)
+    esperar('Confirmada',exacto=False,desplazar=True)
+    tocar('Ver detalle')
+    esperar('COMPROBANTE')
+    esperar('2',exacto=True)
+    captura('03-detalle-modal')
+    tocar('Cerrar detalle')
     captura('03-venta-confirmada')
     historial=api('operaciones?tipo=SALIDA_DIRECTA',token=vt)['items']
     assert len(historial)==1
     venta=api('operaciones/'+historial[0]['id'],token=vt)
     assert venta['usuarioId']==vendedor['usuario']['id'] and venta['detalles'][0]['cantidad']==2
     assert abs(float(venta['latitud'])+21.53)<0.01 and venta['precisionM'] is not None
-    tocar('Cargas y devolución')
+    tocar('Volver a nueva venta')
+    tocar('Mi mercancía')
+    tocar('Devolver sobrantes')
     escribir('Devolver lote L-'+codigo,'1')
     escribir('Motivo de devolución','Sobrante-QA')
     tocar('Revisar devolución')
@@ -266,7 +273,7 @@ try:
     assert devolucion['estado']=='PENDIENTE_RECEPCION'
     api('operaciones/'+devolucion['id']+'/recibir-devolucion',{'operacionClave':str(uuid.uuid4())},at)
     assert api('operaciones/conciliacion',token=at)['conciliado']
-    tocar('Actualizar datos')
+    tocar('Actualizar')
     captura('04-devolucion-recibida')
     resultado={'apk':Path(apk[0]).name,'apkSha256':hashlib.sha256(Path(apk[0]).read_bytes()).hexdigest(),'apkRunId':os.environ.get('QA_APK_RUN_ID'),'pruebaCommit':os.environ.get('GITHUB_SHA'),'carga':carga['id'],'venta':venta['id'],'devolucion':devolucion['id'],'stockLibreFinal':saldo(vt,p['id']),'gpsPuntual':True,'permisoDenegadoSinSalida':True,'respuestaInciertaRecuperadaTrasReabrir':True,'reintentoMismaSolicitud':True,'conciliado':True,'api':'local','base':'zav_test'}
     (SALIDA/'resultado.json').write_text(json.dumps(resultado,indent=2)+'\n',encoding='utf8')

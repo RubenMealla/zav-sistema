@@ -1227,7 +1227,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
           <RefreshControl refreshing={actualizando} onRefresh={() => void refrescar()} />
         }
       >
-        {seccion === 'venta-directa' ? <VentasDirectas sesion={sesion} /> : null}
+        {seccion === 'venta-directa' ? <VentasDirectas sesion={sesion} alCambiarVista={() => scrollPrincipalRef.current?.scrollTo({y:0,animated:false})} /> : null}
         {seccion === 'pedidos' ? (
           <Pedidos
             pedidos={pedidos}

@@ -1,6 +1,10 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BotonEnviar } from "../componentes/interacciones";
+import Image from "next/image";
+import { Ventana } from "../componentes/ventana";
+import { Icono } from "../componentes/icono";
+import { FamiliaIcono } from "../componentes/familia-icono";
 import {
   manejarInvalido,
   limpiarInvalido,
@@ -33,8 +37,8 @@ type Item = {
 };
 const etiquetas = {
   familias: "Familias",
-  productos: "Productos comerciales",
-  presentaciones: "Presentaciones / SKU",
+  productos: "Productos",
+  presentaciones: "Presentaciones",
 };
 export function CatalogoPanel() {
   const [grupo, setGrupo] = useState<Grupo>("familias");
@@ -52,6 +56,40 @@ export function CatalogoPanel() {
   const [mensaje, setMensaje] = useState("");
   const [cargando, setCargando] = useState(true);
   const revision = useRef(0);
+  const [referencias, setReferencias] = useState(0);
+  useEffect(() => {
+    let vigente = true;
+    Promise.all([
+      todasLasPaginas<Item>("catalogo/familias"),
+      todasLasPaginas<Item>("catalogo/productos"),
+    ])
+      .then(([f, p]) => {
+        if (vigente) {
+          setFamilias(f);
+          setProductos(p);
+        }
+      })
+      .catch((e) => {
+        if (vigente) setError(mensajeError(e));
+      });
+    return () => {
+      vigente = false;
+    };
+  }, [referencias]);
+  function cambiarGrupo(g: Grupo, familia = "") {
+    revision.current++;
+    setCargando(true);
+    setItems([]);
+    setTotal(0);
+    setGrupo(g);
+    setFamiliaFiltro(familia);
+    setFiltro("");
+    setPublicado("");
+    setActivo("todos");
+    setPage(1);
+    setEdicion(undefined);
+    setMensaje("");
+  }
   const cargar = useCallback(async () => {
     const actual = ++revision.current;
     setCargando(true);
@@ -66,17 +104,13 @@ export function CatalogoPanel() {
         q.set("familiaId", familiaFiltro);
       if (grupo !== "presentaciones" && publicado)
         q.set("publicado", publicado);
-      const [r, f, p] = await Promise.all([
-        gestion<{ items: Item[]; total: number }>(`catalogo/${grupo}?${q}`),
-        todasLasPaginas<Item>("catalogo/familias"),
-        todasLasPaginas<Item>("catalogo/productos"),
-      ]);
+      const r = await gestion<{ items: Item[]; total: number }>(
+        `catalogo/${grupo}?${q}`,
+      );
       if (actual !== revision.current) return;
       setError("");
       setItems(r.items);
       setTotal(r.total);
-      setFamilias(f);
-      setProductos(p);
     } catch (e) {
       if (actual === revision.current) setError(mensajeError(e));
     } finally {
@@ -101,23 +135,13 @@ export function CatalogoPanel() {
             key={g}
             onClick={() => {
               if (g === grupo) return;
-              setCargando(true);
-              setItems([]);
-              setGrupo(g);
-              setPage(1);
-              setEdicion(undefined);
-              setMensaje("");
+              cambiarGrupo(g);
             }}
           >
             {etiquetas[g]}
           </button>
         ))}
       </nav>
-      <p>
-        Activo habilita operaciones. Publicado controla la landing. La
-        disponibilidad depende del inventario. Los valores provisionales
-        requieren validación comercial antes de operar.
-      </p>
       {error && (
         <p role="alert" className="gestion-error">
           {error}
@@ -128,7 +152,7 @@ export function CatalogoPanel() {
           {mensaje}
         </p>
       )}
-      <div className="gestion-barra">
+      <div className="gestion-barra gestion-filtros">
         <label className="campo">
           Buscar
           <input
@@ -203,102 +227,146 @@ export function CatalogoPanel() {
         </button>
       </div>
       {edicion !== undefined && (
-        <Editor
-          key={`${grupo}-${edicion?.id ?? "nuevo"}`}
-          grupo={grupo}
-          item={edicion}
-          familias={familias}
-          productos={productos}
+        <Ventana
+          titulo={`${edicion ? "Editar" : "Crear"} ${grupo === "familias" ? "familia" : grupo === "productos" ? "producto" : "presentación"}`}
+          etiqueta="CATÁLOGO"
+          amplia
           cerrar={() => setEdicion(undefined)}
-          guardado={() => {
-            setEdicion(undefined);
-            setMensaje("Catálogo actualizado correctamente.");
-            void cargar();
-          }}
-        />
+        >
+          <Editor
+            key={`${grupo}-${edicion?.id ?? "nuevo"}`}
+            grupo={grupo}
+            item={edicion}
+            familias={familias}
+            productos={productos}
+            cerrar={() => setEdicion(undefined)}
+            guardado={() => {
+              setEdicion(undefined);
+              setMensaje("Catálogo actualizado correctamente.");
+              setReferencias((n) => n + 1);
+              void cargar();
+            }}
+          />
+        </Ventana>
       )}
       <div className="gestion-tabla" aria-busy={cargando}>
         <table>
           <thead>
             <tr>
               <th>
-                {grupo === "presentaciones" ? "SKU / Presentación" : "Nombre"}
+                {grupo === "presentaciones"
+                  ? "Producto / Presentación"
+                  : "Nombre"}
               </th>
               <th>Relación</th>
               <th>Estado</th>
               <th>
                 {grupo === "presentaciones"
-                  ? "Precio Bs / Validación"
+                  ? "Precio Bs"
                   : "Publicación / Orden"}
               </th>
               <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
-            {items.map((i) => (
-              <tr key={i.id}>
-                <td>
-                  <strong>{i.codigo ?? i.nombre}</strong>
-                  {grupo === "presentaciones" && (
-                    <p>
-                      {i.nombreComercial ?? i.nombre} · {i.presentacion}
-                    </p>
-                  )}
-                </td>
-                <td>
-                  {grupo === "familias"
-                    ? `${productos.filter((p) => p.familiaId === i.id).length} productos`
-                    : familias.find((f) => f.id === i.familiaId)?.nombre}
-                </td>
-                <td>{i.activo ? "Activo" : "Inactivo"}</td>
-                <td>
-                  {grupo === "presentaciones" ? (
-                    <>
-                      {i.precioBob}
-                      <small className="gestion-bloque">
-                        {i.validacionComercial === "VALIDADO"
-                          ? "Validado"
-                          : i.validacionComercial === "LEGADO"
-                            ? "Legado: pendiente de revisión"
-                            : "PROVISIONAL · no habilitado"}
-                      </small>
-                    </>
-                  ) : (
-                    <>
-                      {i.publicado ? "Publicado" : "Oculto"} · {i.orden}
-                    </>
-                  )}
-                </td>
-                <td>
-                  <button
-                    className="boton boton-secundario"
-                    disabled={cargando}
-                    onClick={() => setEdicion(i)}
-                  >
-                    Editar
-                  </button>
-                  {grupo === "familias" && (
-                    <button
-                      className="boton boton-terciario"
-                      onClick={() => {
-                        setFamiliaFiltro(i.id);
-                        setGrupo("productos");
-                        setPage(1);
-                      }}
-                    >
-                      Ver productos
-                    </button>
-                  )}
+            {cargando ? (
+              <tr>
+                <td colSpan={5}>
+                  <div className="gestion-cargando" role="status">
+                    Cargando {etiquetas[grupo].toLowerCase()}…
+                  </div>
                 </td>
               </tr>
-            ))}
+            ) : (
+              items.map((i) => (
+                <tr key={i.id}>
+                  <td>
+                    <div className="catalogo-celda">
+                      <Miniatura
+                        familia={grupo === "familias"}
+                        item={
+                          grupo === "presentaciones"
+                            ? productos.find(
+                                (p) => p.id === i.productoComercialId,
+                              )
+                            : i
+                        }
+                      />
+                      <div>
+                        <strong>{i.nombreComercial ?? i.nombre}</strong>
+                        {grupo === "presentaciones" && (
+                          <p>
+                            {i.presentacion}
+                            <small className="gestion-bloque">{i.codigo}</small>
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    {grupo === "familias"
+                      ? `${productos.filter((p) => p.familiaId === i.id).length} productos`
+                      : familias.find(
+                          (f) =>
+                            f.id ===
+                            (i.familiaId ??
+                              productos.find(
+                                (p) => p.id === i.productoComercialId,
+                              )?.familiaId),
+                        )?.nombre}
+                  </td>
+                  <td>
+                    <span
+                      className={`gestion-estado ${i.activo ? "estado-verde" : "estado-gris"}`}
+                    >
+                      {i.activo ? "Activo" : "Inactivo"}
+                    </span>
+                  </td>
+                  <td>
+                    {grupo === "presentaciones" ? (
+                      <>
+                        {i.precioBob}
+                        <small className="gestion-bloque">
+                          {i.validacionComercial === "VALIDADO"
+                            ? "Listo para venta"
+                            : i.validacionComercial === "LEGADO"
+                              ? "Pendiente de revisión"
+                              : "Precio por confirmar"}
+                        </small>
+                      </>
+                    ) : (
+                      <>
+                        {i.publicado ? "Visible en web" : "Oculto"} · {i.orden}
+                      </>
+                    )}
+                  </td>
+                  <td>
+                    <button
+                      className="boton boton-secundario"
+                      disabled={cargando}
+                      onClick={() => setEdicion(i)}
+                    >
+                      Editar
+                    </button>
+                    {grupo === "familias" && (
+                      <button
+                        className="boton boton-terciario"
+                        onClick={() => {
+                          cambiarGrupo("productos", i.id);
+                        }}
+                      >
+                        Ver productos
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
-      {cargando ? (
-        <p role="status">Cargando catálogo…</p>
-      ) : (
-        items.length === 0 && <p>No hay resultados para estos filtros.</p>
+      {!cargando && items.length === 0 && (
+        <p>No hay resultados para estos filtros.</p>
       )}
       <div className="gestion-barra">
         <button
@@ -320,6 +388,30 @@ export function CatalogoPanel() {
         </button>
       </div>
     </section>
+  );
+}
+
+function Miniatura({ item, familia }: { item?: Item; familia?: boolean }) {
+  const src = item?.imagenId
+    ? `/api/gestion/catalogo/imagenes/${item.imagenId}`
+    : item?.imagenOriginal;
+  return (
+    <span className="catalogo-miniatura">
+      {familia && !item?.imagenId ? (
+        <FamiliaIcono nombre={item?.nombre ?? ""} />
+      ) : src ? (
+        <Image
+          src={src}
+          alt=""
+          width={52}
+          height={52}
+          sizes="52px"
+          unoptimized={src.startsWith("/api/")}
+        />
+      ) : (
+        <Icono nombre="producto" tamano={24} />
+      )}
+    </span>
   );
 }
 
@@ -388,17 +480,9 @@ function Editor({
   }
   return (
     <section
-      className="gestion-editor"
+      className="catalogo-editor"
       aria-label={item ? "Editar catálogo" : "Crear catálogo"}
     >
-      <div className="gestion-barra">
-        <h2>
-          {item ? "Editar" : "Crear"} {etiquetas[grupo].toLowerCase()}
-        </h2>
-        <button className="boton boton-terciario" onClick={cerrar}>
-          Cerrar editor
-        </button>
-      </div>
       <form
         action={guardar}
         className="formulario gestion-formulario"
@@ -522,7 +606,7 @@ function Editor({
               />
             </label>
             <label className="campo">
-              Validación comercial
+              Precio y presentación
               <select
                 name="validacionComercial"
                 defaultValue={item?.validacionComercial ?? "PROVISIONAL"}
@@ -533,17 +617,17 @@ function Editor({
                   </option>
                 )}
                 <option value="PROVISIONAL">
-                  Provisional · no usar en operaciones
+                  Por confirmar · aún no se puede vender
                 </option>
                 <option value="VALIDADO">
-                  Validado comercialmente por el Administrador
+                  Confirmados · habilitar para venta
                 </option>
               </select>
             </label>
-            <p className="gestion-ancho">
-              Si existe historial, los cambios de identidad requieren otro SKU.
-              Cambiar un precio sin validarlo lo deja provisional.
-            </p>
+            <small className="gestion-ancho">
+              Confirma el precio y la presentación antes de habilitarlos para
+              venta.
+            </small>
           </>
         ) : (
           <>
@@ -628,8 +712,12 @@ function Editor({
               />
             </label>
             {(imagenId || item?.imagenOriginal) && (
-              <img
+              <Image
                 className="gestion-foto"
+                width={160}
+                height={110}
+                sizes="160px"
+                unoptimized={!!imagenId}
                 src={
                   imagenId
                     ? `/api/gestion/catalogo/imagenes/${imagenId}`
@@ -645,7 +733,7 @@ function Editor({
                 type="checkbox"
                 defaultChecked={item?.publicado ?? false}
               />{" "}
-              Publicado en la landing
+              Mostrar en la web
             </label>
           </>
         )}
@@ -655,7 +743,7 @@ function Editor({
             type="checkbox"
             defaultChecked={item?.activo ?? true}
           />{" "}
-          Activo para operaciones
+          Activo
         </label>
         {error && (
           <p className="gestion-error gestion-ancho" role="alert">
@@ -663,6 +751,13 @@ function Editor({
           </p>
         )}
         <div className="gestion-ancho">
+          <button
+            type="button"
+            className="boton boton-terciario"
+            onClick={cerrar}
+          >
+            Cancelar
+          </button>
           <BotonEnviar
             disabled={subiendo}
             confirmacion={{

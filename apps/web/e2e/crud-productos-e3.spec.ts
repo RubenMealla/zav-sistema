@@ -32,7 +32,7 @@ test('edita y desactiva un producto desde la web', async ({ page }) => {
   await page.screenshot({path:path.join(dir,'WEB-17-producto-editado.png'),fullPage:true});
   await fila.getByRole('button',{name:'Editar',exact:true}).click();
   editor=page.getByRole('region',{name:'Editar catálogo'});
-  await editor.getByLabel('Activo para operaciones').uncheck();
+  await editor.getByLabel('Activo').uncheck();
   await editor.getByRole('button',{name:'Guardar cambios',exact:true}).click();
   const confirmacion=page.getByRole('alertdialog',{name:'Guardar catálogo'});
   await expect(confirmacion).toBeVisible();

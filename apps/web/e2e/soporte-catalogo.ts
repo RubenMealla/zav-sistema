@@ -2,7 +2,7 @@ import { expect, type Page } from "@playwright/test";
 
 export async function guardarCatalogo(page: Page) {
   await page
-    .locator(".gestion-editor")
+    .locator(".catalogo-editor")
     .getByRole("button", { name: "Guardar cambios", exact: true })
     .click();
   const confirmacion = page.getByRole("alertdialog", {
@@ -30,7 +30,7 @@ export async function crearPresentacionWeb(
 ) {
   await page.goto("/panel?vista=catalogo");
   await page
-    .getByRole("button", { name: "Productos comerciales", exact: true })
+    .getByRole("button", { name: "Productos", exact: true })
     .click();
   await page
     .getByRole("button", { name: "Crear producto", exact: true })
@@ -42,7 +42,7 @@ export async function crearPresentacionWeb(
   await editor.getByLabel("Nombre", { exact: true }).fill(nombre);
   await guardarCatalogo(page);
   await page
-    .getByRole("button", { name: "Presentaciones / SKU", exact: true })
+    .getByRole("button", { name: "Presentaciones", exact: true })
     .click();
   await page
     .getByRole("button", { name: "Crear presentación", exact: true })
@@ -64,7 +64,7 @@ export async function crearPresentacionWeb(
   await editor.getByLabel("Peso (gramos)", { exact: true }).fill(peso);
   await editor.getByLabel("Precio (Bs)", { exact: true }).fill(precio);
   await editor
-    .getByRole("combobox", { name: "Validación comercial", exact: true })
+    .getByRole("combobox", { name: "Precio y presentación", exact: true })
     .selectOption("VALIDADO");
   await guardarCatalogo(page);
   await page.getByLabel("Buscar", { exact: true }).fill(codigo);

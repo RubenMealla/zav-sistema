@@ -85,7 +85,7 @@
 }
 
 
-/* Fotografías originales ZAV: el archivo PNG se sirve sin conversión; el ajuste es únicamente visual. */
+/* Se conservan los originales; Next sirve tamaños adecuados al dispositivo. */
 .foto-original{position:absolute;inset:0;width:100%;height:100%;display:block;object-fit:contain;object-position:center;background:#ece7dd}
 .foto-original-destacada{padding:clamp(18px,3vw,38px)}
 .foto-original-producto{padding:16px;transition:transform .2s ease}
@@ -93,3 +93,13 @@
 
 /* Evita el desbordamiento del pie cuando se muestra la versión en móvil. */
 .publico-footer-legal{flex-wrap:wrap}
+.familia-dibujo { display: block; width: 50px; height: 38px; color: inherit; }
+.familia-dibujo svg { width: 100%; height: 100%; fill: currentColor; }
+.familia-dibujo .familia-detalle { fill: #fff8f4; }
+.familia-dibujo .familia-detalle-trazo { fill: none; stroke: #fff8f4; stroke-width: 2.4; stroke-linecap: round; }
+.publico-zav-grid { align-items: center; gap: clamp(28px,5vw,72px); }
+.publico-zav-escena { position: relative; }
+.publico-zav-escena > svg { display: block; width: 100%; height: auto; }
+.publico-zav-lugar { position: absolute; bottom: 18px; left: 24px; padding: 8px 12px; color: #fff; background: #20201e; font-size: 11px; letter-spacing: .15em; }
+.publico-zav-copy h2 { font-family: Georgia,serif; font-size: clamp(36px,4vw,56px); line-height: 1.08; font-weight: 400; letter-spacing: -.025em; }
+.publico-zav-firma { display: flex; flex-wrap: wrap; gap: 12px 24px; border-top: 1px solid #d4cfc4; margin-top: 28px; padding-top: 18px; font-size: 13px; color: var(--gris-600); }

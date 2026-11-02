@@ -43,7 +43,7 @@ test("publicación dinámica, alta relacional y ocultación sin reconstruir land
   await editor
     .getByLabel("Descripción")
     .fill("Familia sintética de ensayo web");
-  await editor.getByLabel("Publicado en la landing").check();
+  await editor.getByLabel("Mostrar en la web").check();
   await guardarCatalogo(page);
   await page.goto("/");
   await expect(
@@ -57,7 +57,7 @@ test("publicación dinámica, alta relacional y ocultación sin reconstruir land
     .getByRole("button", { name: "Editar", exact: true })
     .click();
   editor = page.getByRole("region", { name: "Editar catálogo" });
-  await editor.getByLabel("Publicado en la landing").uncheck();
+  await editor.getByLabel("Mostrar en la web").uncheck();
   await guardarCatalogo(page);
   await page.goto("/");
   await expect(
@@ -124,6 +124,12 @@ test("venta directa web, respuesta perdida, reintento y carga a Vendedor", async
   );
   expect(configurada.status()).toBe(200);
   await page.goto("/panel?vista=venta-directa");
+  await expect(
+    page.getByRole("heading", { name: "Historial", exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("region", { name: "Detalle de operación" }),
+  ).toHaveCount(0);
   await page.getByLabel("Buscar producto o presentación").fill(codigo);
   const cantidad = page.getByLabel(`Cantidad ${codigo}`, { exact: true });
   await cantidad.pressSequentially("-3");
@@ -182,13 +188,34 @@ test("venta directa web, respuesta perdida, reintento y carga a Vendedor", async
     page.getByRole("heading", { name: "Operación pendiente de verificar" }),
   ).toBeVisible();
   await expect(
-    page.getByRole("status").filter({ hasText: "Confirmado por la API" }),
+    page
+      .getByRole("status")
+      .filter({ hasText: "Venta registrada correctamente." }),
   ).toHaveCount(0);
   await page.reload();
   await page.getByRole("button", { name: "Verificar / reintentar" }).click();
   await expect(
-    page.getByRole("status").filter({ hasText: "Confirmado por la API" }),
+    page
+      .getByRole("status")
+      .filter({ hasText: "Venta registrada correctamente." }),
   ).toBeVisible();
+  await page.getByRole("button", { name: "Historial", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Historial", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByLabel("Buscar producto o presentación")).toHaveCount(
+    0,
+  );
+  await page
+    .getByRole("button", { name: "Ver detalle", exact: true })
+    .first()
+    .click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Detalle de operación" }),
+  ).toContainText(codigo);
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   expect(llamadas).toBe(2);
   const saldos = await request.get(`${API}/api/v1/operaciones/disponibilidad`, {
     headers,
@@ -216,11 +243,17 @@ test("venta directa web, respuesta perdida, reintento y carga a Vendedor", async
     .getByRole("button", { name: "Confirmar", exact: true })
     .click();
   await expect(
-    page.getByRole("status").filter({ hasText: "Confirmado por la API" }),
+    page.getByRole("status").filter({ hasText: "Carga registrada." }),
   ).toBeVisible();
+  await page
+    .getByRole("status")
+    .getByRole("button", { name: "Ver detalle" })
+    .click();
+  await expect(page.getByRole("dialog")).toBeVisible();
   await expect(
     page.getByRole("region", { name: "Detalle de operación" }),
-  ).toContainText("PENDIENTE_RECEPCION");
+  ).toContainText("Por recibir");
+  await page.getByRole("button", { name: "Cerrar ventana" }).click();
   const cargas = await request.get(`${API}/api/v1/operaciones?tipo=CARGA`, {
     headers: { Authorization: `Bearer ${vendedor.accessToken}` },
   });
@@ -233,11 +266,61 @@ test("venta directa web, respuesta perdida, reintento y carga a Vendedor", async
     },
   );
   expect(recibida.status()).toBe(201);
+  await page
+    .getByRole("button", { name: "Mercancía por vendedor", exact: true })
+    .click();
   await page.getByRole("button", { name: "Actualizar", exact: true }).click();
   await page.screenshot({
     path: "test-results/custodia-vendedor.png",
     fullPage: true,
   });
+});
+
+test("el catálogo cambia de tabla sin mostrar filas anteriores y edita en modal", async ({
+  page,
+  request,
+}) => {
+  const sesion = await login(request);
+  await entrar(page, sesion.accessToken);
+  await page.goto("/panel?vista=catalogo");
+  const familia = page.getByRole("row").filter({ hasText: "Chorizos" });
+  await expect(familia).toBeVisible();
+  const llamada = page.waitForRequest(
+    (r) =>
+      r.url().includes("/api/gestion/catalogo/productos?") &&
+      r.url().includes("limit=20"),
+  );
+  let continuar!: () => void;
+  const espera = new Promise<void>((resolve) => {
+    continuar = resolve;
+  });
+  await page.route("**/api/gestion/catalogo/productos?*", async (route) => {
+    if (route.request().url().includes("limit=20")) await espera;
+    await route.continue();
+  });
+  await familia.getByRole("button", { name: "Ver productos" }).click();
+  await llamada;
+  await expect(page.getByRole("button", { name: "Ver productos" })).toHaveCount(
+    0,
+  );
+  await expect(
+    page.getByRole("status").filter({ hasText: "Cargando productos" }),
+  ).toBeVisible();
+  continuar();
+  const producto = page
+    .getByRole("row")
+    .filter({ hasText: "Chorizo Parrillero" });
+  await expect(producto).toBeVisible();
+  await expect(producto.locator("img")).toBeVisible();
+  await producto.getByRole("button", { name: "Editar", exact: true }).click();
+  await expect(
+    page.getByRole("dialog", { name: "Editar producto" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Cerrar ventana" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(
+    producto.getByRole("button", { name: "Editar", exact: true }),
+  ).toBeFocused();
 });
 test("proxy de gestión rechaza escritura desde otro origen", async ({
   request,
@@ -287,9 +370,9 @@ test("formularios rechazan nombres, códigos y precios inválidos y reinician se
       .locator("form")
       .evaluate((e) => (e as HTMLFormElement).checkValidity()),
   ).toBe(true);
-  await editor.getByRole("button", { name: "Cerrar editor" }).click();
+  await editor.getByRole("button", { name: "Cancelar" }).click();
   await page
-    .getByRole("button", { name: "Presentaciones / SKU", exact: true })
+    .getByRole("button", { name: "Presentaciones", exact: true })
     .click();
   await page
     .getByRole("button", { name: "Crear presentación", exact: true })

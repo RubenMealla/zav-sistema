@@ -1,7 +1,14 @@
+import {
+  DetalleOperacion,
+  EstadoOperacion,
+  nombreOperacion,
+} from "./detalle-operacion";
 import * as Location from "expo-location";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  BackHandler,
+  StyleSheet,
   Alert,
   Pressable,
   Text,
@@ -32,12 +39,26 @@ import { uuidV4 } from "@/lib/uuid";
 import { errorCantidad, validarCantidades } from "@/lib/cantidades";
 import { styles as s } from "@/screens/vendedor-estilos";
 
-export function VentasDirectas({ sesion }: { sesion: Sesion }) {
+export function VentasDirectas({
+  sesion,
+  alCambiarVista,
+}: {
+  sesion: Sesion;
+  alCambiarVista?: () => void;
+}) {
   const token = sesion.accessToken,
     usuario = sesion.usuario.id;
-  const [vista, setVista] = useState<"venta" | "custodia" | "historial">(
-    "venta",
-  );
+  const [vista, setVista] = useState<
+    "venta" | "custodia" | "cargas" | "devolucion" | "historial"
+  >("venta");
+  const [tipoHistorial, setTipoHistorial] =
+    useState<OperacionResumen["tipo"]>("SALIDA_DIRECTA");
+  const [detalleAbierto, setDetalleAbierto] = useState(false);
+  const [cargandoDetalle, setCargandoDetalle] = useState(false);
+  const [errorDetalle, setErrorDetalle] = useState("");
+  const [comprobante, setComprobante] = useState<OperacionDetalle | null>(null);
+  const revisionDetalle = useRef(0);
+  const revisionLista = useRef(0);
   const [stock, setStock] = useState<StockLibre[]>([]);
   const [custodia, setCustodia] = useState<CustodiaLibre[]>([]);
   const [historial, setHistorial] = useState<OperacionResumen[]>([]);
@@ -56,31 +77,92 @@ export function VentasDirectas({ sesion }: { sesion: Sesion }) {
   const [total, setTotal] = useState(0);
   const [custodiaPage, setCustodiaPage] = useState(1);
   const bloqueo = useRef(false);
-  const cargar = useCallback(
-    () =>
-      Promise.all([
+  const cargar = useCallback(() => {
+    const revision = ++revisionLista.current;
+    return Promise.all([
         leerOperacionPendiente(usuario),
-        consultarStockLibre(token),
-        consultarCustodia(token, custodiaPage),
-        consultarOperaciones(token, page),
-      ])
-        .then(([p, d, c, h]) => {
-          setPendiente(p);
-          setStock(d.items);
-          setCustodia(c.items);
-          setHistorial(h.items);
-          setTotal(h.total);
-          setListo(true);
-        })
-        .catch((e) =>
-          setError(e instanceof Error ? e.message : "No se pudo actualizar."),
-        )
-        .finally(() => setCargando(false)),
-    [usuario, token, page, custodiaPage],
-  );
+        vista === "venta" ? consultarStockLibre(token) : null,
+        vista === "custodia" || vista === "devolucion"
+          ? consultarCustodia(token, custodiaPage)
+          : null,
+        vista === "historial"
+          ? consultarOperaciones(token, page, tipoHistorial)
+          : vista === "cargas"
+            ? consultarOperaciones(token, page, "CARGA", "PENDIENTE_RECEPCION")
+            : null,
+      ]).then(([p, d, c, h]) => {
+      if (revision !== revisionLista.current) return;
+      setPendiente(p);
+      if (d) setStock(d.items);
+      if (c) setCustodia(c.items);
+      if (h) {
+        setHistorial(h.items);
+        setTotal(h.total);
+      }
+      setListo(true);
+      setError("");
+    }).catch((e) => {
+      if (revision === revisionLista.current)
+        setError(e instanceof Error ? e.message : "No se pudo actualizar.");
+    }).finally(() => {
+      if (revision === revisionLista.current) setCargando(false);
+    });
+  }, [usuario, token, vista, page, custodiaPage, tipoHistorial]);
   useEffect(() => {
     void cargar();
+    return () => {
+      revisionLista.current++;
+    };
   }, [cargar]);
+  function cambiarVista(v: typeof vista) {
+    if (v === vista) {
+      setCargando(true);
+      void cargar();
+      return;
+    }
+    revisionLista.current++;
+    setVista(v);
+    setPage(1);
+    setCustodiaPage(1);
+    setCargando(true);
+    setListo(false);
+    setError("");
+    setMensaje("");
+    alCambiarVista?.();
+  }
+  useEffect(() => {
+    if (vista === "venta") return;
+    const listener = BackHandler.addEventListener("hardwareBackPress", () => {
+      setVista(
+        vista === "cargas" || vista === "devolucion" ? "custodia" : "venta",
+      );
+      alCambiarVista?.();
+      return true;
+    });
+    return () => listener.remove();
+  }, [vista, alCambiarVista]);
+  function cerrarDetalle() {
+    revisionDetalle.current++;
+    setDetalleAbierto(false);
+  }
+  async function abrirDetalle(id: string) {
+    const revision = ++revisionDetalle.current;
+    setDetalle(null);
+    setErrorDetalle("");
+    setDetalleAbierto(true);
+    setCargandoDetalle(true);
+    try {
+      const d = await consultarOperacion(token, id);
+      if (revision === revisionDetalle.current) setDetalle(d);
+    } catch (e) {
+      if (revision === revisionDetalle.current)
+        setErrorDetalle(
+          e instanceof Error ? e.message : "No se pudo cargar el detalle.",
+        );
+    } finally {
+      if (revision === revisionDetalle.current) setCargandoDetalle(false);
+    }
+  }
   async function enviar(p: OperacionPendiente) {
     if (bloqueo.current) return;
     bloqueo.current = true;
@@ -89,12 +171,18 @@ export function VentasDirectas({ sesion }: { sesion: Sesion }) {
     setMensaje("");
     try {
       const resultado = await ejecutarOperacionPersistida(usuario, token, p);
-      setDetalle(resultado);
+      setComprobante(resultado);
       setPendiente(null);
       setCantidades({});
       setDevoluciones({});
       setMotivo("");
-      setMensaje(`Confirmado por el servidor: ${resultado.id}`);
+      setMensaje(
+        resultado.tipo === "SALIDA_DIRECTA"
+          ? "Venta registrada correctamente."
+          : resultado.tipo === "CARGA"
+            ? "Carga recibida. Ya puedes vender estos productos."
+            : "Devolución enviada al despacho.",
+      );
       await cargar();
     } catch (e) {
       setError(e instanceof Error ? e.message : "No se recibió confirmación.");
@@ -120,7 +208,7 @@ export function VentasDirectas({ sesion }: { sesion: Sesion }) {
       cantidades,
       stock.map((p) => ({
         id: p.productoId,
-        nombre: p.codigo,
+        nombre: p.nombre,
         disponible: p.cantidadDisponible,
       })),
     );
@@ -162,7 +250,7 @@ export function VentasDirectas({ sesion }: { sesion: Sesion }) {
       if (
         await confirmar(
           "Confirmar venta directa",
-          `${resumen}\n\nConsumidor final\nGPS: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}\nPrecisión: ±${Math.round(accuracy)} m\nCaptura puntual.`,
+          `${resumen}\n\nConsumidor final\nUbicación: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}\nPrecisión: ±${Math.round(accuracy)} m`,
           "Confirmar entrega",
         )
       ) {
@@ -269,79 +357,101 @@ export function VentasDirectas({ sesion }: { sesion: Sesion }) {
     }
   }
   const deshabilitado = ocupado || !!pendiente || !listo;
+  const titulo = {
+    venta: "Venta directa",
+    custodia: "Mi mercancía",
+    cargas: "Recibir cargas",
+    devolucion: "Devolver sobrantes",
+    historial: "Historial",
+  }[vista];
+  const stockVisible = stock.filter((p) =>
+    `${p.nombre} ${p.codigo} ${p.presentacion}`
+      .toLocaleLowerCase()
+      .includes(busqueda.toLocaleLowerCase()),
+  );
   return (
     <View style={s.bloque}>
-      <Text style={s.titulo}>Venta directa</Text>
-      <Text style={s.descripcion}>
-        Mercancía libre bajo tu custodia. Los productos de pedidos permanecen
-        reservados.
-      </Text>
-      <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
-        {(["venta", "custodia", "historial"] as const).map((v) => (
-          <Boton
-            key={v}
-            titulo={
-              v === "venta"
-                ? "Nueva venta"
-                : v === "custodia"
-                  ? "Cargas y devolución"
-                  : "Historial"
-            }
-            onPress={() => {
-              setVista(v);
-              setError("");
-            }}
-            activo={vista === v}
-          />
-        ))}
+      <View style={ui.cabecera}>
+        <View style={{ flex: 1, gap: 3 }}>
+          <Text style={ui.etiqueta}>VENTAS Y MERCANCÍA</Text>
+          <Text style={s.titulo}>{titulo}</Text>
+        </View>
+        <Boton
+          titulo="Actualizar"
+          disabled={ocupado || cargando}
+          onPress={() => {
+            setCargando(true);
+            setListo(false);
+            void cargar();
+          }}
+        />
       </View>
-      {error ? (
-        <Text
-          accessibilityRole="alert"
-          style={{ color: "#a1322c", backgroundColor: "#fcefeb", padding: 12 }}
-        >
-          {error}
-        </Text>
-      ) : null}
-      {mensaje ? (
-        <Text
-          accessibilityLiveRegion="polite"
-          style={{ color: "#286344", padding: 12 }}
-        >
-          {mensaje}
-        </Text>
-      ) : null}
-      {cargando || ocupado ? (
-        <ActivityIndicator
-          accessibilityLabel={
-            ocupado ? "Procesando operación" : "Cargando inventario"
+      {vista === "venta" ? (
+        <View style={ui.fila}>
+          <Boton
+            titulo="Mi mercancía"
+            onPress={() => cambiarVista("custodia")}
+          />
+          <Boton titulo="Historial" onPress={() => cambiarVista("historial")} />
+        </View>
+      ) : (
+        <Boton
+          titulo={
+            vista === "cargas" || vista === "devolucion"
+              ? "Volver a mi mercancía"
+              : "Volver a nueva venta"
+          }
+          onPress={() =>
+            cambiarVista(
+              vista === "cargas" || vista === "devolucion"
+                ? "custodia"
+                : "venta",
+            )
           }
         />
-      ) : null}
-      {pendiente ? (
-        <View style={s.tarjeta}>
-          <Text style={s.titulo}>Pendiente de verificar</Text>
+      )}
+      {!!error && (
+        <Text accessibilityRole="alert" style={ui.error}>
+          {error}
+        </Text>
+      )}
+      {!!mensaje && (
+        <View style={ui.exito}>
+          <Text accessibilityLiveRegion="polite" style={ui.exitoTexto}>
+            {mensaje}
+          </Text>
+          {comprobante && (
+            <Boton
+              titulo="Ver detalle"
+              onPress={() => void abrirDetalle(comprobante.id)}
+            />
+          )}
+        </View>
+      )}
+      {pendiente && (
+        <View style={[s.tarjeta, ui.pendiente]}>
+          <Text style={ui.nombre}>Pendiente de verificar</Text>
           <Text>{pendiente.resumen}</Text>
           <Text style={s.descripcion}>
-            La API todavía no confirmó el resultado. Reintentar utiliza la misma
-            clave y recupera la operación si ya se registró.
+            Comprueba el resultado antes de hacer otra operación.
           </Text>
           <Boton
             titulo="Verificar / reintentar"
+            activo
             disabled={ocupado}
             onPress={() => void enviar(pendiente)}
           />
         </View>
-      ) : null}
-      <Boton
-        titulo="Actualizar datos"
-        disabled={ocupado}
-        onPress={() => {
-          setCargando(true);
-          void cargar();
-        }}
-      />
-      {vista === "venta" ? (
+      )}
+      {(cargando || ocupado) && (
+        <ActivityIndicator
+          color="#b83b17"
+          accessibilityLabel={
+            ocupado ? "Procesando operación" : "Cargando datos"
+          }
+        />
+      )}
+      {vista === "venta" && (
         <View style={s.bloque}>
           <TextInput
             accessibilityLabel="Buscar producto"
@@ -350,253 +460,409 @@ export function VentasDirectas({ sesion }: { sesion: Sesion }) {
             value={busqueda}
             onChangeText={setBusqueda}
           />
-          {stock
-            .filter((p) =>
-              `${p.nombre} ${p.codigo} ${p.presentacion}`
-                .toLocaleLowerCase()
-                .includes(busqueda.toLocaleLowerCase()),
-            )
-            .map((p) => (
-              <View style={s.tarjeta} key={p.productoId}>
-                <Text style={{ fontSize: 16, fontWeight: "700" }}>
-                  {p.nombre}
-                </Text>
-                <Text>
-                  {p.codigo} · {p.presentacion}
-                </Text>
-                <Text>{p.cantidadDisponible} unidades libres</Text>
-                <TextInput
-                  style={s.input}
-                  accessibilityLabel={`Cantidad ${p.codigo}`}
-                  placeholder="Cantidad"
-                  keyboardType="number-pad"
-                  value={cantidades[p.productoId] ?? ""}
-                  editable={!deshabilitado}
-                  onChangeText={(v) =>
-                    setCantidades((c) => ({
-                      ...c,
-                      [p.productoId]: v,
-                    }))
-                  }
-                />
-                {errorCantidad(
+          {!cargando &&
+            stockVisible.map((p) => (
+              <View
+                style={[
+                  s.tarjeta,
+                  Number(cantidades[p.productoId]) > 0 && ui.seleccionada,
+                ]}
+                key={p.productoId}
+              >
+                <View style={ui.fila}>
+                  <View style={{ flex: 1, gap: 4 }}>
+                    <Text style={ui.nombre}>{p.nombre}</Text>
+                    <Text style={s.descripcion}>{p.presentacion}</Text>
+                    <Text style={ui.disponible}>
+                      {p.cantidadDisponible} disponibles
+                    </Text>
+                  </View>
+                  <View style={ui.cantidad}>
+                    <Text style={ui.label}>Cantidad</Text>
+                    <TextInput
+                      style={[s.input, ui.numero]}
+                      accessibilityLabel={`Cantidad ${p.codigo}`}
+                      placeholder="0"
+                      keyboardType="number-pad"
+                      value={cantidades[p.productoId] ?? ""}
+                      editable={!deshabilitado}
+                      onChangeText={(v) =>
+                        setCantidades((c) => ({ ...c, [p.productoId]: v }))
+                      }
+                    />
+                  </View>
+                </View>
+                {!!errorCantidad(
                   cantidades[p.productoId] ?? "",
                   p.cantidadDisponible,
-                ) ? (
-                  <Text accessibilityRole="alert">
+                ) && (
+                  <Text accessibilityRole="alert" style={ui.errorTexto}>
                     {errorCantidad(
                       cantidades[p.productoId] ?? "",
                       p.cantidadDisponible,
                     )}
                   </Text>
-                ) : null}
+                )}
               </View>
             ))}
-          {!stock.length && !cargando ? (
-            <Text>
-              No tienes stock libre vendible. Revisa las cargas pendientes de
-              recepción.
-            </Text>
-          ) : null}
-          <View style={s.tarjeta}>
-            <Text style={{ fontWeight: "700" }}>
-              Resumen · Consumidor final
-            </Text>
-            {seleccion.map((p) => (
-              <Text key={p.productoId}>
-                {cantidades[p.productoId]} × {p.nombre} · {p.presentacion}
+          {!cargando && !stockVisible.length && (
+            <View style={s.vacio}>
+              <Text style={s.textoSecundario}>
+                {stock.length
+                  ? "No encontramos ese producto."
+                  : "Todavía no tienes productos para vender."}
               </Text>
-            ))}
-            <Boton
-              titulo="Limpiar selección"
-              disabled={deshabilitado}
-              onPress={() => setCantidades({})}
-            />
-            <Boton
-              titulo="Obtener GPS y revisar entrega"
-              disabled={deshabilitado || !seleccion.length}
-              onPress={() => void prepararVenta()}
-            />
-          </View>
-        </View>
-      ) : null}
-      {vista === "custodia" ? (
-        <View style={s.bloque}>
-          <Text style={{ fontSize: 18, fontWeight: "700" }}>Mi mercancía</Text>
-          {custodia.map((c) => (
-            <View style={s.tarjeta} key={`${c.loteId}-${c.finalidad}`}>
-              <Text style={{ fontWeight: "700" }}>
-                {c.nombre} · {c.presentacion}
-              </Text>
-              <Text>
-                Lote {c.loteCodigo} · vence {c.venceEl.slice(0, 10)}
-              </Text>
-              <Text>
-                {c.finalidad} · {c.cantidad} físicas · {c.libre} libres ·{" "}
-                {c.pendiente} pendientes
-              </Text>
-              <Text>
-                {c.condicion}
-                {!c.elegible ? " · No vendible" : ""}
-              </Text>
-              {c.finalidad === "LIBRE" && c.libre > 0 ? (
-                <TextInput
-                  style={s.input}
-                  accessibilityLabel={`Devolver lote ${c.loteCodigo}`}
-                  keyboardType="number-pad"
-                  placeholder="Cantidad a devolver"
-                  editable={!deshabilitado}
-                  value={devoluciones[c.loteId] ?? ""}
-                  onChangeText={(v) =>
-                    setDevoluciones((d) => ({
-                      ...d,
-                      [c.loteId]: v,
-                    }))
-                  }
-                />
-              ) : null}
-              {c.finalidad === "LIBRE" &&
-              errorCantidad(devoluciones[c.loteId] ?? "", c.libre) ? (
-                <Text accessibilityRole="alert">
-                  {errorCantidad(devoluciones[c.loteId] ?? "", c.libre)}
-                </Text>
-              ) : null}
-            </View>
-          ))}
-          <View style={{ flexDirection: "row", gap: 8 }}>
-            <Boton
-              titulo="Anterior"
-              disabled={custodiaPage === 1 || ocupado || devolucionEnEdicion}
-              onPress={() => setCustodiaPage((p) => p - 1)}
-            />
-            <Text>Página {custodiaPage}</Text>
-            <Boton
-              titulo="Más lotes"
-              disabled={custodia.length < 50 || ocupado || devolucionEnEdicion}
-              onPress={() => setCustodiaPage((p) => p + 1)}
-            />
-          </View>
-          {devolucionEnEdicion ? (
-            <Text>
-              Confirma o limpia la selección antes de cambiar de página.
-            </Text>
-          ) : null}
-          <Boton
-            titulo="Limpiar devolución"
-            disabled={deshabilitado}
-            onPress={() => setDevoluciones({})}
-          />
-          <TextInput
-            style={[s.input, s.inputMultiline]}
-            accessibilityLabel="Motivo de devolución"
-            placeholder="Motivo y condición observada"
-            multiline
-            maxLength={300}
-            editable={!deshabilitado}
-            value={motivo}
-            onChangeText={setMotivo}
-          />
-          <Boton
-            titulo="Revisar devolución"
-            disabled={deshabilitado}
-            onPress={prepararDevolucion}
-          />
-          <Text style={s.descripcion}>
-            Las devoluciones se reciben en inspección. No vuelven
-            automáticamente a venta.
-          </Text>
-        </View>
-      ) : null}
-      {vista !== "venta" ? (
-        <View style={s.bloque}>
-          <Text style={{ fontSize: 18, fontWeight: "700" }}>
-            Mis operaciones y cargas
-          </Text>
-          {historial.map((o) => (
-            <View key={o.id} style={s.tarjeta}>
-              <Text style={{ fontWeight: "700" }}>
-                {o.tipo} · {o.estado}
-              </Text>
-              <Text>
-                {fechaCorta(o.creadoEn)} · {o.unidades} unidades
-              </Text>
-              <Boton
-                titulo="Ver detalle"
-                onPress={async () => {
-                  try {
-                    setDetalle(await consultarOperacion(token, o.id));
-                  } catch (e) {
-                    setError(
-                      e instanceof Error ? e.message : "No se pudo consultar.",
-                    );
-                  }
-                }}
-              />
-              {o.tipo === "CARGA" && o.estado === "PENDIENTE_RECEPCION" ? (
+              {!stock.length && (
                 <Boton
-                  titulo="Confirmar recepción"
-                  disabled={deshabilitado}
-                  onPress={() => void prepararRecepcion(o.id)}
+                  titulo="Revisar cargas"
+                  onPress={() => cambiarVista("cargas")}
                 />
-              ) : null}
+              )}
             </View>
-          ))}
-          <View style={{ flexDirection: "row", gap: 8 }}>
-            <Boton
-              titulo="Anterior"
-              disabled={page === 1 || ocupado}
-              onPress={() => setPage((p) => p - 1)}
-            />
-            <Text>
-              {page} · {total} registros
-            </Text>
-            <Boton
-              titulo="Siguiente"
-              disabled={page * 20 >= total || ocupado}
-              onPress={() => setPage((p) => p + 1)}
-            />
-          </View>
-        </View>
-      ) : null}
-      {detalle ? (
-        <View style={s.tarjeta}>
-          <Text style={{ fontSize: 18, fontWeight: "700" }}>
-            Detalle · {detalle.tipo}
-          </Text>
-          <Text selectable>{detalle.id}</Text>
-          <Text>
-            {detalle.responsable} · {detalle.estado}
-          </Text>
-          {detalle.latitud ? (
-            <Text>
-              GPS histórico: {detalle.latitud}, {detalle.longitud} · precisión{" "}
-              {detalle.precisionM ?? "—"} m
-            </Text>
-          ) : null}
-          {detalle.detalles.map((d) => (
-            <View key={d.productoId}>
-              <Text style={{ fontWeight: "700" }}>
-                {d.cantidad} × {d.productoHistorico.nombre} ·{" "}
-                {d.productoHistorico.presentacion}
+          )}
+          {seleccion.length > 0 && (
+            <View style={ui.resumen}>
+              <Text style={ui.nombre}>
+                Tu selección ·{" "}
+                {seleccion.reduce(
+                  (n, p) => n + Number(cantidades[p.productoId]),
+                  0,
+                )}{" "}
+                unidades
               </Text>
-              <Text>
-                {d.precioUnitarioBob
-                  ? `Bs ${d.precioUnitarioBob} por unidad al registrar`
-                  : "Sin precio comercial validado"}
-              </Text>
-              {d.lotes.map((l) => (
-                <Text key={l.loteId}>
-                  Lote {l.codigo}: {l.cantidad} · {l.condicionAlRegistrar}
+              {seleccion.map((p) => (
+                <Text key={p.productoId}>
+                  {cantidades[p.productoId]} × {p.nombre} · {p.presentacion}
                 </Text>
               ))}
+              <Text style={s.descripcion}>Consumidor final</Text>
+              <Boton
+                titulo="Limpiar selección"
+                disabled={deshabilitado}
+                onPress={() => setCantidades({})}
+              />
             </View>
-          ))}
-          <Boton titulo="Cerrar detalle" onPress={() => setDetalle(null)} />
+          )}
+          <Boton
+            titulo="Obtener ubicación y continuar"
+            activo
+            disabled={deshabilitado || !seleccion.length}
+            onPress={() => void prepararVenta()}
+          />
         </View>
-      ) : null}
+      )}
+      {(vista === "custodia" || vista === "devolucion") && (
+        <View style={s.bloque}>
+          {vista === "custodia" && (
+            <View style={ui.fila}>
+              <Boton
+                titulo="Recibir cargas"
+                activo
+                onPress={() => cambiarVista("cargas")}
+              />
+              <Boton
+                titulo="Devolver sobrantes"
+                onPress={() => cambiarVista("devolucion")}
+              />
+            </View>
+          )}
+          {!cargando &&
+            custodia
+              .filter(
+                (c) =>
+                  vista === "custodia" ||
+                  (c.finalidad === "LIBRE" && c.libre > 0),
+              )
+              .map((c) => (
+                <View
+                  style={[
+                    s.tarjeta,
+                    c.finalidad === "PEDIDO" ? ui.reservada : ui.seleccionada,
+                  ]}
+                  key={`${c.loteId}-${c.finalidad}`}
+                >
+                  <Text style={ui.nombre}>{c.nombre}</Text>
+                  <Text style={s.descripcion}>{c.presentacion}</Text>
+                  <Text style={ui.disponible}>
+                    {c.finalidad === "PEDIDO"
+                      ? `${c.cantidad} reservadas para pedidos`
+                      : `${c.libre} disponibles para vender`}
+                  </Text>
+                  {c.pendiente > 0 && (
+                    <Text style={ui.avisoTexto}>
+                      {c.pendiente} pendientes de recepción
+                    </Text>
+                  )}
+                  <Text style={s.descripcion}>
+                    Lote {c.loteCodigo} · vence {c.venceEl.slice(0, 10)}
+                  </Text>
+                  {!c.elegible && (
+                    <Text style={ui.errorTexto}>
+                      No apto para venta · {nombreOperacion(c.condicion)}
+                    </Text>
+                  )}
+                  {vista === "devolucion" && (
+                    <>
+                      <Text style={ui.label}>Cantidad a devolver</Text>
+                      <TextInput
+                        style={s.input}
+                        accessibilityLabel={`Devolver lote ${c.loteCodigo}`}
+                        keyboardType="number-pad"
+                        placeholder="0"
+                        editable={!deshabilitado}
+                        value={devoluciones[c.loteId] ?? ""}
+                        onChangeText={(v) =>
+                          setDevoluciones((d) => ({ ...d, [c.loteId]: v }))
+                        }
+                      />
+                      {!!errorCantidad(
+                        devoluciones[c.loteId] ?? "",
+                        c.libre,
+                      ) && (
+                        <Text accessibilityRole="alert" style={ui.errorTexto}>
+                          {errorCantidad(devoluciones[c.loteId] ?? "", c.libre)}
+                        </Text>
+                      )}
+                    </>
+                  )}
+                </View>
+              ))}
+          {!cargando &&
+            !custodia.some(
+              (c) =>
+                vista === "custodia" ||
+                (c.finalidad === "LIBRE" && c.libre > 0),
+            ) && (
+              <View style={s.vacio}>
+                <Text style={s.textoSecundario}>
+                  {vista === "custodia"
+                    ? "No tienes mercancía asignada."
+                    : "No tienes sobrantes disponibles para devolver."}
+                </Text>
+              </View>
+            )}
+          {(custodiaPage > 1 || custodia.length >= 50) && (
+            <View style={ui.fila}>
+              <Boton
+                titulo="Anterior"
+                disabled={custodiaPage === 1 || ocupado || devolucionEnEdicion}
+                onPress={() => {
+                  setCargando(true);
+                  setCustodiaPage((p) => p - 1);
+                }}
+              />
+              <Text>Página {custodiaPage}</Text>
+              <Boton
+                titulo="Más lotes"
+                disabled={
+                  custodia.length < 50 || ocupado || devolucionEnEdicion
+                }
+                onPress={() => {
+                  setCargando(true);
+                  setCustodiaPage((p) => p + 1);
+                }}
+              />
+            </View>
+          )}
+          {vista === "devolucion" && (
+            <View style={ui.resumen}>
+              <Text style={ui.nombre}>Motivo de devolución</Text>
+              <TextInput
+                style={[s.input, s.inputMultiline]}
+                accessibilityLabel="Motivo de devolución"
+                placeholder="Por ejemplo: sobrantes del recorrido"
+                multiline
+                maxLength={300}
+                editable={!deshabilitado}
+                value={motivo}
+                onChangeText={setMotivo}
+              />
+              {devolucionEnEdicion && (
+                <Boton
+                  titulo="Limpiar devolución"
+                  disabled={deshabilitado}
+                  onPress={() => setDevoluciones({})}
+                />
+              )}
+              <Boton
+                titulo="Revisar devolución"
+                activo
+                disabled={
+                  deshabilitado || !devolucionEnEdicion || !motivo.trim()
+                }
+                onPress={() => void prepararDevolucion()}
+              />
+            </View>
+          )}
+        </View>
+      )}
+      {(vista === "historial" || vista === "cargas") && (
+        <View style={s.bloque}>
+          {vista === "historial" && (
+            <View style={ui.fila}>
+              {(
+                [
+                  ["SALIDA_DIRECTA", "Ventas"],
+                  ["CARGA", "Cargas"],
+                  ["DEVOLUCION", "Devoluciones"],
+                ] as const
+              ).map(([tipo, texto]) => (
+                <Boton
+                  key={tipo}
+                  titulo={texto}
+                  activo={tipoHistorial === tipo}
+                  onPress={() => {
+                    if (tipo !== tipoHistorial) {
+                      setCargando(true);
+                      setTipoHistorial(tipo);
+                      setPage(1);
+                    }
+                  }}
+                />
+              ))}
+            </View>
+          )}
+          {!cargando &&
+            historial.map((o) => (
+              <View
+                key={o.id}
+                style={[
+                  s.tarjeta,
+                  o.estado === "PENDIENTE_RECEPCION"
+                    ? ui.pendiente
+                    : ui.registrada,
+                ]}
+              >
+                <View style={ui.fila}>
+                  <Text style={[ui.nombre, { flex: 1 }]}>
+                    {nombreOperacion(o.tipo)}
+                  </Text>
+                  <EstadoOperacion
+                    estado={o.estado}
+                    revertida={!!o.reversionId}
+                  />
+                </View>
+                <Text style={s.descripcion}>
+                  {fechaCorta(o.creadoEn)} · {o.unidades} unidades
+                </Text>
+                <View style={ui.fila}>
+                  <Boton
+                    titulo="Ver detalle"
+                    onPress={() => void abrirDetalle(o.id)}
+                  />
+                  {o.tipo === "CARGA" && o.estado === "PENDIENTE_RECEPCION" && (
+                    <Boton
+                      titulo="Confirmar recepción"
+                      activo
+                      disabled={deshabilitado}
+                      onPress={() => void prepararRecepcion(o.id)}
+                    />
+                  )}
+                </View>
+              </View>
+            ))}
+          {!cargando && !historial.length && (
+            <View style={s.vacio}>
+              <Text style={s.textoSecundario}>
+                {vista === "cargas"
+                  ? "No hay cargas por recibir."
+                  : "Todavía no hay operaciones en esta sección."}
+              </Text>
+            </View>
+          )}
+          {total > 20 && (
+            <View style={ui.fila}>
+              <Boton
+                titulo="Anterior"
+                disabled={page === 1 || ocupado || cargando}
+                onPress={() => {
+                  setCargando(true);
+                  setPage((p) => p - 1);
+                }}
+              />
+              <Text>Página {page}</Text>
+              <Boton
+                titulo="Siguiente"
+                disabled={page * 20 >= total || ocupado || cargando}
+                onPress={() => {
+                  setCargando(true);
+                  setPage((p) => p + 1);
+                }}
+              />
+            </View>
+          )}
+        </View>
+      )}
+      <DetalleOperacion
+        visible={detalleAbierto}
+        detalle={detalle}
+        cargando={cargandoDetalle}
+        error={errorDetalle}
+        cerrar={cerrarDetalle}
+      />
     </View>
   );
 }
+const ui = StyleSheet.create({
+  cabecera: {
+    flexDirection: "row",
+    gap: 8,
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  fila: {
+    flexDirection: "row",
+    gap: 10,
+    alignItems: "center",
+    flexWrap: "wrap",
+  },
+  etiqueta: {
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 1.2,
+    color: "#a73a1d",
+  },
+  nombre: { fontSize: 16, fontWeight: "700", color: "#20201e" },
+  label: { fontSize: 12, fontWeight: "700", color: "#66665e" },
+  cantidad: { width: 76, gap: 5 },
+  numero: { textAlign: "center", fontSize: 18 },
+  disponible: { color: "#286344", fontWeight: "700", fontSize: 13 },
+  seleccionada: {
+    borderLeftWidth: 4,
+    borderLeftColor: "#b83b17",
+    backgroundColor: "#fffaf7",
+  },
+  reservada: {
+    borderLeftWidth: 4,
+    borderLeftColor: "#c98a18",
+    backgroundColor: "#fffdf7",
+  },
+  registrada: { borderLeftWidth: 4, borderLeftColor: "#2d7a55" },
+  pendiente: {
+    borderLeftWidth: 4,
+    borderLeftColor: "#c98a18",
+    backgroundColor: "#fffdf7",
+  },
+  resumen: {
+    backgroundColor: "#f8ebe5",
+    borderWidth: 1,
+    borderColor: "#d9a28f",
+    borderRadius: 10,
+    padding: 16,
+    gap: 10,
+  },
+  error: {
+    padding: 12,
+    color: "#a1322c",
+    backgroundColor: "#fcefeb",
+    borderRadius: 6,
+  },
+  errorTexto: { color: "#a1322c", fontSize: 13 },
+  avisoTexto: { color: "#795410", fontSize: 13 },
+  exito: { padding: 12, gap: 8, backgroundColor: "#eaf4ed", borderRadius: 6 },
+  exitoTexto: { color: "#286344", fontWeight: "700" },
+});
+
 function confirmar(
   titulo: string,
   mensaje: string,

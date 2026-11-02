@@ -39,7 +39,7 @@ test('captura un producto registrado sin datos de otras pruebas', async ({ page 
   const dialogo=page.getByRole('alertdialog');await expect(dialogo).toBeVisible();
   await page.screenshot({path:path.join(DIR,'WEB-15-confirmacion-producto.png'),fullPage:true});
   await dialogo.getByRole('button',{name:'Cancelar'}).click();
-  await page.getByRole('button',{name:'Cerrar editor'}).click();
+  await page.getByRole('button',{name:'Cancelar'}).click();
   await page.screenshot({
     path: path.join(DIR, 'WEB-13-producto-registrado-limpio.png'),
     fullPage: true,
