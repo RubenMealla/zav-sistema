@@ -6,6 +6,7 @@ import {
 import { DataSource } from 'typeorm';
 import {
   consultaTexto,
+  nombreTexto,
   objeto,
   paginacion,
   texto,
@@ -30,8 +31,19 @@ const CAMPOS_EDICION = [
 const CAMPOS_ESTADO = ['activo'] as const;
 
 function telefonoOpcional(valor: unknown): string | null {
-  if (valor === undefined || valor === null || valor === '') return null;
-  return texto(valor, 'telefono', 30);
+  if (
+    valor === undefined ||
+    valor === null ||
+    (typeof valor === 'string' && !valor.trim())
+  )
+    return null;
+  const telefono = texto(valor, 'telefono', 30);
+  const digitos = telefono.replace(/\D/g, '').length;
+  if (!/^\+?[0-9][0-9 ()-]*$/.test(telefono) || digitos < 7 || digitos > 15)
+    throw new BadRequestException(
+      'telefono debe contener entre 7 y 15 dígitos; admite + inicial, espacios, paréntesis y guiones.',
+    );
+  return telefono;
 }
 
 function coordenada(
@@ -72,7 +84,7 @@ export class ClientesService {
 
   async crear(entrada: unknown) {
     const datos = objeto(entrada, CAMPOS_CLIENTE);
-    const nombre = texto(datos.nombre, 'nombre', 140);
+    const nombre = nombreTexto(datos.nombre, 140);
     const telefono = telefonoOpcional(datos.telefono);
     const direccion = texto(datos.direccion, 'direccion', 240);
     const { latitud, longitud } = coordenadasOpcionales(datos);
@@ -97,7 +109,7 @@ export class ClientesService {
   async actualizar(idEntrada: string, entrada: unknown) {
     const id = uuid(idEntrada, 'id');
     const datos = objeto(entrada, CAMPOS_EDICION);
-    const nombre = texto(datos.nombre, 'nombre', 140);
+    const nombre = nombreTexto(datos.nombre, 140);
     const telefono = telefonoOpcional(datos.telefono);
     const direccion = texto(datos.direccion, 'direccion', 240);
     const { latitud, longitud } = coordenadasOpcionales(datos);

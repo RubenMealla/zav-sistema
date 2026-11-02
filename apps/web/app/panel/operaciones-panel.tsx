@@ -9,6 +9,10 @@ import {
   useSyncExternalStore,
 } from "react";
 import { BotonEnviar } from "../componentes/interacciones";
+import {
+  manejarInvalido,
+  limpiarInvalido,
+} from "../componentes/validacion-formularios";
 import { ErrorGestion, gestion, mensajeError } from "./lib/gestion-cliente";
 
 type Disponible = {
@@ -217,11 +221,41 @@ export function OperacionesPanel({
   const elegidos = disponibles.filter(
     (p) => (seleccion[p.productoId] ?? 0) > 0,
   );
+  const errorSeleccion = (() => {
+    for (const [id, cantidad] of Object.entries(seleccion)) {
+      if (cantidad === 0) continue;
+      const p = disponibles.find((p) => p.productoId === id);
+      if (!p)
+        return "Un producto seleccionado dejó de estar disponible. Actualiza la lista y revisa la selección.";
+      if (
+        !Number.isSafeInteger(cantidad) ||
+        cantidad < 0 ||
+        cantidad > 2147483647
+      )
+        return `${p.codigo}: ingresa unidades enteras, sin decimales ni valores negativos.`;
+      if (cantidad > p.cantidadDisponible)
+        return `${p.codigo}: solo hay ${p.cantidadDisponible} unidades libres. Revisa la cantidad aunque el producto esté oculto por la búsqueda.`;
+    }
+    if (elegidos.length > 50)
+      return "Selecciona como máximo 50 presentaciones por operación.";
+    return "";
+  })();
   const resumen = elegidos
     .map((p) => `${seleccion[p.productoId]} × ${p.nombre} (${p.presentacion})`)
     .join("; ");
   async function crear() {
     if (pendiente || !lista) return;
+    if (
+      errorSeleccion ||
+      !elegidos.length ||
+      (modo === "custodia" && !vendedores.some((v) => v.id === vendedor))
+    ) {
+      setError(
+        errorSeleccion ||
+          "Selecciona productos y, para una carga, un Vendedor válido.",
+      );
+      return;
+    }
     await enviar({
       version: 1,
       ruta: `operaciones/${modo === "custodia" ? "cargas" : "salidas-directas"}`,
@@ -286,7 +320,13 @@ export function OperacionesPanel({
             Configurar o revisar ubicación del despacho
           </Link>
         )}
-        <form action={crear} className="formulario gestion-formulario">
+        <form
+          action={crear}
+          className="formulario gestion-formulario"
+          onInvalid={manejarInvalido}
+          onInput={limpiarInvalido}
+          onChange={limpiarInvalido}
+        >
           <fieldset
             disabled={!!pendiente || enviando || !lista}
             className="gestion-ancho gestion-fieldset"
@@ -366,6 +406,20 @@ export function OperacionesPanel({
             )}
             <div className="gestion-resumen">
               <h3>Resumen de entrega</h3>
+              {errorSeleccion && (
+                <p className="gestion-error" role="alert">
+                  {errorSeleccion}
+                </p>
+              )}
+              {Object.keys(seleccion).length > 0 && (
+                <button
+                  type="button"
+                  className="boton boton-terciario"
+                  onClick={() => setSeleccion({})}
+                >
+                  Limpiar selección
+                </button>
+              )}
               {elegidos.length ? (
                 <ul>
                   {elegidos.map((p) => (
@@ -383,7 +437,7 @@ export function OperacionesPanel({
               </p>
             </div>
             <BotonEnviar
-              disabled={elegidos.length === 0 || cargando}
+              disabled={elegidos.length === 0 || cargando || !!errorSeleccion}
               pendiente="Registrando…"
               confirmacion={{
                 titulo:
@@ -602,7 +656,9 @@ export function OperacionesPanel({
           {detalle.eventos.map((e, i) => (
             <p key={i}>
               {e.accion}: {e.responsable} ·{" "}
-              {new Date(e.creadoEn).toLocaleString("es-BO", { timeZone: "America/La_Paz" })}
+              {new Date(e.creadoEn).toLocaleString("es-BO", {
+                timeZone: "America/La_Paz",
+              })}
             </p>
           ))}
           {detalle.tipo === "DEVOLUCION" &&

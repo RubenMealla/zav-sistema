@@ -1,5 +1,8 @@
 import { bloquearProductos } from './bloqueos.js';
-import { conflictoCatalogo } from '../catalogo/validacion-catalogo.js';
+import {
+  conflictoCatalogo,
+  nombreCatalogo,
+} from '../catalogo/validacion-catalogo.js';
 import {
   BadRequestException,
   ConflictException,
@@ -43,8 +46,8 @@ export class ProductosService {
     const datos = objeto(entrada, CAMPOS_PRODUCTO);
     const nuevo = this.productos.create({
       codigo: codigo(datos.codigo, 'codigo', 40),
-      nombre: texto(datos.nombre, 'nombre', 120),
-      familia: texto(datos.familia, 'familia', 70),
+      nombre: nombreCatalogo(datos.nombre, 120),
+      familia: nombreCatalogo(datos.familia, 70, 'familia'),
       presentacion: texto(datos.presentacion, 'presentacion', 100),
       pesoGramos: enteroPositivo(datos.pesoGramos, 'pesoGramos'),
       precioBob: precio(datos.precioBob),
@@ -128,9 +131,9 @@ export class ProductosService {
       if (datos.codigo !== undefined)
         producto.codigo = codigo(datos.codigo, 'codigo', 40);
       if (datos.nombre !== undefined)
-        producto.nombre = texto(datos.nombre, 'nombre', 120);
+        producto.nombre = nombreCatalogo(datos.nombre, 120);
       if (datos.familia !== undefined)
-        producto.familia = texto(datos.familia, 'familia', 70);
+        producto.familia = nombreCatalogo(datos.familia, 70, 'familia');
       if (datos.presentacion !== undefined)
         producto.presentacion = texto(datos.presentacion, 'presentacion', 100);
       if (datos.pesoGramos !== undefined)

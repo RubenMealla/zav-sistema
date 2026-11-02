@@ -79,9 +79,9 @@ export class ImagenesService {
 
   async obtener(idEntrada: string, publica: boolean) {
     const condicion = publica
-      ? `AND (EXISTS(SELECT 1 FROM familia f WHERE f.imagen_id=i.id AND f.activo AND f.publicado)
+      ? `AND (EXISTS(SELECT 1 FROM familia f WHERE f.imagen_id=i.id AND f.publicado)
       OR EXISTS(SELECT 1 FROM producto_comercial c JOIN familia f ON f.id=c.familia_id
-        WHERE c.imagen_id=i.id AND c.activo AND c.publicado AND f.activo AND f.publicado))`
+        WHERE c.imagen_id=i.id AND c.publicado AND f.publicado))`
       : '';
     const [imagen] = (await this.db.query(
       `SELECT contenido,tipo,sha256 FROM imagen_catalogo i WHERE id=$1 ${condicion}`,

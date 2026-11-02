@@ -18,18 +18,16 @@ async function login(request: APIRequestContext, rol = "ADMIN") {
   return r.json();
 }
 async function entrar(page: Page, token: string) {
-  await page
-    .context()
-    .addCookies([
-      {
-        name: "zav_acceso",
-        value: token,
-        domain: "127.0.0.1",
-        path: "/",
-        httpOnly: true,
-        sameSite: "Lax",
-      },
-    ]);
+  await page.context().addCookies([
+    {
+      name: "zav_acceso",
+      value: token,
+      domain: "127.0.0.1",
+      path: "/",
+      httpOnly: true,
+      sameSite: "Lax",
+    },
+  ]);
 }
 test("publicación dinámica, alta relacional y ocultación sin reconstruir landing", async ({
   page,
@@ -127,6 +125,24 @@ test("venta directa web, respuesta perdida, reintento y carga a Vendedor", async
   expect(configurada.status()).toBe(200);
   await page.goto("/panel?vista=venta-directa");
   await page.getByLabel("Buscar producto o presentación").fill(codigo);
+  await page.getByLabel(`Cantidad ${codigo}`, { exact: true }).fill("1.5");
+  await expect(
+    page.getByRole("alert").filter({ hasText: "unidades enteras" }),
+  ).toBeVisible();
+  await page
+    .getByLabel("Buscar producto o presentación")
+    .fill("no-coincide-con-productos");
+  await expect(
+    page.getByRole("alert").filter({ hasText: "unidades enteras" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Confirmar entrega", exact: true }),
+  ).toBeDisabled();
+  await page.getByLabel("Buscar producto o presentación").fill(codigo);
+  await page.getByLabel(`Cantidad ${codigo}`, { exact: true }).fill("13");
+  await expect(
+    page.getByRole("alert").filter({ hasText: "12 unidades libres" }),
+  ).toBeVisible();
   await page.getByLabel(`Cantidad ${codigo}`, { exact: true }).fill("3");
   let clave = "";
   let llamadas = 0;
@@ -223,4 +239,97 @@ test("proxy de gestión rechaza escritura desde otro origen", async ({
     data: { nombre: "No crear" },
   });
   expect(r.status()).toBe(403);
+});
+
+test("formularios rechazan nombres, códigos y precios inválidos y reinician selectores dependientes", async ({
+  page,
+  request,
+}) => {
+  const sesion = await login(request);
+  await entrar(page, sesion.accessToken);
+  await page.goto("/panel?vista=catalogo");
+  await page
+    .getByRole("button", { name: "Crear familia", exact: true })
+    .click();
+  let editor = page.getByRole("region", { name: "Crear catálogo" });
+  for (const nombre of [
+    "   ",
+    "12345",
+    "---",
+    "Jamón\u200bQA",
+    "<b>Jamón</b>",
+  ]) {
+    await editor.getByLabel("Nombre", { exact: true }).fill(nombre);
+    await editor.getByRole("button", { name: "Guardar cambios" }).click();
+    await expect(page.getByRole("alertdialog")).toHaveCount(0);
+    expect(
+      await editor
+        .locator("form")
+        .evaluate((e) => (e as HTMLFormElement).checkValidity()),
+    ).toBe(false);
+  }
+  await editor
+    .getByLabel("Nombre", { exact: true })
+    .fill("Jamón artesanal ZAV 2026");
+  expect(
+    await editor
+      .locator("form")
+      .evaluate((e) => (e as HTMLFormElement).checkValidity()),
+  ).toBe(true);
+  await editor.getByRole("button", { name: "Cerrar editor" }).click();
+  await page
+    .getByRole("button", { name: "Presentaciones / SKU", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Crear presentación", exact: true })
+    .click();
+  editor = page.getByRole("region", { name: "Crear catálogo" });
+  const familia = editor.getByRole("combobox", {
+    name: "Familia",
+    exact: true,
+  });
+  const producto = editor.getByRole("combobox", {
+    name: "Producto comercial",
+    exact: true,
+  });
+  await expect(producto).toBeDisabled();
+  await familia.selectOption({ label: "Chorizos" });
+  await producto.selectOption({ label: "Chorizo Parrillero" });
+  await familia.selectOption({ label: "Salchichas" });
+  await expect(producto).toHaveValue("");
+  await expect(
+    producto.getByRole("option", { name: "Chorizo Parrillero" }),
+  ).toHaveCount(0);
+  await producto.selectOption({ label: "Salchicha Tipo Viena" });
+  await editor
+    .getByLabel("Presentación", { exact: true })
+    .fill("Paquete 500 g");
+  await editor.getByLabel("Tipo de empaque", { exact: true }).fill("Bolsa");
+  await editor.getByLabel("Peso (gramos)", { exact: true }).fill("500");
+  await editor.getByLabel("Precio (Bs)", { exact: true }).fill("27.50");
+  for (const codigo of ["NO VALIDO", "_SKU", "A", "SKU/QA", "SKU@QA"]) {
+    await editor.getByLabel("Código SKU", { exact: true }).fill(codigo);
+    await editor.getByRole("button", { name: "Guardar cambios" }).click();
+    await expect(page.getByRole("alertdialog")).toHaveCount(0);
+    expect(
+      await editor
+        .locator("form")
+        .evaluate((e) => (e as HTMLFormElement).checkValidity()),
+    ).toBe(false);
+  }
+  await editor.getByLabel("Código SKU", { exact: true }).fill("ZAV-500.QA_01");
+  for (const precio of ["-2", "2.345", "dos"]) {
+    await editor.getByLabel("Precio (Bs)", { exact: true }).fill(precio);
+    expect(
+      await editor
+        .locator("form")
+        .evaluate((e) => (e as HTMLFormElement).checkValidity()),
+    ).toBe(false);
+  }
+  await editor.getByLabel("Precio (Bs)", { exact: true }).fill("27.50");
+  expect(
+    await editor
+      .locator("form")
+      .evaluate((e) => (e as HTMLFormElement).checkValidity()),
+  ).toBe(true);
 });

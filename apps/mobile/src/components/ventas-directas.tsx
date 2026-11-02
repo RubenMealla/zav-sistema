@@ -29,6 +29,7 @@ import type {
 } from "@/lib/operaciones-tipos";
 import type { Sesion } from "@/lib/tipos";
 import { uuidV4 } from "@/lib/uuid";
+import { errorCantidad, validarCantidades } from "@/lib/cantidades";
 import { styles as s } from "@/screens/vendedor-estilos";
 
 export function VentasDirectas({ sesion }: { sesion: Sesion }) {
@@ -110,18 +111,22 @@ export function VentasDirectas({ sesion }: { sesion: Sesion }) {
   const seleccion = stock.filter(
     (p) => Number(cantidades[p.productoId] ?? 0) > 0,
   );
+  const devolucionEnEdicion = Object.values(devoluciones).some(
+    (v) => v !== "" && !/^0+$/.test(v),
+  );
   async function prepararVenta() {
     if (bloqueo.current || pendiente || !listo) return;
-    if (!seleccion.length) {
-      setError("Selecciona una cantidad.");
+    const errorCantidades = validarCantidades(
+      cantidades,
+      stock.map((p) => ({
+        id: p.productoId,
+        nombre: p.codigo,
+        disponible: p.cantidadDisponible,
+      })),
+    );
+    if (errorCantidades) {
+      setError(errorCantidades);
       return;
-    }
-    for (const p of seleccion) {
-      const n = Number(cantidades[p.productoId]);
-      if (!Number.isInteger(n) || n > p.cantidadDisponible) {
-        setError("Revisa las cantidades y el stock libre.");
-        return;
-      }
     }
     bloqueo.current = true;
     setOcupado(true);
@@ -179,18 +184,19 @@ export function VentasDirectas({ sesion }: { sesion: Sesion }) {
     const seleccion = custodia.filter(
       (c) => c.finalidad === "LIBRE" && Number(devoluciones[c.loteId] ?? 0) > 0,
     );
-    if (!seleccion.length || !motivo.trim()) {
-      setError("Selecciona lotes y describe el motivo de devolución.");
-      return;
-    }
-    if (
-      seleccion.some(
-        (c) =>
-          !Number.isInteger(Number(devoluciones[c.loteId])) ||
-          Number(devoluciones[c.loteId]) > c.libre,
-      )
-    ) {
-      setError("La devolución supera la custodia libre.");
+    const errorCantidades = validarCantidades(
+      devoluciones,
+      custodia
+        .filter((c) => c.finalidad === "LIBRE")
+        .map((c) => ({
+          id: c.loteId,
+          nombre: c.loteCodigo,
+          disponible: c.libre,
+        })),
+      100,
+    );
+    if (errorCantidades || !motivo.trim()) {
+      setError(errorCantidades ?? "Describe el motivo de devolución.");
       return;
     }
     const resumen = seleccion
@@ -369,10 +375,21 @@ export function VentasDirectas({ sesion }: { sesion: Sesion }) {
                   onChangeText={(v) =>
                     setCantidades((c) => ({
                       ...c,
-                      [p.productoId]: v.replace(/[^0-9]/g, ""),
+                      [p.productoId]: v,
                     }))
                   }
                 />
+                {errorCantidad(
+                  cantidades[p.productoId] ?? "",
+                  p.cantidadDisponible,
+                ) ? (
+                  <Text accessibilityRole="alert">
+                    {errorCantidad(
+                      cantidades[p.productoId] ?? "",
+                      p.cantidadDisponible,
+                    )}
+                  </Text>
+                ) : null}
               </View>
             ))}
           {!stock.length && !cargando ? (
@@ -390,6 +407,11 @@ export function VentasDirectas({ sesion }: { sesion: Sesion }) {
                 {cantidades[p.productoId]} × {p.nombre} · {p.presentacion}
               </Text>
             ))}
+            <Boton
+              titulo="Limpiar selección"
+              disabled={deshabilitado}
+              onPress={() => setCantidades({})}
+            />
             <Boton
               titulo="Obtener GPS y revisar entrega"
               disabled={deshabilitado || !seleccion.length}
@@ -428,26 +450,42 @@ export function VentasDirectas({ sesion }: { sesion: Sesion }) {
                   onChangeText={(v) =>
                     setDevoluciones((d) => ({
                       ...d,
-                      [c.loteId]: v.replace(/[^0-9]/g, ""),
+                      [c.loteId]: v,
                     }))
                   }
                 />
+              ) : null}
+              {c.finalidad === "LIBRE" &&
+              errorCantidad(devoluciones[c.loteId] ?? "", c.libre) ? (
+                <Text accessibilityRole="alert">
+                  {errorCantidad(devoluciones[c.loteId] ?? "", c.libre)}
+                </Text>
               ) : null}
             </View>
           ))}
           <View style={{ flexDirection: "row", gap: 8 }}>
             <Boton
               titulo="Anterior"
-              disabled={custodiaPage === 1 || ocupado}
+              disabled={custodiaPage === 1 || ocupado || devolucionEnEdicion}
               onPress={() => setCustodiaPage((p) => p - 1)}
             />
             <Text>Página {custodiaPage}</Text>
             <Boton
               titulo="Más lotes"
-              disabled={custodia.length < 50 || ocupado}
+              disabled={custodia.length < 50 || ocupado || devolucionEnEdicion}
               onPress={() => setCustodiaPage((p) => p + 1)}
             />
           </View>
+          {devolucionEnEdicion ? (
+            <Text>
+              Confirma o limpia la selección antes de cambiar de página.
+            </Text>
+          ) : null}
+          <Boton
+            titulo="Limpiar devolución"
+            disabled={deshabilitado}
+            onPress={() => setDevoluciones({})}
+          />
           <TextInput
             style={[s.input, s.inputMultiline]}
             accessibilityLabel="Motivo de devolución"
@@ -480,8 +518,7 @@ export function VentasDirectas({ sesion }: { sesion: Sesion }) {
                 {o.tipo} · {o.estado}
               </Text>
               <Text>
-                {fechaCorta(o.creadoEn)} · {o.unidades}{" "}
-                unidades
+                {fechaCorta(o.creadoEn)} · {o.unidades} unidades
               </Text>
               <Boton
                 titulo="Ver detalle"

@@ -1,5 +1,7 @@
 import { VentasDirectas } from '@/components/ventas-directas';
 import { capturarUbicacionPuntual } from '@/lib/ubicacion-puntual';
+import { validarCantidades } from '@/lib/cantidades';
+import { validarDatosCliente } from '@/lib/validacion-cliente';
 import * as Location from 'expo-location';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -338,8 +340,9 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
   }
 
   async function guardarCliente() {
-    if (!clienteNombre.trim()) {
-      setError('VALIDACIÓN · El nombre del cliente es obligatorio.');
+    const errorDatos = validarDatosCliente(clienteNombre, clienteTelefono);
+    if (errorDatos) {
+      setError(`VALIDACIÓN · ${errorDatos}`);
       return;
     }
     if (!clienteUbicacion || !clienteDireccion.trim()) {
@@ -413,8 +416,9 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
 
   async function guardarEdicionCliente() {
     if (!clienteEditando) return;
-    if (!clienteEditNombre.trim()) {
-      setError('VALIDACIÓN · El nombre del cliente es obligatorio.');
+    const errorDatos = validarDatosCliente(clienteEditNombre, clienteEditTelefono);
+    if (errorDatos) {
+      setError(`VALIDACIÓN · ${errorDatos}`);
       return;
     }
     if (!clienteEditUbicacion || !clienteEditDireccion.trim()) {
@@ -531,6 +535,11 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
         }))
       : disponibilidad;
 
+    const errorCantidades = validarCantidades(cantidades, productosFormulario.map(p => ({ id: p.productoId, nombre: p.codigo, disponible: p.cantidadDisponible })));
+    if (errorCantidades) {
+      setError(`VALIDACIÓN · ${errorCantidades}`);
+      return;
+    }
     const detalles = productosFormulario
       .map((producto) => ({
         productoId: producto.productoId,

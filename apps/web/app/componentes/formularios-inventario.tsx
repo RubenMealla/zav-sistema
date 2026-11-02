@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useId, useMemo, useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useId, useMemo, useState, type ReactNode } from 'react';
 import {
   cambiarCondicionLote,
   registrarLote,
@@ -9,6 +9,7 @@ import {
 } from '../panel/acciones';
 import { editarProducto } from '../panel/acciones-productos-e3';
 import { BotonEnviar } from './interacciones';
+import { manejarInvalido, limpiarInvalido, PATRON_CODIGO_SKU, PATRON_CODIGO_LOTE, PATRON_NOMBRE, PATRON_TEXTO_REQUERIDO } from './validacion-formularios';
 
 type ProductoOpcion = {
   id: string;
@@ -73,42 +74,6 @@ function CampoAyuda({ id, children }: { id: string; children: ReactNode }) {
   return <small id={id} className="campo-ayuda">{children}</small>;
 }
 
-type ControlValidable = HTMLInputElement | HTMLSelectElement;
-
-function mensajeValidacion(control: ControlValidable) {
-  const validez = control.validity;
-  if (validez.valueMissing) return 'VALIDACIÓN · Completa este campo obligatorio.';
-  if (validez.tooShort && control instanceof HTMLInputElement) return `VALIDACIÓN · Ingresa al menos ${control.minLength} caracteres.`;
-  if (validez.tooLong && control instanceof HTMLInputElement) return `VALIDACIÓN · Usa como máximo ${control.maxLength} caracteres.`;
-  if (validez.patternMismatch) return 'VALIDACIÓN · Usa únicamente letras, números, punto, guion o guion bajo.';
-  if (validez.rangeUnderflow && control instanceof HTMLInputElement) {
-    return control.type === 'date'
-      ? `VALIDACIÓN · Selecciona una fecha igual o posterior a ${control.min}.`
-      : `VALIDACIÓN · El valor mínimo permitido es ${control.min}.`;
-  }
-  if (validez.rangeOverflow && control instanceof HTMLInputElement) {
-    return control.type === 'date'
-      ? `VALIDACIÓN · Selecciona una fecha igual o anterior a ${control.max}.`
-      : `VALIDACIÓN · El valor máximo permitido es ${control.max}.`;
-  }
-  if (validez.stepMismatch) return 'VALIDACIÓN · Ingresa un valor compatible con el formato solicitado.';
-  if (validez.badInput || validez.typeMismatch) return 'VALIDACIÓN · Ingresa un valor válido.';
-  return 'VALIDACIÓN · Revisa este campo antes de continuar.';
-}
-
-function manejarInvalido(evento: FormEvent<HTMLFormElement>) {
-  const control = evento.target;
-  if (!(control instanceof HTMLInputElement || control instanceof HTMLSelectElement)) return;
-  control.setCustomValidity('');
-  control.setCustomValidity(mensajeValidacion(control));
-}
-
-function limpiarInvalido(evento: FormEvent<HTMLFormElement>) {
-  const control = evento.target;
-  if (!(control instanceof HTMLInputElement || control instanceof HTMLSelectElement)) return;
-  control.setCustomValidity('');
-}
-
 export function FormularioNuevoProducto() {
   const baseId = useId();
   const [familia, setFamilia] = useState('');
@@ -168,7 +133,7 @@ export function FormularioNuevoProducto() {
             <div className="campo-etiqueta"><label htmlFor={idFamilia}>Familia</label><span>Obligatorio</span></div>
             <input
               id={idFamilia}
-              name="familia"
+              name="familia" pattern={PATRON_NOMBRE} data-validacion="La familia debe contener letras y no incluir etiquetas ni caracteres invisibles."
               list={`${baseId}-familias`}
               minLength={2}
               maxLength={70}
@@ -190,7 +155,7 @@ export function FormularioNuevoProducto() {
                 name="codigo"
                 minLength={2}
                 maxLength={40}
-                pattern="[A-Za-z0-9._-]{2,40}"
+                pattern={PATRON_CODIGO_SKU} data-validacion="El código debe empezar con letra o número y contener de 2 a 40 letras, números, puntos, guiones o guiones bajos."
                 title="Usa letras, números, punto, guion o guion bajo."
                 required
                 value={codigo}
@@ -225,7 +190,7 @@ export function FormularioNuevoProducto() {
 
           <div className="campo campo-ancho">
             <div className="campo-etiqueta"><label htmlFor={idNombre}>Nombre comercial</label><span>Obligatorio</span></div>
-            <input id={idNombre} name="nombre" minLength={2} maxLength={120} required placeholder="Ej. Salchicha Tipo Viena" autoComplete="off" />
+            <input id={idNombre} name="nombre" pattern={PATRON_NOMBRE} data-validacion="El nombre debe contener letras y no incluir etiquetas ni caracteres invisibles." minLength={2} maxLength={120} required placeholder="Ej. Salchicha Tipo Viena" autoComplete="off" />
           </div>
         </div>
       </section>
@@ -238,7 +203,7 @@ export function FormularioNuevoProducto() {
         <div className="form-grid">
           <div className="campo campo-ancho">
             <div className="campo-etiqueta"><label htmlFor={idPresentacion}>Presentación</label><span>Obligatorio</span></div>
-            <input id={idPresentacion} name="presentacion" minLength={2} maxLength={100} required placeholder="Ej. Paquete de 500 gramos" />
+            <input id={idPresentacion} name="presentacion" pattern={PATRON_TEXTO_REQUERIDO} data-validacion="Describe la presentación; no uses solamente espacios." minLength={2} maxLength={100} required placeholder="Ej. Paquete de 500 gramos" />
           </div>
           <div className="campo">
             <div className="campo-etiqueta"><label htmlFor={idPeso}>Peso (gramos)</label><span>Obligatorio</span></div>
@@ -280,17 +245,17 @@ export function FormularioEditarProducto({ producto }: { producto: ProductoEdita
         <div className="form-grid">
           <div className="campo">
             <div className="campo-etiqueta"><label htmlFor={`${baseId}-codigo`}>Código</label><span>Obligatorio</span></div>
-            <input id={`${baseId}-codigo`} name="codigo" minLength={2} maxLength={40} pattern="[A-Za-z0-9._-]{2,40}" required defaultValue={producto.codigo} onInput={(e) => { e.currentTarget.value = normalizarCodigo(e.currentTarget.value); }} />
+            <input id={`${baseId}-codigo`} name="codigo" minLength={2} maxLength={40} pattern={PATRON_CODIGO_SKU} data-validacion="El código debe empezar con letra o número y contener de 2 a 40 letras, números, puntos, guiones o guiones bajos." required defaultValue={producto.codigo} onInput={(e) => { e.currentTarget.value = normalizarCodigo(e.currentTarget.value); }} />
             <CampoAyuda id={`${baseId}-codigo-ayuda`}>Letras, números, punto, guion o guion bajo.</CampoAyuda>
           </div>
           <div className="campo">
             <div className="campo-etiqueta"><label htmlFor={`${baseId}-familia`}>Familia</label><span>Obligatorio</span></div>
-            <input id={`${baseId}-familia`} name="familia" list={`${baseId}-familias-editar`} minLength={2} maxLength={70} required defaultValue={producto.familia} autoComplete="off" />
+            <input id={`${baseId}-familia`} name="familia" pattern={PATRON_NOMBRE} data-validacion="La familia debe contener letras y no incluir etiquetas ni caracteres invisibles." list={`${baseId}-familias-editar`} minLength={2} maxLength={70} required defaultValue={producto.familia} autoComplete="off" />
             <datalist id={`${baseId}-familias-editar`}>{FAMILIAS_ZAV.map((item) => <option key={item} value={item} />)}</datalist>
           </div>
           <div className="campo campo-ancho">
             <div className="campo-etiqueta"><label htmlFor={`${baseId}-nombre`}>Nombre comercial</label><span>Obligatorio</span></div>
-            <input id={`${baseId}-nombre`} name="nombre" minLength={2} maxLength={120} required defaultValue={producto.nombre} />
+            <input id={`${baseId}-nombre`} name="nombre" pattern={PATRON_NOMBRE} data-validacion="El nombre debe contener letras y no incluir etiquetas ni caracteres invisibles." minLength={2} maxLength={120} required defaultValue={producto.nombre} />
           </div>
         </div>
       </section>
@@ -303,7 +268,7 @@ export function FormularioEditarProducto({ producto }: { producto: ProductoEdita
         <div className="form-grid">
           <div className="campo campo-ancho">
             <div className="campo-etiqueta"><label htmlFor={`${baseId}-presentacion`}>Presentación</label><span>Obligatorio</span></div>
-            <input id={`${baseId}-presentacion`} name="presentacion" minLength={2} maxLength={100} required defaultValue={producto.presentacion} />
+            <input id={`${baseId}-presentacion`} name="presentacion" pattern={PATRON_TEXTO_REQUERIDO} data-validacion="Describe la presentación; no uses solamente espacios." minLength={2} maxLength={100} required defaultValue={producto.presentacion} />
           </div>
           <div className="campo">
             <div className="campo-etiqueta"><label htmlFor={`${baseId}-peso`}>Peso (gramos)</label><span>Obligatorio</span></div>
@@ -399,7 +364,7 @@ export function FormularioNuevoLote({ productos, operacionClave }: { productos: 
                 name="codigo"
                 minLength={2}
                 maxLength={60}
-                pattern="[A-Za-z0-9._-]{2,60}"
+                pattern={PATRON_CODIGO_LOTE} data-validacion="El código debe empezar con letra o número y contener de 2 a 60 letras, números, puntos, guiones o guiones bajos."
                 required
                 value={codigo}
                 onChange={(evento) => {

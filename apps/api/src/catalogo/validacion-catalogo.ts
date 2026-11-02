@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException } from '@nestjs/common';
-import { codigoPostgres, texto } from '../inventario/validacion.js';
+import { codigoPostgres, nombreTexto } from '../inventario/validacion.js';
 
 export function booleano(valor: unknown, campo: string): boolean {
   if (typeof valor !== 'boolean')
@@ -19,8 +19,12 @@ export function textoCatalogo(
   return valor.trim();
 }
 
-export function nombreCatalogo(valor: unknown, maximo: number): string {
-  return texto(valor, 'nombre', maximo).normalize('NFC').replace(/\s+/g, ' ');
+export function nombreCatalogo(
+  valor: unknown,
+  maximo: number,
+  campo = 'nombre',
+): string {
+  return nombreTexto(valor, maximo, campo);
 }
 
 export function ordenCatalogo(valor: unknown): number {

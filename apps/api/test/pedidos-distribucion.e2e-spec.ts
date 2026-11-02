@@ -88,7 +88,10 @@ describe('Pedidos y distribucion E3 (e2e)', () => {
       })
       .expect(201);
 
-    return { productoId: producto.body.id as string, loteId: lote.body.id as string };
+    return {
+      productoId: producto.body.id as string,
+      loteId: lote.body.id as string,
+    };
   }
 
   async function crearCliente(
@@ -112,7 +115,11 @@ describe('Pedidos y distribucion E3 (e2e)', () => {
     return respuesta.body.id as string;
   }
 
-  async function crearPedido(clienteId: string, productoId: string, cantidad: number) {
+  async function crearPedido(
+    clienteId: string,
+    productoId: string,
+    cantidad: number,
+  ) {
     return request(app.getHttpServer())
       .post('/api/v1/pedidos')
       .set('Authorization', `Bearer ${tokenVendedor}`)
@@ -152,6 +159,30 @@ describe('Pedidos y distribucion E3 (e2e)', () => {
   afterAll(async () => {
     await db.end();
     await app.close();
+  });
+
+  it('valida nombres y teléfonos de clientes también frente a solicitudes manuales', async () => {
+    for (const cambio of [
+      { nombre: '12345' },
+      { nombre: 'Tienda\u200bQA' },
+      { nombre: '<b>Tienda</b>' },
+      { telefono: 'abc' },
+      { telefono: '123' },
+      { telefono: '++59170000000' },
+      { telefono: '1234567890123456' },
+    ]) {
+      await request(app.getHttpServer())
+        .post('/api/v1/clientes')
+        .set('Authorization', `Bearer ${tokenVendedor}`)
+        .send({
+          nombre: 'Tienda QA',
+          direccion: 'Calle QA Tarija',
+          latitud: -21.53,
+          longitud: -64.73,
+          ...cambio,
+        })
+        .expect(400);
+    }
   });
 
   it('rechaza al Administrador en rutas exclusivas del Vendedor y valida cliente', async () => {
@@ -249,7 +280,9 @@ describe('Pedidos y distribucion E3 (e2e)', () => {
 
     const pedido = await crearPedido(clienteId, productoEdicionId, 1);
     expect(pedido.status).toBe(201);
-    expect(pedido.body.direccionEntrega).toBe('Barrio de prueba actualizado, Tarija');
+    expect(pedido.body.direccionEntrega).toBe(
+      'Barrio de prueba actualizado, Tarija',
+    );
     expect(pedido.body.destinoGps).toEqual({
       latitud: -21.541,
       longitud: -64.741,
@@ -257,7 +290,10 @@ describe('Pedidos y distribucion E3 (e2e)', () => {
   });
 
   it('lista Pedidos por estado operativo sin romper los parametros SQL', async () => {
-    const producto = await prepararProducto(`QA-PED-FILTRO-${randomUUID().slice(0, 8)}`, 3);
+    const producto = await prepararProducto(
+      `QA-PED-FILTRO-${randomUUID().slice(0, 8)}`,
+      3,
+    );
     const clienteId = await crearCliente(`FILTRO-${randomUUID().slice(0, 8)}`);
     const creado = await crearPedido(clienteId, producto.productoId, 1);
 
@@ -269,7 +305,9 @@ describe('Pedidos y distribucion E3 (e2e)', () => {
       .expect(200);
 
     expect(
-      registrados.body.items.some((item: { id: string }) => item.id === creado.body.id),
+      registrados.body.items.some(
+        (item: { id: string }) => item.id === creado.body.id,
+      ),
     ).toBe(true);
 
     await request(app.getHttpServer())
@@ -284,7 +322,9 @@ describe('Pedidos y distribucion E3 (e2e)', () => {
       .expect(200);
 
     expect(
-      distribucion.body.items.some((item: { id: string }) => item.id === creado.body.id),
+      distribucion.body.items.some(
+        (item: { id: string }) => item.id === creado.body.id,
+      ),
     ).toBe(true);
 
     await request(app.getHttpServer())
@@ -299,7 +339,11 @@ describe('Pedidos y distribucion E3 (e2e)', () => {
       .set('Authorization', `Bearer ${tokenVendedor}`)
       .expect(200);
 
-    expect(productos.body.items.some((p: { id: string }) => p.id === productoPrincipalId)).toBe(true);
+    expect(
+      productos.body.items.some(
+        (p: { id: string }) => p.id === productoPrincipalId,
+      ),
+    ).toBe(true);
 
     const disponibilidad = await request(app.getHttpServer())
       .get('/api/v1/pedidos/disponibilidad')
@@ -443,7 +487,9 @@ describe('Pedidos y distribucion E3 (e2e)', () => {
     expect(primero.body.resultado).toBe('COMPLETO');
     expect(primero.body.exitosos).toBe(2);
     expect(primero.body.fallidos).toBe(0);
-    expect(primero.body.items.every((item: { ok: boolean }) => item.ok)).toBe(true);
+    expect(primero.body.items.every((item: { ok: boolean }) => item.ok)).toBe(
+      true,
+    );
 
     const repetido = await request(app.getHttpServer())
       .post('/api/v1/pedidos/retiros')
@@ -503,7 +549,10 @@ describe('Pedidos y distribucion E3 (e2e)', () => {
     const bloquea = await request(app.getHttpServer())
       .post(`/api/v1/lotes/${lotePrincipalId}/bloquear`)
       .set('Authorization', `Bearer ${tokenAdmin}`)
-      .send({ operacionClave: randomUUID(), motivo: 'Intento sobre stock comprometido' })
+      .send({
+        operacionClave: randomUUID(),
+        motivo: 'Intento sobre stock comprometido',
+      })
       .expect(409);
 
     expect(bloquea.body.statusCode).toBe(409);
@@ -584,11 +633,12 @@ describe('Pedidos y distribucion E3 (e2e)', () => {
     );
 
     const venta = saldos.rows.find((fila) => fila.codigo === 'VENTA_DESPACHO');
-    const distribucion = saldos.rows.find((fila) => fila.codigo === 'EN_DISTRIBUCION');
+    const distribucion = saldos.rows.find(
+      (fila) => fila.codigo === 'EN_DISTRIBUCION',
+    );
     expect(venta.cantidad_fisica).toBe(14);
     expect(distribucion).toBeUndefined();
   });
-
 
   it('gestiona baja lógica de Cliente sin perder historial ni permitir nuevos pedidos', async () => {
     const clienteId = await crearCliente(`BAJA-${randomUUID().slice(0, 8)}`);
@@ -606,9 +656,16 @@ describe('Pedidos y distribucion E3 (e2e)', () => {
       .set('Authorization', `Bearer ${tokenVendedor}`)
       .expect(200);
 
-    expect(todos.body.items.find((item: { id: string }) => item.id === clienteId)?.activo).toBe(false);
+    expect(
+      todos.body.items.find((item: { id: string }) => item.id === clienteId)
+        ?.activo,
+    ).toBe(false);
 
-    const pedidoRechazado = await crearPedido(clienteId, productoPrincipalId, 1);
+    const pedidoRechazado = await crearPedido(
+      clienteId,
+      productoPrincipalId,
+      1,
+    );
     expect(pedidoRechazado.status).toBe(404);
 
     const alta = await request(app.getHttpServer())
@@ -621,7 +678,10 @@ describe('Pedidos y distribucion E3 (e2e)', () => {
   });
 
   it('edita y anula Pedidos solo antes del retiro, liberando el compromiso de stock', async () => {
-    const producto = await prepararProducto(`QA-PED-CORR-${randomUUID().slice(0, 6)}`, 5);
+    const producto = await prepararProducto(
+      `QA-PED-CORR-${randomUUID().slice(0, 6)}`,
+      5,
+    );
     const clienteId = await crearCliente(`CORR-${randomUUID().slice(0, 8)}`);
     const creado = await crearPedido(clienteId, producto.productoId, 4);
     expect(creado.status).toBe(201);
@@ -678,7 +738,10 @@ describe('Pedidos y distribucion E3 (e2e)', () => {
   });
 
   it('permite al Administrador auditar el pedido y el Vendedor responsable', async () => {
-    const auditoria = await prepararProducto(`QA-AUD-${randomUUID().slice(0, 8)}`, 2);
+    const auditoria = await prepararProducto(
+      `QA-AUD-${randomUUID().slice(0, 8)}`,
+      2,
+    );
     const clienteId = await crearCliente(`AUD-${randomUUID().slice(0, 8)}`);
     const pedido = await crearPedido(clienteId, auditoria.productoId, 1);
     expect(pedido.status).toBe(201);
@@ -705,5 +768,4 @@ describe('Pedidos y distribucion E3 (e2e)', () => {
       .set('Authorization', `Bearer ${tokenVendedor}`)
       .expect(403);
   });
-
 });

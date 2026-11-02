@@ -46,6 +46,19 @@ export function codigo(valor: unknown, campo: string, maximo: number): string {
   return normalizado;
 }
 
+export function nombreTexto(
+  valor: unknown,
+  maximo: number,
+  campo = 'nombre',
+): string {
+  const nombre = texto(valor, campo, maximo).normalize('NFC');
+  if (!/\p{L}/u.test(nombre) || /[\p{Cc}\p{Cf}<>]/u.test(nombre))
+    throw new BadRequestException(
+      `${campo} debe contener letras y no puede incluir etiquetas ni caracteres de control o invisibles.`,
+    );
+  return nombre.replace(/\s+/g, ' ');
+}
+
 export function uuid(valor: unknown, campo: string): string {
   if (typeof valor !== 'string' || !UUID.test(valor)) {
     throw new BadRequestException(`${campo} debe ser un UUID valido.`);

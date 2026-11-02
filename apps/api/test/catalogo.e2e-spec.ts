@@ -254,6 +254,38 @@ describe('Catálogo relacional y publicación (PostgreSQL real)', () => {
       .expect(200);
     expect(imagen.headers['content-type']).toContain('image/png');
     expect(imagen.headers['cache-control']).toBe('no-store');
+    // La inactividad impide operar, pero la visibilidad se decide con Publicado.
+    await request(app.getHttpServer())
+      .patch(`/api/v1/catalogo/familias/${familiaId}`)
+      .set(auth())
+      .send({ activo: false })
+      .expect(200);
+    await request(app.getHttpServer())
+      .patch(`/api/v1/catalogo/productos/${comercialId}`)
+      .set(auth())
+      .send({ activo: false })
+      .expect(200);
+    const inactivoPublicado = await request(app.getHttpServer())
+      .get('/api/v1/publico/catalogo')
+      .expect(200);
+    expect(
+      inactivoPublicado.body.familias
+        .find((f: { id: string }) => f.id === familiaId)
+        .productos.map((p: { id: string }) => p.id),
+    ).toContain(comercialId);
+    await request(app.getHttpServer())
+      .get(`/api/v1/publico/catalogo/imagenes/${imagenId}`)
+      .expect(200);
+    await request(app.getHttpServer())
+      .patch(`/api/v1/catalogo/familias/${familiaId}`)
+      .set(auth())
+      .send({ activo: true })
+      .expect(200);
+    await request(app.getHttpServer())
+      .patch(`/api/v1/catalogo/productos/${comercialId}`)
+      .set(auth())
+      .send({ activo: true })
+      .expect(200);
     await request(app.getHttpServer())
       .patch(`/api/v1/catalogo/familias/${familiaId}`)
       .set(auth())
@@ -268,6 +300,97 @@ describe('Catálogo relacional y publicación (PostgreSQL real)', () => {
     expect(
       publico.body.familias.some((f: { id: string }) => f.id === familiaId),
     ).toBe(false);
+  });
+
+  it('rechaza nombres vacíos, numéricos, invisibles y códigos o valores comerciales inválidos', async () => {
+    for (const nombre of [
+      '   ',
+      '12345',
+      '---',
+      'Jamón\u200bQA',
+      '<b>Jamón</b>',
+      'Jamón\nQA',
+    ]) {
+      await request(app.getHttpServer())
+        .post('/api/v1/catalogo/familias')
+        .set(auth())
+        .send({ nombre })
+        .expect(400);
+      await request(app.getHttpServer())
+        .post('/api/v1/catalogo/productos')
+        .set(auth())
+        .send({ familiaId, nombre })
+        .expect(400);
+    }
+    for (const cambio of [
+      { codigo: 'NO VALIDO' },
+      { codigo: '_SKU' },
+      { codigo: 'A' },
+      { codigo: 'SKU/QA' },
+      { codigo: 'A'.repeat(41) },
+      { productoComercialId: '' },
+      { pesoGramos: 0 },
+      { pesoGramos: 1.5 },
+      { pesoGramos: 2147483648 },
+      { presentacion: '   ' },
+      { tipoEmpaque: '  ' },
+      { precioBob: '-1' },
+      { precioBob: '2.345' },
+    ]) {
+      await request(app.getHttpServer())
+        .post('/api/v1/catalogo/presentaciones')
+        .set(auth())
+        .send({
+          codigo: `VAL-${randomUUID().slice(0, 8)}`,
+          productoComercialId: comercialId,
+          presentacion: 'Paquete QA',
+          tipoEmpaque: 'Bolsa',
+          pesoGramos: 500,
+          precioBob: '25.30',
+          ...cambio,
+        })
+        .expect(400);
+    }
+  });
+
+  it('permite editar datos con la misma relación inactiva, pero impide asignaciones nuevas a ella', async () => {
+    await request(app.getHttpServer())
+      .patch(`/api/v1/catalogo/familias/${familiaId}`)
+      .set(auth())
+      .send({ activo: false })
+      .expect(200);
+    await request(app.getHttpServer())
+      .patch(`/api/v1/catalogo/productos/${comercialId}`)
+      .set(auth())
+      .send({ familiaId, descripcion: 'Corrección con familia inactiva' })
+      .expect(200);
+    await request(app.getHttpServer())
+      .patch(`/api/v1/catalogo/presentaciones/${skuId}`)
+      .set(auth())
+      .send({ productoComercialId: comercialId, precioBob: '29.25' })
+      .expect(200);
+    await request(app.getHttpServer())
+      .post('/api/v1/catalogo/productos')
+      .set(auth())
+      .send({ familiaId, nombre: 'No debe crearse' })
+      .expect(409);
+    await request(app.getHttpServer())
+      .post('/api/v1/catalogo/presentaciones')
+      .set(auth())
+      .send({
+        productoComercialId: comercialId,
+        codigo: `INACT-${sufijo}`,
+        presentacion: 'Paquete',
+        tipoEmpaque: 'Bolsa',
+        pesoGramos: 500,
+        precioBob: '20.00',
+      })
+      .expect(409);
+    await request(app.getHttpServer())
+      .patch(`/api/v1/catalogo/familias/${familiaId}`)
+      .set(auth())
+      .send({ activo: true })
+      .expect(200);
   });
 
   it('baja lógica preserva relaciones y deja auditoría atribuida', async () => {

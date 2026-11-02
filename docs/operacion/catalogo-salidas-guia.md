@@ -4,6 +4,8 @@ La ampliación está en el [PR 74](https://github.com/RubenMealla/zav-sistema/pu
 
 ## Administrador
 
+Los formularios validan nombres con letras (se admiten tildes, números y espacios), códigos de 2 a 40 caracteres para SKU y hasta 60 para lotes, peso entero positivo y precio no negativo con hasta dos decimales. Los códigos empiezan con letra o número y admiten punto, guion y guion bajo. Los nombres equivalentes y los códigos reutilizados se rechazan en la API. Cambiar de familia limpia el producto seleccionado. Una familia inactiva conserva sus relaciones históricas y permite corregir datos existentes, pero no recibir nuevas asociaciones. **Activo** controla las operaciones; **Publicado** controla la landing, incluso sin stock o estando inactivo para operaciones.
+
 1. Entrar en **Catálogo**. Crear o editar una familia y un producto comercial. Los siete grupos y trece nombres/fotografías originales ya están importados en el ensayo. Activación y publicación son controles independientes.
 2. En Presentaciones, seleccionar familia y producto; completar SKU, empaque, peso y precio. Un dato provisional no habilita operaciones. Validar comercialmente solo con información confirmada. Un SKU con historial no se redefine para representar otro artículo.
 3. Publicar familia y producto y revisar la landing. Ocultarlos debe retirarlos del catálogo público; el inventario interno y los precios provisionales no aparecen. Para nuevas fotos, usar JPEG, PNG o WebP hasta 5 MB y 4096 píxeles por dimensión.
@@ -12,6 +14,8 @@ La ampliación está en el [PR 74](https://github.com/RubenMealla/zav-sistema/pu
 6. Revisar historial y conciliación. Recibir devoluciones coloca los productos en `DEVOLUCIONES_INSPECCION`; no los vuelve automáticamente vendibles. Después de inspección, condición y vigencia válidas, el traslado auditado permite reintegrarlos.
 
 ## Vendedor Android
+
+Las cantidades se conservan tal como se escriben: pegar `1.5` o `-3` muestra un error, sin convertirlos en `15` o `3`. Se comprueba toda la selección antes de enviar, incluidos productos ocultos por una búsqueda. Clientes exige nombre con letras, hasta 140 caracteres; el teléfono es opcional y, si se informa, admite de 7 a 15 dígitos, `+` inicial, espacios, paréntesis y guiones. Las mismas reglas se aplican a las solicitudes directas a la API.
 
 1. Instalar la APK **QA**, identificada con paquete distinto y etiqueta QA. Configurar la URL base de la API QA; para emulador local es `http://10.0.2.2:3001`, sin añadir `/api/v1`. No utilizar la API productiva para esta prueba.
 2. Abrir la pestaña independiente **Venta directa**, después **Cargas y devolución**. Confirmar una carga propia tras verificar la recepción física.

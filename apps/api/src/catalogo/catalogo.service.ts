@@ -200,7 +200,7 @@ export class CatalogoService {
           : [];
         if (id && !anterior)
           throw new NotFoundException('Registro del catálogo no encontrado.');
-        if (valores.familia_id) {
+        if (valores.familia_id && valores.familia_id !== anterior?.familia_id) {
           const familias = (await m.query(
             'SELECT id FROM familia WHERE id=$1 AND activo=true',
             [valores.familia_id],
@@ -355,7 +355,10 @@ export class CatalogoService {
           : [];
         if (id && !anterior)
           throw new NotFoundException('Presentación no encontrada.');
-        if (valores.producto_comercial_id) {
+        if (
+          valores.producto_comercial_id &&
+          valores.producto_comercial_id !== anterior?.producto_comercial_id
+        ) {
           const [c] = (await m.query(
             'SELECT c.nombre,f.nombre AS familia FROM producto_comercial c JOIN familia f ON f.id=c.familia_id WHERE c.id=$1 AND c.activo AND f.activo',
             [valores.producto_comercial_id],
@@ -402,12 +405,12 @@ export class CatalogoService {
     const familias = (await this.db
       .query(`SELECT f.id,f.slug,f.nombre,f.descripcion,f.orden,
       COALESCE('/api/v1/publico/catalogo/imagenes/'||f.imagen_id::text,f.imagen_original) AS imagen
-      FROM familia f WHERE f.publicado AND f.activo ORDER BY f.orden,f.nombre,f.id`)) as Fila[];
+      FROM familia f WHERE f.publicado ORDER BY f.orden,f.nombre,f.id`)) as Fila[];
     const productos = (await this.db
       .query(`SELECT c.id,c.familia_id,c.nombre,c.descripcion,c.caracteristicas,c.orden,
       COALESCE('/api/v1/publico/catalogo/imagenes/'||c.imagen_id::text,c.imagen_original) AS imagen
       FROM producto_comercial c JOIN familia f ON f.id=c.familia_id
-      WHERE c.publicado AND c.activo AND f.publicado AND f.activo ORDER BY c.orden,c.nombre,c.id`)) as Fila[];
+      WHERE c.publicado AND f.publicado ORDER BY c.orden,c.nombre,c.id`)) as Fila[];
     return {
       familias: familias.map((f) => ({
         ...f,

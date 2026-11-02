@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { Cliente, Disponibilidad } from '@/lib/tipos';
+import { errorCantidad } from '@/lib/cantidades';
 
 function normalizar(texto: string) {
   return texto.trim().toLocaleLowerCase('es-BO');
@@ -183,13 +184,7 @@ export function SelectorProductosPedidoModal({
   }, [cantidades, productos]);
 
   function cambiar(producto: Disponibilidad, valor: string) {
-    const limpio = valor.replace(/\D/g, '');
-    if (!limpio) {
-      onCambiarCantidad(producto.productoId, '');
-      return;
-    }
-    const limitado = Math.min(Number(limpio), producto.cantidadDisponible);
-    onCambiarCantidad(producto.productoId, String(limitado));
+    onCambiarCantidad(producto.productoId, valor);
   }
 
   function sumar(producto: Disponibilidad, delta: -1 | 1) {
@@ -299,6 +294,9 @@ export function SelectorProductosPedidoModal({
                     <Text style={styles.cantidadBotonTexto}>+</Text>
                   </Pressable>
                 </View>
+                {errorCantidad(cantidad, item.cantidadDisponible) ? (
+                  <Text accessibilityRole="alert">{errorCantidad(cantidad, item.cantidadDisponible)}</Text>
+                ) : null}
               </View>
             );
           }}

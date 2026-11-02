@@ -1,6 +1,13 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BotonEnviar } from "../componentes/interacciones";
+import {
+  manejarInvalido,
+  limpiarInvalido,
+  PATRON_CODIGO_SKU,
+  PATRON_NOMBRE,
+  PATRON_TEXTO_REQUERIDO,
+} from "../componentes/validacion-formularios";
 import { gestion, mensajeError, todasLasPaginas } from "./lib/gestion-cliente";
 
 type Grupo = "familias" | "productos" | "presentaciones";
@@ -47,6 +54,7 @@ export function CatalogoPanel() {
   const revision = useRef(0);
   const cargar = useCallback(async () => {
     const actual = ++revision.current;
+    setCargando(true);
     try {
       const q = new URLSearchParams({
         page: String(page),
@@ -92,6 +100,9 @@ export function CatalogoPanel() {
             }
             key={g}
             onClick={() => {
+              if (g === grupo) return;
+              setCargando(true);
+              setItems([]);
               setGrupo(g);
               setPage(1);
               setEdicion(undefined);
@@ -180,6 +191,7 @@ export function CatalogoPanel() {
         )}
         <button
           className="boton boton-primario"
+          disabled={cargando}
           onClick={() => setEdicion(null)}
         >
           Crear{" "}
@@ -260,6 +272,7 @@ export function CatalogoPanel() {
                 <td>
                   <button
                     className="boton boton-secundario"
+                    disabled={cargando}
                     onClick={() => setEdicion(i)}
                   >
                     Editar
@@ -386,7 +399,13 @@ function Editor({
           Cerrar editor
         </button>
       </div>
-      <form action={guardar} className="formulario gestion-formulario">
+      <form
+        action={guardar}
+        className="formulario gestion-formulario"
+        onInvalid={manejarInvalido}
+        onInput={limpiarInvalido}
+        onChange={limpiarInvalido}
+      >
         {grupo !== "familias" && (
           <label className="campo">
             Familia
@@ -418,6 +437,7 @@ function Editor({
               Producto comercial
               <select
                 required
+                disabled={!familiaId}
                 value={productoId}
                 onChange={(e) => setProductoId(e.target.value)}
               >
@@ -439,12 +459,21 @@ function Editor({
               Código SKU
               <input
                 name="codigo"
+                aria-label="Código SKU"
                 defaultValue={item?.codigo}
                 required
                 readOnly={!!item}
+                minLength={2}
                 maxLength={40}
-                pattern="[A-Za-z0-9][A-Za-z0-9._-]+"
+                pattern={PATRON_CODIGO_SKU}
+                data-validacion="Usa de 2 a 40 letras, números, puntos, guiones o guiones bajos. Empieza con una letra o un número."
+                onBlur={(e) => {
+                  e.currentTarget.value = e.currentTarget.value
+                    .trim()
+                    .toUpperCase();
+                }}
               />
+              <small>Único y permanente. Ejemplo: CH-PARR-500.</small>
             </label>
             <label className="campo">
               Presentación
@@ -453,6 +482,8 @@ function Editor({
                 defaultValue={item?.presentacion}
                 required
                 maxLength={100}
+                pattern={PATRON_TEXTO_REQUERIDO}
+                data-validacion="Describe la presentación; no uses solamente espacios."
               />
             </label>
             <label className="campo">
@@ -462,6 +493,8 @@ function Editor({
                 defaultValue={item?.tipoEmpaque}
                 required
                 maxLength={100}
+                pattern={PATRON_TEXTO_REQUERIDO}
+                data-validacion="Indica el tipo de empaque; no uses solamente espacios."
               />
             </label>
             <label className="campo">
@@ -470,6 +503,7 @@ function Editor({
                 name="pesoGramos"
                 type="number"
                 min="1"
+                max="2147483647"
                 step="1"
                 defaultValue={item?.pesoGramos}
                 required
@@ -481,6 +515,8 @@ function Editor({
                 name="precioBob"
                 inputMode="decimal"
                 pattern="[0-9]{1,10}([.][0-9]{1,2})?"
+                maxLength={13}
+                data-validacion="Ingresa un precio no negativo con punto decimal y hasta dos decimales. Ejemplo: 27.50."
                 defaultValue={item?.precioBob}
                 required
               />
@@ -518,6 +554,8 @@ function Editor({
                 defaultValue={item?.nombre}
                 required
                 maxLength={grupo === "familias" ? 70 : 120}
+                pattern={PATRON_NOMBRE}
+                data-validacion="El nombre debe contener letras; no admite etiquetas ni caracteres de control o invisibles."
               />
             </label>
             <label className="campo gestion-ancho">
@@ -557,8 +595,17 @@ function Editor({
                 onChange={async (e) => {
                   const archivo = e.target.files?.[0];
                   if (!archivo) return;
-                  if (archivo.size > 5 * 1024 * 1024) {
-                    setError("La fotografía supera 5 MB.");
+                  if (
+                    !["image/png", "image/jpeg", "image/webp"].includes(
+                      archivo.type,
+                    ) ||
+                    archivo.size === 0 ||
+                    archivo.size > 5 * 1024 * 1024
+                  ) {
+                    setError(
+                      "Selecciona una fotografía PNG, JPEG o WebP de hasta 5 MB que no esté vacía.",
+                    );
+                    e.target.value = "";
                     return;
                   }
                   setSubiendo(true);

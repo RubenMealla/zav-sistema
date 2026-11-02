@@ -1631,6 +1631,7 @@ components:
       type: object
       properties:
         nombre:
+          description: Debe contener letras. No admite etiquetas ni caracteres de control o invisibles. Normaliza espacios, mayúsculas y acentos para detectar duplicados.
           type: string
           minLength: 1
           maxLength: 70
@@ -1655,6 +1656,7 @@ components:
       type: object
       properties:
         nombre:
+          description: Debe contener letras. No admite etiquetas ni caracteres de control o invisibles. Normaliza espacios, mayúsculas y acentos para detectar duplicados.
           type: string
           minLength: 1
           maxLength: 120
@@ -1673,6 +1675,7 @@ components:
           minimum: 0
           maximum: 100000
         familiaId:
+          description: Familia activa al crear o cambiar la relación. Se permite conservar una relación inactiva al editar otros datos.
           type: string
           format: uuid
         caracteristicas:
@@ -1687,8 +1690,11 @@ components:
       properties:
         codigo:
           type: string
+          minLength: 2
           maxLength: 40
+          pattern: "^[A-Za-z0-9][A-Za-z0-9._-]{1,39}$"
         productoComercialId:
+          description: Producto y familia activos al crear o cambiar la relación. Se permite conservar una relación inactiva al editar otros datos.
           type: string
           format: uuid
         presentacion:
@@ -1700,6 +1706,7 @@ components:
         pesoGramos:
           type: integer
           minimum: 1
+          maximum: 2147483647
         precioBob:
           oneOf:
             - type: string
@@ -1979,6 +1986,7 @@ components:
         - productos
       additionalProperties: false
     CatalogoPublico:
+      description: Publicación independiente del estado activo y del stock. Solo incluye familias y productos publicados; la inactividad impide operaciones, pero no oculta publicaciones.
       type: object
       properties:
         familias:
