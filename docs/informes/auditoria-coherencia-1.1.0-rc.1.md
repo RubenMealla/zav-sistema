@@ -55,11 +55,47 @@ Android usa **versionCode 10102**, superior a las compilaciones QA anteriores. L
 
 ## Verificación y entrega
 
-La evidencia final de Actions, despliegues y APK se completa al terminar sus ejecuciones. Verificaciones locales ya realizadas: compilación web, 40 recorridos Playwright aprobados, 26 pruebas unitarias y 65 E2E de API/PostgreSQL aprobadas, tipos móviles y 20 pruebas móviles aprobadas; las dos especificaciones OpenAPI pasan lint de sintaxis y la colección Postman local aprueba sus tres aserciones.
+Las cuatro Actions del código `8240962dcc0ef1b3bad8b5fd192c5e5143e8a1b1` terminaron correctamente:
+
+| Verificación | Evidencia y resultado |
+| --- | --- |
+| API | [41636741981](https://github.com/RubenMealla/zav-sistema/actions/runs/41636741981): compilación, lint, 26 pruebas unitarias y 65 E2E con PostgreSQL. |
+| Web | [41636741840](https://github.com/RubenMealla/zav-sistema/actions/runs/41636741840): compilación y 40 recorridos Playwright; la ejecución local también aprobó los 40. |
+| Móvil | [41636741896](https://github.com/RubenMealla/zav-sistema/actions/runs/41636741896): tipos, lint y 20 pruebas. |
+| Android | [41636741935](https://github.com/RubenMealla/zav-sistema/actions/runs/41636741935): APK firmada, identidad/versión QA, hora Bolivia con distintas zonas del dispositivo y recorrido real en emulador con API/PostgreSQL locales. |
+| Contratos | Ambas especificaciones OpenAPI sin errores de sintaxis; colección Postman local: dos solicitudes y tres aserciones aprobadas. `postman status` no existe en el CLI instalado; esa limitación no se presenta como una comprobación aprobada. |
+| Desplegado | Inicio de sesión, avisos repetidos, conservación de campos, modales, catálogo, venta/historial, custodia y landing a 1440/390 px; retorno al acceso al vencer la sesión. Sin errores JavaScript capturados. |
+
+Las regresiones cubren clientes, pedidos, retiros, distribución, entregas, lotes, movimientos, permisos y publicación. La revisión Android comprueba recepción, rechazo de GPS sin salida, venta, notificación flotante, detalle modal, respuesta incierta, reapertura y reintento con la misma solicitud, devolución y conciliación. No se ejecutan esos datos sintéticos contra la base remota que el propietario utiliza.
+
+[APK QA 1.1.0-rc.1, build 10102](https://github.com/RubenMealla/zav-sistema/actions/runs/41636741935/artifacts/13232985740), 149407793 bytes, SHA-256 `907e99ced863f4829a63cbce72200f70e49fd6d34b31f1e6835822bd6b5c6524`. El hash descargado coincide con el archivo de checksum y con el APK efectivamente usado en el emulador. [Resultados/capturas Android](https://github.com/RubenMealla/zav-sistema/actions/runs/41636741935/artifacts/13232837224). GitHub ejecutó el merge de prueba `7cd1959f9270b733044af3a76fa6d6f14c20c9f6`; es la referencia temporal de CI, no una fusión de la rama a `main`.
+
+Los avisos de lint existentes sobre ordenación sin comparador y contadores de revisiones en limpiezas de efectos no son errores de compilación; no se ocultaron para declarar cero avisos.
+
+Commits de esta auditoría: `c87b1ad` (avisos, formularios, elegibilidad y versión), `9f9f4ef` (búsqueda comercial y prueba de versión candidata), `8240962` (etiquetas coherentes y dictamen). Los commits de entrega documental posteriores no cambian esos ejecutables.
 
 Los fallos iniciales se conservan: borrado de campos y segundo aviso invisible detectados por Playwright; expectativas antiguas de versión estable en pruebas web/API que no admitían el sufijo RC. Se corrigieron las causas y las expectativas de versión, sin retirar pruebas.
 
 La comprobación remota encontró nombres modificados durante la revisión del propietario. Al asumir un nombre anterior para probar el rechazo de duplicados, creó una familia vacía en QA. Se identificó como **Ensayo de avisos QA 20261103**, desactivada y oculta, sin borrar historial ni modificar los productos del propietario. Se adaptó la comprobación a los datos actuales; los dos rechazos posteriores, conservación de campos, cierre de avisos, modales, historial y landing a 1440/390 px pasaron en el Preview, sin errores JavaScript. La [evidencia sanitizada](../evidencias/auditoria-coherencia-20261103.json) identifica el registro y los conteos de la base.
+
+## Entornos y recuperación de esta revisión
+
+API QA: `https://zav-api-catalogo-qa.onrender.com`, servicio Render `srv-dbj4ia8u01pc73ef4850`, despliegue `dep-dbkt7lgae00c73c0v1mg`, LIVE, código `9f9f4ef2281c25e693dad9c0a2cc2bce9b3f7d3e`. Salud y versión devolvieron HTTP 200 con `1.1.0-rc.1`. El commit de presentación posterior `8240962` no cambia la API.
+
+Web QA: [Preview de revisión](https://zav-sistema-b0mnx7z8x-dariomealla24-6763.vercel.app), despliegue `dpl_DrHUauCZfrAURdL3Cmg471tWsMGF`, READY, código `8240962dcc0ef1b3bad8b5fd192c5e5143e8a1b1`. El enlace temporal privado se entrega al propietario; no se incluye en Git ni se desactiva la protección global de Vercel.
+
+Base QA: proyecto Neon `fancy-darkness-96751098`, rama `br-dawn-cake-b6cs8va8`, base `zav_catalogo_qa`, once migraciones. Consulta real: cero saldos físicos/custodias/libres negativos, cero SKU sin jerarquía, cero diferencias distribución/custodia y cero custodias sin responsable. Siete familias originales y trece productos con foto original; un Consumidor final, sin pedidos asociados. Las 23 operaciones y 34 movimientos existentes no se borraron ni reinicializaron.
+
+La API productiva `https://zav-api-2026.onrender.com` respondió salud HTTP 200 y versión **1.0.0**. `main` y `origin/main` siguen en el SHA base después de `git fetch origin`. No se ejecutaron migraciones ni pruebas de escritura productivas.
+
+Para volver al código QA previo a esta auditoría:
+
+1. En Render, seleccionar el despliegue anterior `dep-dbk07n7b9u1s73f89g80`, commit `14ce8ff4ecf08e96b2eb1f62caccc8b576178e41`, mediante la función de rollback/redeploy del panel. Verificar `/api/v1/salud`, autenticación y una consulta de conciliación. No cambiar la conexión a la base productiva.
+2. Usar el [Preview anterior](https://zav-sistema-dmjhjvojb-dariomealla24-6763.vercel.app), `dpl_DARozZUrhGasVQrRuSVhdGHZkyRA`, código `39cf0a8`. No necesita revertir la base: esta revisión solo cambia consultas, clientes y mensajes; no introduce esquema nuevo.
+3. Para Android ya instalado, conservar solicitudes pendientes y confirmar su resultado antes de cambiar de aplicación. Android no permite instalar normalmente un versionCode inferior sobre 10102. Para regresar a la interfaz anterior sin perder almacenamiento local, compilar ese código con la misma identidad/firma QA y un versionCode superior. No indicar desinstalación como reversión inocua: eliminaría datos locales pendientes.
+4. Una recuperación de datos es un procedimiento distinto. Esta revisión no necesita restauración de base. La copia productiva restaurada y verificada del 01/11 se conserva en `backups/catalogo-salidas-20261101-verificado/production-previa.dump`, SHA-256 `c12eeb1230f30463dd71bc489a231b012ebc11819ff9ec59efe29e13fae2cbdd`; no se presenta como una copia fresca del 03/11. Para una futura migración productiva hay que refrescar y volver a ensayar el respaldo según el [runbook](../operacion/catalogo-salidas-recuperacion.md).
+
+El retorno de despliegue se documenta con las referencias disponibles; no se ejecutó un rollback de ensayo sobre el entorno que el propietario está utilizando. Los datos añadidos por el propietario no se sobrescriben para cambiar de versión.
 
 ## Límites y trabajo que no se declara resuelto
 

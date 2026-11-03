@@ -1,7 +1,7 @@
 {
   "fecha": "2026-11-03",
   "base": "e9dc1a40476a72034f38e4dabb0e178c62af0066",
-  "codigo": "9f9f4ef2281c25e693dad9c0a2cc2bce9b3f7d3e",
+  "codigo": "8240962dcc0ef1b3bad8b5fd192c5e5143e8a1b1",
   "version": "1.1.0-rc.1",
   "pr": 74,
   "local": {
@@ -28,6 +28,11 @@
       "pedidos_genericos": "0",
       "operaciones": "23",
       "movimientos": "34"
+    },
+    "conciliacion": {
+      "diferencias_distribucion_custodia": 0,
+      "custodias_sin_responsable": 0,
+      "libres_negativos": 0
     }
   },
   "incidenciaQA": {
@@ -35,5 +40,92 @@
     "causa": "La comprobación de duplicados usó un nombre que el propietario había cambiado durante su revisión.",
     "correccion": "Registro identificado como Ensayo de avisos QA 20261103, desactivado y oculto, sin productos asociados; no se eliminó historial.",
     "registrosUsuario": "Conservados"
+  },
+  "webDesplegada": {
+    "deployment": "dpl_DrHUauCZfrAURdL3Cmg471tWsMGF",
+    "sha": "8240962dcc0ef1b3bad8b5fd192c5e5143e8a1b1",
+    "fecha": "2026-11-03T12:35:32.712Z",
+    "resultados": [
+      "Inicio de sesión real de Administrador, versión 1.1.0-rc.1",
+      "Aviso flotante dentro del modal, datos conservados y segundo rechazo visible",
+      "Catálogo: tabla de familias, modal, Escape y productos relacionados",
+      "Venta directa: nueva venta e historial separados; detalle modal con datos reales",
+      "Mercancía por vendedor y devoluciones en vistas independientes",
+      "Landing 1440px: imágenes cargadas, iconos familiares y sin desbordamiento",
+      "Landing 390px: imágenes cargadas, iconos familiares y sin desbordamiento"
+    ],
+    "errores": []
+  },
+  "render": {
+    "servicio": "srv-dbj4ia8u01pc73ef4850",
+    "deploy": "dep-dbkt7lgae00c73c0v1mg",
+    "codigo": "9f9f4ef2281c25e693dad9c0a2cc2bce9b3f7d3e",
+    "estado": "live",
+    "saludHttp": 200,
+    "version": "1.1.0-rc.1"
+  },
+  "produccion": {
+    "escriturasEnEstaAuditoria": false,
+    "apiVersion": "1.0.0",
+    "saludHttp": 200,
+    "main": "e9dc1a40476a72034f38e4dabb0e178c62af0066"
+  },
+  "actions": {
+    "codigo": "8240962dcc0ef1b3bad8b5fd192c5e5143e8a1b1",
+    "api": {
+      "run": 41636741981,
+      "resultado": "success"
+    },
+    "web": {
+      "run": 41636741840,
+      "resultado": "success"
+    },
+    "movil": {
+      "run": 41636741896,
+      "resultado": "success"
+    },
+    "android": {
+      "run": 41636741935,
+      "resultado": "success",
+      "jobs": [
+        "Construir APK Android autónomo",
+        "Verificar hora QA en Android",
+        "Verificar venta directa en APK y PostgreSQL"
+      ]
+    }
+  },
+  "android": {
+    "sha256": "907e99ced863f4829a63cbce72200f70e49fd6d34b31f1e6835822bd6b5c6524",
+    "bytes": 149407793,
+    "run": 41636741935,
+    "artifact": 13232985740,
+    "resultadoAndroid": {
+      "apk": "ZAV-Vendedor-1.1.0-rc.1-build10102-qa.apk",
+      "apkSha256": "907e99ced863f4829a63cbce72200f70e49fd6d34b31f1e6835822bd6b5c6524",
+      "apkRunId": "41636741935",
+      "pruebaCommit": "7cd1959f9270b733044af3a76fa6d6f14c20c9f6",
+      "carga": "c461bc98-1c9d-41ff-82b2-d649f889bbe4",
+      "venta": "bdae5a99-0a25-4e1c-8548-6c3ca83b957a",
+      "devolucion": "20577925-045b-481d-b71d-c4ae2613eb51",
+      "stockLibreFinal": 2,
+      "gpsPuntual": true,
+      "notificacionesFlotantes": true,
+      "permisoDenegadoSinSalida": true,
+      "respuestaInciertaRecuperadaTrasReabrir": true,
+      "reintentoMismaSolicitud": true,
+      "conciliado": true,
+      "api": "local",
+      "base": "zav_test"
+    }
+  },
+  "sesionDesplegada": {
+    "deployment": "dpl_DrHUauCZfrAURdL3Cmg471tWsMGF",
+    "sha": "8240962dcc0ef1b3bad8b5fd192c5e5143e8a1b1",
+    "fecha": "2026-11-03T17:37:50.504Z",
+    "resultados": [
+      "Inicio de sesión real de Administrador, versión 1.1.0-rc.1",
+      "La sesión vencida en Venta directa vuelve al acceso mediante el aviso previsto"
+    ],
+    "errores": []
   }
 }

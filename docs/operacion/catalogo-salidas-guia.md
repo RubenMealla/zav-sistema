@@ -1,6 +1,8 @@
 # Prueba funcional de la ampliación
 
-La ampliación está en el [PR 74](https://github.com/RubenMealla/zav-sistema/pull/74), todavía sin integrar. Producción conserva la versión anterior. Interfaz actualizada el 02/11: [web Preview](https://zav-sistema-dmjhjvojb-dariomealla24-6763.vercel.app), API `https://zav-api-catalogo-qa.onrender.com`. El Preview requiere la sesión de Vercel o el enlace temporal privado entregado al propietario. Las claves y los enlaces privados no se publican en este documento. No realizar ventas ficticias en producción.
+La ampliación está en el [PR 74](https://github.com/RubenMealla/zav-sistema/pull/74), todavía sin integrar. Producción conserva la versión anterior. Versión de revisión 1.1.0-rc.1, actualizada el 03/11: [web Preview](https://zav-sistema-b0mnx7z8x-dariomealla24-6763.vercel.app), API `https://zav-api-catalogo-qa.onrender.com`. El Preview requiere la sesión de Vercel o el enlace temporal privado entregado al propietario. Las claves y los enlaces privados no se publican en este documento. No realizar ventas ficticias en producción.
+
+Los avisos de éxito y error aparecen flotando y se pueden cerrar. Si un guardado falla, los campos se conservan. Una operación pendiente de confirmación mantiene su botón Verificar/reintentar hasta conocer el resultado. **Datos confirmados** se refiere a la validación comercial; no afirma que haya stock ni que un lote esté vigente.
 
 ## Administrador
 
@@ -17,7 +19,7 @@ Los formularios validan nombres con letras (se admiten tildes, números y espaci
 
 Las cantidades se conservan tal como se escriben: pegar `1.5` o `-3` muestra un error, sin convertirlos en `15` o `3`. Se comprueba toda la selección antes de enviar, incluidos productos ocultos por una búsqueda. Clientes exige nombre con letras, hasta 140 caracteres; el teléfono es opcional y, si se informa, admite de 7 a 15 dígitos, `+` inicial, espacios, paréntesis y guiones. Las mismas reglas se aplican a las solicitudes directas a la API.
 
-1. Instalar la [APK QA 1.1.1, build 10101](https://github.com/RubenMealla/zav-sistema/actions/runs/41536504894/artifacts/13185885740), identificada con paquete distinto y etiqueta QA. Esta compilación ya apunta a la API QA remota. Para emulador local la URL es `http://10.0.2.2:3001`, sin añadir `/api/v1`. No utilizar la API productiva para esta prueba.
+1. Instalar la [APK QA 1.1.0-rc.1, build 10102](https://github.com/RubenMealla/zav-sistema/actions/runs/41636741935/artifacts/13232985740), identificada con paquete distinto y etiqueta QA. Esta compilación ya apunta a la API QA remota. Para emulador local la URL es `http://10.0.2.2:3001`, sin añadir `/api/v1`. No utilizar la API productiva para esta prueba.
 2. Abrir la pestaña independiente **Venta directa → Mi mercancía → Recibir cargas**. Confirmar una carga propia tras verificar la recepción física.
 3. Volver a Nueva venta y seleccionar cantidades dentro del saldo libre propio. La mercancía de pedidos y de otros vendedores no está disponible para esta operación.
 4. Obtener ubicación puntual y revisar precisión. Confirmar la entrega. La pantalla solo afirma registro exitoso cuando responde la API. Si falla la red, conservar la operación pendiente y usar su reintento: mantiene la misma clave y datos, incluso al reabrir. No crear otra solicitud para reemplazar una respuesta incierta.
