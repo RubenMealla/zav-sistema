@@ -1,9 +1,9 @@
 openapi: 3.0.3
 info:
   title: ZAV API
-  version: 1.0.0
+  version: 1.1.0-rc.1
   description: >
-    Contrato de las rutas públicas de ZAV API 1.0.0, identificado mediante el prefijo /api/v1. La versión del
+    Contrato de las rutas públicas de ZAV API 1.1.0-rc.1, identificado mediante el prefijo /api/v1. La versión del
     servicio y la versión mayor del contrato evolucionan de forma independiente.
 servers:
   - url: https://zav-api-2026.onrender.com
@@ -57,7 +57,7 @@ paths:
                 required: [ servicio, version, contrato ]
                 properties:
                   servicio: { type: string, example: 'ZAV API' }
-                  version: { type: string, example: '1.0.0' }
+                  version: { type: string, example: '1.1.0-rc.1' }
                   contrato: { type: string, example: 'v1' }
 
   /api/v1/auth/login:
@@ -2375,6 +2375,7 @@ components:
               libre: *a3
               pendiente: *a3
               elegible:
+                description: Lote liberado y vigente, con presentación, producto y familia activos y datos comerciales habilitados. libre conserva las unidades físicas sin compromisos, incluso si solo pueden devolverse.
                 type: boolean
         page: *a3
         limit: *a3

@@ -646,8 +646,10 @@ export class OperacionesService {
     const filas = (await this.db.query(
       `SELECT s.vendedor_id,u.nombre AS vendedor_nombre,s.lote_id,l.codigo AS lote_codigo,l.producto_id,p.nombre,p.codigo,p.presentacion,l.condicion,l.vence_el,s.finalidad,s.cantidad,
         CASE WHEN s.finalidad='LIBRE' THEN c.disponible ELSE 0 END AS libre,
-        COALESCE(c.pendiente,0) AS pendiente, (l.condicion='LIBERADO' AND l.vence_el>=${FECHA_HOY_BOLIVIA_SQL}) AS elegible
-      FROM saldo_custodia s JOIN lote l ON l.id=s.lote_id JOIN producto p ON p.id=l.producto_id LEFT JOIN usuario u ON u.id=s.vendedor_id
+        COALESCE(c.pendiente,0) AS pendiente, (l.condicion='LIBERADO' AND l.vence_el>=${FECHA_HOY_BOLIVIA_SQL}
+          AND p.activo AND pc.activo AND f.activo AND p.validacion_comercial<>'PROVISIONAL') AS elegible
+      FROM saldo_custodia s JOIN lote l ON l.id=s.lote_id JOIN producto p ON p.id=l.producto_id
+      JOIN producto_comercial pc ON pc.id=p.producto_comercial_id JOIN familia f ON f.id=pc.familia_id LEFT JOIN usuario u ON u.id=s.vendedor_id
       LEFT JOIN custodia_libre c ON c.vendedor_id=s.vendedor_id AND c.lote_id=s.lote_id AND s.finalidad='LIBRE'
       WHERE s.cantidad<>0 AND ($1::uuid IS NULL OR s.vendedor_id=$1) ORDER BY u.nombre,p.nombre,l.vence_el,l.id,s.finalidad LIMIT $2 OFFSET $3`,
       [vendedor, limit, (page - 1) * limit],

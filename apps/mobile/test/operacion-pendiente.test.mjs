@@ -15,7 +15,7 @@ test('fallo de red conserva solicitud y clave; reintentar recupera confirmación
   await assert.rejects(ejecutarOperacionPersistida(usuario,'token-qa',p),e=>e.status===0);
   assert.deepEqual(await leerOperacionPendiente(usuario),p);
   await assert.rejects(ejecutarOperacionPersistida(usuario,'token-qa',operacion()),/pendiente/);
-  globalThis.fetch=async(_url,opts)=>{peticiones.push(JSON.parse(opts.body));return Response.json({id:'confirmacion-original'});};
+  globalThis.fetch=async(_url,opts)=>{peticiones.push(JSON.parse(opts.body));return Response.json({id:'confirmacion-original',estado:'CONFIRMADA',detalles:[]});};
   assert.equal((await ejecutarOperacionPersistida(usuario,'token-qa',p)).id,'confirmacion-original');
   assert.deepEqual(peticiones[0],peticiones[1]);assert.equal(await leerOperacionPendiente(usuario),null);
 });
@@ -28,6 +28,15 @@ test('sesión vencida y respuestas inválidas mantienen operación pendiente; re
   globalThis.fetch=async()=>Response.json({message:'Stock insuficiente QA'},{status:409});
   await assert.rejects(ejecutarOperacionPersistida(usuario,'token-qa',p));assert.equal(await leerOperacionPendiente(usuario),null);
 });
+test('HTTP 200 sin comprobante válido conserva la solicitud pendiente',async()=>{
+  const usuario=crypto.randomUUID(),p=operacion();
+  for (const respuesta of [Response.json({}), Response.json(null), new Response('incompleta',{headers:{'Content-Type':'application/json'}})]) {
+    globalThis.fetch=async()=>respuesta;
+    await assert.rejects(ejecutarOperacionPersistida(usuario,'token-qa',p), e=>e.status===502);
+    assert.deepEqual(await leerOperacionPendiente(usuario),p);
+  }
+});
+
 test('una operación pendiente no se envía a otra API ni aparece en otro usuario',async()=>{
   const usuario=crypto.randomUUID(),p=operacion();let llamadas=0;
   globalThis.fetch=async()=>{llamadas++;throw new Error('Sin red');};

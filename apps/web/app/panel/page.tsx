@@ -89,7 +89,7 @@ function condicionClase(condicion: string) {
 }
 
 function fechaBolivia(valor: string) {
-  return new Date(valor).toLocaleString('es-BO', { dateStyle: 'short', timeStyle: 'short' });
+  return new Date(valor).toLocaleString('es-BO', { dateStyle: 'short', timeStyle: 'short', timeZone: 'America/La_Paz' });
 }
 
 export default async function Panel({

@@ -25,9 +25,12 @@ export function consultarOperaciones(token:string,page=1,tipo?:OperacionResumen[
   return solicitud<{items:OperacionResumen[];total:number}>('/api/v1/operaciones?'+q,{},token);
 }
 export function consultarOperacion(token:string,id:string) {return solicitud<OperacionDetalle>('/api/v1/operaciones/'+encodeURIComponent(id),{},token);}
-export function enviarOperacion(token:string,ruta:string,datos:Record<string,unknown>) {
+export async function enviarOperacion(token:string,ruta:string,datos:Record<string,unknown>) {
   if(!/^operaciones\/(salidas-directas|devoluciones|[a-f0-9-]{36}\/recepcion)$/.test(ruta)) throw new Error('Operación móvil no permitida.');
-  return solicitud<OperacionDetalle>('/api/v1/'+ruta,{method:'POST',body:JSON.stringify(datos)},token);
+  const resultado = await solicitud<OperacionDetalle>('/api/v1/'+ruta,{method:'POST',body:JSON.stringify(datos)},token);
+  if (!resultado?.id || !resultado.estado || !Array.isArray(resultado.detalles))
+    throw new ApiError(502, {message:'No se recibió un comprobante válido. Verifica o reintenta la misma operación.'});
+  return resultado;
 }
 
 export class ApiError extends Error {

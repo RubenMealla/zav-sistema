@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { BotonEnviar } from "../componentes/interacciones";
+import { BotonEnviar, Notificacion } from "../componentes/interacciones";
 import Image from "next/image";
 import { Ventana } from "../componentes/ventana";
 import { Icono } from "../componentes/icono";
@@ -12,7 +12,7 @@ import {
   PATRON_NOMBRE,
   PATRON_TEXTO_REQUERIDO,
 } from "../componentes/validacion-formularios";
-import { gestion, mensajeError, todasLasPaginas } from "./lib/gestion-cliente";
+import { gestion, mensajeError, todasLasPaginas, useSesionGestion } from "./lib/gestion-cliente";
 
 type Grupo = "familias" | "productos" | "presentaciones";
 type Item = {
@@ -41,6 +41,7 @@ const etiquetas = {
   presentaciones: "Presentaciones",
 };
 export function CatalogoPanel() {
+  useSesionGestion();
   const [grupo, setGrupo] = useState<Grupo>("familias");
   const [items, setItems] = useState<Item[]>([]);
   const [familias, setFamilias] = useState<Item[]>([]);
@@ -54,9 +55,15 @@ export function CatalogoPanel() {
   const [publicado, setPublicado] = useState("");
   const [error, setError] = useState("");
   const [mensaje, setMensaje] = useState("");
+  const [avisoId, setAvisoId] = useState(0);
   const [cargando, setCargando] = useState(true);
   const revision = useRef(0);
   const [referencias, setReferencias] = useState(0);
+  function abrirEditor(item: Item | null) {
+    setMensaje("");
+    setError("");
+    setEdicion(item);
+  }
   useEffect(() => {
     let vigente = true;
     Promise.all([
@@ -70,7 +77,7 @@ export function CatalogoPanel() {
         }
       })
       .catch((e) => {
-        if (vigente) setError(mensajeError(e));
+        if (vigente) { setError(mensajeError(e)); setAvisoId(id => id + 1); }
       });
     return () => {
       vigente = false;
@@ -112,7 +119,7 @@ export function CatalogoPanel() {
       setItems(r.items);
       setTotal(r.total);
     } catch (e) {
-      if (actual === revision.current) setError(mensajeError(e));
+      if (actual === revision.current) { setError(mensajeError(e)); setAvisoId(id => id + 1); }
     } finally {
       if (actual === revision.current) setCargando(false);
     }
@@ -142,16 +149,7 @@ export function CatalogoPanel() {
           </button>
         ))}
       </nav>
-      {error && (
-        <p role="alert" className="gestion-error">
-          {error}
-        </p>
-      )}
-      {mensaje && (
-        <p role="status" className="gestion-exito">
-          {mensaje}
-        </p>
-      )}
+      {error ? <Notificacion key={avisoId} tipo="error" mensaje={error} /> : mensaje ? <Notificacion tipo="exito" mensaje={mensaje} /> : null}
       <div className="gestion-barra gestion-filtros">
         <label className="campo">
           Buscar
@@ -216,7 +214,7 @@ export function CatalogoPanel() {
         <button
           className="boton boton-primario"
           disabled={cargando}
-          onClick={() => setEdicion(null)}
+          onClick={() => abrirEditor(null)}
         >
           Crear{" "}
           {grupo === "familias"
@@ -344,7 +342,7 @@ export function CatalogoPanel() {
                     <button
                       className="boton boton-secundario"
                       disabled={cargando}
-                      onClick={() => setEdicion(i)}
+                      onClick={() => abrirEditor(i)}
                     >
                       Editar
                     </button>
@@ -365,7 +363,7 @@ export function CatalogoPanel() {
           </tbody>
         </table>
       </div>
-      {!cargando && items.length === 0 && (
+      {!cargando && !error && items.length === 0 && (
         <p>No hay resultados para estos filtros.</p>
       )}
       <div className="gestion-barra">
@@ -435,7 +433,9 @@ function Editor({
   const [imagenId, setImagenId] = useState(item?.imagenId ?? null);
   const [subiendo, setSubiendo] = useState(false);
   const [error, setError] = useState("");
+  const [avisoId, setAvisoId] = useState(0);
   async function guardar(form: FormData) {
+    setAvisoId(id => id + 1);
     setError("");
     const valor = (n: string) => String(form.get(n) ?? "");
     const datos: Record<string, unknown> = {
@@ -485,6 +485,10 @@ function Editor({
     >
       <form
         action={guardar}
+        // React restablece los campos al resolver la acción, incluso si la API
+        // rechazó los datos. El editor se cierra al guardar; ante un error debe
+        // conservar lo escrito para poder corregirlo o reintentar.
+        onReset={(evento) => evento.preventDefault()}
         className="formulario gestion-formulario"
         onInvalid={manejarInvalido}
         onInput={limpiarInvalido}
@@ -679,6 +683,7 @@ function Editor({
                 onChange={async (e) => {
                   const archivo = e.target.files?.[0];
                   if (!archivo) return;
+                  setAvisoId(id => id + 1);
                   if (
                     !["image/png", "image/jpeg", "image/webp"].includes(
                       archivo.type,
@@ -745,11 +750,7 @@ function Editor({
           />{" "}
           Activo
         </label>
-        {error && (
-          <p className="gestion-error gestion-ancho" role="alert">
-            {error}
-          </p>
-        )}
+        {error && <Notificacion key={avisoId} tipo="error" mensaje={error} />}
         <div className="gestion-ancho">
           <button
             type="button"

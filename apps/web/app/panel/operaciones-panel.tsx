@@ -10,12 +10,12 @@ import {
 } from "react";
 import { Ventana } from "../componentes/ventana";
 import { etiquetaOperacion, fechaOperacion } from "./lib/etiquetas-operaciones";
-import { BotonEnviar } from "../componentes/interacciones";
+import { BotonEnviar, Notificacion } from "../componentes/interacciones";
 import {
   manejarInvalido,
   limpiarInvalido,
 } from "../componentes/validacion-formularios";
-import { ErrorGestion, gestion, mensajeError } from "./lib/gestion-cliente";
+import { ErrorGestion, gestion, mensajeError, useSesionGestion } from "./lib/gestion-cliente";
 
 type Disponible = {
   productoId: string;
@@ -58,6 +58,7 @@ type Detalle = Operacion & {
   eventos: { accion: string; responsable: string; creadoEn: string }[];
 };
 type Custodia = {
+  elegible: boolean;
   vendedorId: string;
   vendedorNombre: string;
   loteId: string;
@@ -99,6 +100,8 @@ export function OperacionesPanel({
     "nueva" | "inventario" | "devoluciones" | "historial"
   >("nueva");
   const [detalleAbierto, setDetalleAbierto] = useState(false);
+  useSesionGestion();
+  const [datosListos, setDatosListos] = useState(false);
   const [cargandoDetalle, setCargandoDetalle] = useState(false);
   const [errorDetalle, setErrorDetalle] = useState("");
   const revisionDetalle = useRef(0);
@@ -122,6 +125,7 @@ export function OperacionesPanel({
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState("");
   const [mensaje, setMensaje] = useState("");
+  const [avisoId, setAvisoId] = useState(0);
   const almacenamiento = `zav.operacion.v1.${usuario}`;
   const bloqueo = useRef(false);
   const leerPendiente = useCallback((): string | null | undefined => {
@@ -150,7 +154,7 @@ export function OperacionesPanel({
       };
     }
   }, [guardado]);
-  const lista = guardado !== undefined && !errorAlmacenamiento;
+  const lista = guardado !== undefined && !errorAlmacenamiento && datosListos;
   function persistir(p: Pendiente | null) {
     if (p) localStorage.setItem(almacenamiento, JSON.stringify(p));
     else localStorage.removeItem(almacenamiento);
@@ -183,6 +187,7 @@ export function OperacionesPanel({
           : null,
       ]).then(([d, h, v, c, conc]) => {
       if (revision !== revisionLista.current) return;
+      setDatosListos(true);
       setError("");
       if (d) setDisponibles(d.items);
       if (h) {
@@ -193,7 +198,11 @@ export function OperacionesPanel({
       if (c) setCustodia(c.items);
       if (conc) setConciliado(conc.conciliado);
     }).catch((e) => {
-      if (revision === revisionLista.current) setError(mensajeError(e));
+      if (revision === revisionLista.current) {
+        setDatosListos(false);
+        setError(mensajeError(e));
+        setAvisoId(id => id + 1);
+      }
     }).finally(() => {
       if (revision === revisionLista.current) setCargando(false);
     });
@@ -221,8 +230,10 @@ export function OperacionesPanel({
   function cerrarDetalle() {
     revisionDetalle.current++;
     setDetalleAbierto(false);
+    setErrorDetalle("");
   }
   async function abrirDetalle(id: string) {
+    setAvisoId(id => id + 1);
     const revision = ++revisionDetalle.current;
     setDetalle(null);
     setErrorDetalle("");
@@ -240,6 +251,7 @@ export function OperacionesPanel({
   }
   async function enviar(p: Pendiente) {
     if (bloqueo.current) return;
+    setAvisoId(id => id + 1);
     bloqueo.current = true;
     setEnviando(true);
     setError("");
@@ -253,6 +265,8 @@ export function OperacionesPanel({
       // Persistir la solicitud exacta antes del primer envío: un error de red no crea otra clave.
       persistir(p);
       const resultado = await gestion<Detalle>(p.ruta, "POST", p.datos);
+      if (!resultado.id || !Array.isArray(resultado.detalles) || !resultado.estado)
+        throw new ErrorGestion("No se recibió un comprobante válido. Verifica o reintenta la misma operación.", 502);
       persistir(null);
       setComprobante(resultado);
       if (detalleAbierto) setDetalle(resultado);
@@ -312,6 +326,7 @@ export function OperacionesPanel({
     .map((p) => `${seleccion[p.productoId]} × ${p.nombre} (${p.presentacion})`)
     .join("; ");
   async function crear() {
+    setAvisoId(id => id + 1);
     if (pendiente || !lista) return;
     if (
       errorSeleccion ||
@@ -338,6 +353,10 @@ export function OperacionesPanel({
       resumen,
     });
   }
+  const aviso = errorAlmacenamiento || error || errorDetalle;
+  const notificacion = aviso ? <Notificacion key={avisoId} tipo="error" mensaje={aviso} /> : mensaje ? (
+    <Notificacion key={avisoId} tipo="exito" mensaje={mensaje} accion={!detalleAbierto && comprobante ? {texto: "Ver detalle", ejecutar: () => void abrirDetalle(comprobante.id)} : undefined} />
+  ) : null;
   return (
     <section className="gestion-modulo">
       <nav
@@ -391,29 +410,7 @@ export function OperacionesPanel({
           Historial
         </button>
       </nav>
-      {errorAlmacenamiento && (
-        <p className="gestion-error" role="alert">
-          {errorAlmacenamiento}
-        </p>
-      )}
-      {error && (
-        <p className="gestion-error" role="alert">
-          {error}
-        </p>
-      )}
-      {mensaje && (
-        <p className="gestion-exito" role="status">
-          {mensaje}{" "}
-          {comprobante && (
-            <button
-              className="boton boton-terciario"
-              onClick={() => void abrirDetalle(comprobante.id)}
-            >
-              Ver detalle
-            </button>
-          )}
-        </p>
-      )}
+      {!detalleAbierto && notificacion}
       {pendiente && (
         <section className="gestion-editor">
           <h2>Operación pendiente de verificar</h2>
@@ -522,7 +519,7 @@ export function OperacionesPanel({
                     </label>
                   ))}
               </div>
-              {!cargando && disponibles.length === 0 && (
+              {!cargando && datosListos && disponibles.length === 0 && (
                 <p>
                   No hay presentaciones habilitadas. Revisa el catálogo y la
                   validación comercial.
@@ -651,7 +648,7 @@ export function OperacionesPanel({
                       </td>
                       <td>{etiquetaOperacion(c.finalidad)}</td>
                       <td>{c.cantidad}</td>
-                      <td>{c.libre}</td>
+                      <td>{c.elegible ? c.libre : 0}</td>
                       <td>{c.pendiente}</td>
                       <td>{etiquetaOperacion(c.condicion)}</td>
                     </tr>
@@ -788,11 +785,7 @@ export function OperacionesPanel({
               Cargando detalle…
             </p>
           )}
-          {errorDetalle && (
-            <p className="gestion-error" role="alert">
-              {errorDetalle}
-            </p>
-          )}
+          {notificacion}
           {detalle && (
             <section
               className="detalle-operacion"

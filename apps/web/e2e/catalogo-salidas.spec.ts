@@ -174,6 +174,8 @@ test("venta directa web, respuesta perdida, reintento y carga a Vendedor", async
         const r = await route.fetch();
         expect(r.status()).toBe(201);
         await route.abort("failed");
+      } else if (llamadas === 2) {
+        await route.fulfill({status: 200, contentType: 'application/json', body: '{respuesta incompleta'});
       } else await route.continue();
     },
   );
@@ -194,6 +196,10 @@ test("venta directa web, respuesta perdida, reintento y carga a Vendedor", async
   ).toHaveCount(0);
   await page.reload();
   await page.getByRole("button", { name: "Verificar / reintentar" }).click();
+  await expect(page.locator('.toast-error')).toContainText('Respuesta incompleta');
+  await expect(page.locator('.toast-error')).toHaveCSS('position', 'fixed');
+  await expect(page.getByRole('heading', {name:'Operación pendiente de verificar'})).toBeVisible();
+  await page.getByRole('button', {name:'Verificar / reintentar'}).click();
   await expect(
     page
       .getByRole("status")
@@ -216,7 +222,7 @@ test("venta directa web, respuesta perdida, reintento y carga a Vendedor", async
   ).toContainText(codigo);
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog")).toHaveCount(0);
-  expect(llamadas).toBe(2);
+  expect(llamadas).toBe(3);
   const saldos = await request.get(`${API}/api/v1/operaciones/disponibilidad`, {
     headers,
   });
@@ -274,6 +280,31 @@ test("venta directa web, respuesta perdida, reintento y carga a Vendedor", async
     path: "test-results/custodia-vendedor.png",
     fullPage: true,
   });
+});
+
+test('los errores del catálogo usan la notificación flotante dentro del modal y permiten reintentar', async ({page, request}) => {
+  const sesion = await login(request);
+  await entrar(page, sesion.accessToken);
+  await page.goto('/panel?vista=catalogo');
+  await page.getByRole('button', {name:'Crear familia'}).click();
+  const editor = page.getByRole('region', {name:'Crear catálogo'});
+  await editor.getByLabel('Nombre', {exact:true}).fill('Chorizos');
+  const guardar = async () => {
+    await editor.getByRole('button', {name:'Guardar cambios'}).click();
+    await page.getByRole('alertdialog').getByRole('button', {name:'Guardar cambios'}).click();
+  };
+  await guardar();
+  const aviso = editor.locator('.toast-error');
+  await expect(aviso).toBeVisible();
+  await expect(aviso).toHaveCSS('position', 'fixed');
+  await expect(aviso).toContainText(/existe|duplicado|registrad/i);
+  await expect(editor.getByLabel('Nombre', {exact:true})).toHaveValue('Chorizos');
+  await aviso.getByRole('button', {name:'Cerrar notificación'}).click();
+  await expect(aviso).toHaveCount(0);
+  await guardar();
+  await expect(aviso).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
 });
 
 test("el catálogo cambia de tabla sin mostrar filas anteriores y edita en modal", async ({

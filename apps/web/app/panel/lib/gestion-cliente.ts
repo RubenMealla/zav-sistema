@@ -1,3 +1,20 @@
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+
+export function useSesionGestion() {
+  const router = useRouter();
+  useEffect(() => {
+    let redirigiendo = false;
+    const entrar = () => {
+      if (redirigiendo) return;
+      redirigiendo = true;
+      router.replace("/acceso?error=sesion");
+    };
+    window.addEventListener("zav-sesion-vencida", entrar);
+    return () => window.removeEventListener("zav-sesion-vencida", entrar);
+  }, [router]);
+}
+
 export class ErrorGestion extends Error {
   constructor(
     message: string,
@@ -28,6 +45,7 @@ export async function gestion<T>(
             ? undefined
             : JSON.stringify(datos),
       cache: "no-store",
+      signal: AbortSignal.timeout(45000),
     });
   } catch {
     throw new ErrorGestion(
@@ -35,9 +53,15 @@ export async function gestion<T>(
       0,
     );
   }
-  const body = await respuesta
-    .json()
-    .catch(() => ({ message: "Respuesta no válida del servidor." }));
+  if (respuesta.status === 401) {
+    window.dispatchEvent(new Event("zav-sesion-vencida"));
+    throw new ErrorGestion("Tu sesión terminó. Vuelve a ingresar para continuar.", 401);
+  }
+  const body = await respuesta.json().catch(() => {
+    throw new ErrorGestion("Respuesta incompleta del servidor. Verifica o reintenta la misma operación.", respuesta.ok ? 502 : respuesta.status);
+  });
+  if (!body || typeof body !== "object")
+    throw new ErrorGestion("Respuesta no válida del servidor. Verifica o reintenta la misma operación.", 502);
   if (!respuesta.ok)
     throw new ErrorGestion(
       Array.isArray(body.message)

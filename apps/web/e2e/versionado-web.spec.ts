@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { VERSION_WEB } from '../app/lib/version';
 
 test('el identificador de versión de la web sigue la convención SemVer', () => {
-  expect(VERSION_WEB).toMatch(/^\d+\.\d+\.\d+$/);
+  expect(VERSION_WEB).toMatch(/^\d+\.\d+\.\d+(?:-rc\.[1-9]\d*)?$/);
 });
 
 for (const ancho of [390, 1440]) {

@@ -10,6 +10,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { OperacionDetalle } from "@/lib/operaciones-tipos";
 import { fechaCorta } from "@/lib/distribucion";
+import { NotificacionEstado } from "./notificacion-estado";
 
 const etiquetas: Record<string, string> = {
   SALIDA_DIRECTA: "Venta directa",
@@ -50,12 +51,14 @@ export function DetalleOperacion({
   cargando,
   error,
   cerrar,
+  cerrarError,
 }: {
   visible: boolean;
   detalle: OperacionDetalle | null;
   cargando: boolean;
   error: string;
   cerrar: () => void;
+  cerrarError: () => void;
 }) {
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={cerrar}>
@@ -82,11 +85,6 @@ export function DetalleOperacion({
               color="#b83b17"
               accessibilityLabel="Cargando detalle"
             />
-          )}
-          {!!error && (
-            <Text accessibilityRole="alert" style={estilos.error}>
-              {error}
-            </Text>
           )}
           {detalle && (
             <>
@@ -154,6 +152,7 @@ export function DetalleOperacion({
             </>
           )}
         </ScrollView>
+        {!!error && <NotificacionEstado tipo="error" mensaje={error} top={100} onCerrar={cerrarError} />}
       </SafeAreaView>
     </Modal>
   );

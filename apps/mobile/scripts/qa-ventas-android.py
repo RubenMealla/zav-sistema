@@ -155,6 +155,24 @@ def captura(nombre):
         subprocess.run(['adb', '-s', SERIAL, 'exec-out', 'screencap', '-p'], stdout=f, check=True, timeout=30)
 
 
+def comprobar_aviso(mensaje, nombre):
+    # Un solo snapshot: varios dumps seguidos pueden agotar la duración del aviso.
+    limite = time.monotonic() + 45
+    while time.monotonic() < limite:
+        raiz = layout()
+        if any(mensaje in n.get('text', '') for n in raiz.iter('node')):
+            cerrar = next(n for n in raiz.iter('node')
+                          if n.get('content-desc') == 'Cerrar notificación')
+            ET.ElementTree(raiz).write(SALIDA / (nombre+'.xml'), encoding='utf8')
+            with open(SALIDA / (nombre+'.png'), 'wb') as f:
+                subprocess.run(['adb', '-s', SERIAL, 'exec-out', 'screencap', '-p'], stdout=f, check=True, timeout=30)
+            x1, y1, x2, y2 = map(int, re.findall(r'\d+', cerrar.get('bounds', '')))
+            adb('shell', 'input', 'tap', str((x1+x2)//2), str((y1+y2)//2))
+            return
+        time.sleep(0.3)
+    raise AssertionError('No aparece el aviso flotante: ' + mensaje)
+
+
 def saldo(token, producto):
     return next((p['cantidadDisponible'] for p in api('operaciones/disponibilidad', token=token)['items'] if p['productoId'] == producto), 0)
 
@@ -217,10 +235,9 @@ try:
     tocar('Venta directa')
     escribir('Cantidad '+codigo,'2')
     tocar('Obtener ubicación y continuar')
-    esperar('No se registró la entrega: falta autorizar la ubicación puntual.',desplazar=True)
+    comprobar_aviso('No se registró la entrega: falta autorizar la ubicación puntual.', '02-permiso-gps-denegado')
     assert saldo(vt,p['id'])==5
     assert len(api('operaciones?tipo=SALIDA_DIRECTA',token=vt)['items'])==0
-    captura('02-permiso-gps-denegado')
     for permiso in reversed(permisos):
         adb('shell','pm','clear-permission-flags',PACKAGE,permiso,'user-fixed','user-set')
         adb('shell','pm','grant',PACKAGE,permiso)
@@ -244,7 +261,7 @@ try:
     tocar('Venta directa')
     esperar('Pendiente de verificar', desplazar=True)
     tocar('Verificar / reintentar')
-    esperar('Venta registrada correctamente.',exacto=False,desplazar=True)
+    comprobar_aviso('Venta registrada correctamente.', '03-aviso-venta')
     assert len(RespuestaIncierta.intentos_venta) == 2
     assert RespuestaIncierta.intentos_venta[0] == RespuestaIncierta.intentos_venta[1], 'El reintento debe conservar todos los datos y la clave.'
     assert saldo(vt,p['id'])==3
@@ -275,7 +292,7 @@ try:
     assert api('operaciones/conciliacion',token=at)['conciliado']
     tocar('Actualizar')
     captura('04-devolucion-recibida')
-    resultado={'apk':Path(apk[0]).name,'apkSha256':hashlib.sha256(Path(apk[0]).read_bytes()).hexdigest(),'apkRunId':os.environ.get('QA_APK_RUN_ID'),'pruebaCommit':os.environ.get('GITHUB_SHA'),'carga':carga['id'],'venta':venta['id'],'devolucion':devolucion['id'],'stockLibreFinal':saldo(vt,p['id']),'gpsPuntual':True,'permisoDenegadoSinSalida':True,'respuestaInciertaRecuperadaTrasReabrir':True,'reintentoMismaSolicitud':True,'conciliado':True,'api':'local','base':'zav_test'}
+    resultado={'apk':Path(apk[0]).name,'apkSha256':hashlib.sha256(Path(apk[0]).read_bytes()).hexdigest(),'apkRunId':os.environ.get('QA_APK_RUN_ID'),'pruebaCommit':os.environ.get('GITHUB_SHA'),'carga':carga['id'],'venta':venta['id'],'devolucion':devolucion['id'],'stockLibreFinal':saldo(vt,p['id']),'gpsPuntual':True,'notificacionesFlotantes':True,'permisoDenegadoSinSalida':True,'respuestaInciertaRecuperadaTrasReabrir':True,'reintentoMismaSolicitud':True,'conciliado':True,'api':'local','base':'zav_test'}
     (SALIDA/'resultado.json').write_text(json.dumps(resultado,indent=2)+'\n',encoding='utf8')
     print(json.dumps(resultado))
 finally:

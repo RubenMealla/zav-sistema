@@ -16,6 +16,7 @@ import {
   View,
 } from "react-native";
 import {
+  ApiError,
   consultarCustodia,
   consultarOperacion,
   consultarOperaciones,
@@ -42,9 +43,13 @@ import { styles as s } from "@/screens/vendedor-estilos";
 export function VentasDirectas({
   sesion,
   alCambiarVista,
+  alNotificar,
+  alErrorSesion,
 }: {
   sesion: Sesion;
   alCambiarVista?: () => void;
+  alNotificar: (tipo: "error" | "exito", mensaje: string) => void;
+  alErrorSesion: (error: unknown) => Promise<void>;
 }) {
   const token = sesion.accessToken,
     usuario = sesion.usuario.id;
@@ -56,7 +61,6 @@ export function VentasDirectas({
   const [detalleAbierto, setDetalleAbierto] = useState(false);
   const [cargandoDetalle, setCargandoDetalle] = useState(false);
   const [errorDetalle, setErrorDetalle] = useState("");
-  const [comprobante, setComprobante] = useState<OperacionDetalle | null>(null);
   const revisionDetalle = useRef(0);
   const revisionLista = useRef(0);
   const [stock, setStock] = useState<StockLibre[]>([]);
@@ -68,8 +72,6 @@ export function VentasDirectas({
   const [busqueda, setBusqueda] = useState("");
   const [pendiente, setPendiente] = useState<OperacionPendiente | null>(null);
   const [detalle, setDetalle] = useState<OperacionDetalle | null>(null);
-  const [error, setError] = useState("");
-  const [mensaje, setMensaje] = useState("");
   const [cargando, setCargando] = useState(true);
   const [ocupado, setOcupado] = useState(false);
   const [listo, setListo] = useState(false);
@@ -77,6 +79,17 @@ export function VentasDirectas({
   const [total, setTotal] = useState(0);
   const [custodiaPage, setCustodiaPage] = useState(1);
   const bloqueo = useRef(false);
+  const notificarError = useCallback((mensaje: string) => {
+    if (mensaje) alNotificar("error", mensaje);
+  }, [alNotificar]);
+  const notificarExito = (mensaje: string) => alNotificar("exito", mensaje);
+  const informarError = useCallback((e: unknown) => {
+    if (e instanceof ApiError && e.status === 401) {
+      void alErrorSesion(e);
+    } else {
+      notificarError(e instanceof Error ? e.message : "No se pudo completar la operación.");
+    }
+  }, [alErrorSesion, notificarError]);
   const cargar = useCallback(() => {
     const revision = ++revisionLista.current;
     return Promise.all([
@@ -100,21 +113,22 @@ export function VentasDirectas({
         setTotal(h.total);
       }
       setListo(true);
-      setError("");
     }).catch((e) => {
-      if (revision === revisionLista.current)
-        setError(e instanceof Error ? e.message : "No se pudo actualizar.");
+      if (revision === revisionLista.current) {
+        setListo(false);
+        informarError(e);
+      }
     }).finally(() => {
       if (revision === revisionLista.current) setCargando(false);
     });
-  }, [usuario, token, vista, page, custodiaPage, tipoHistorial]);
+  }, [usuario, token, vista, page, custodiaPage, tipoHistorial, informarError]);
   useEffect(() => {
     void cargar();
     return () => {
       revisionLista.current++;
     };
   }, [cargar]);
-  function cambiarVista(v: typeof vista) {
+  const cambiarVista = useCallback((v: typeof vista) => {
     if (v === vista) {
       setCargando(true);
       void cargar();
@@ -126,21 +140,16 @@ export function VentasDirectas({
     setCustodiaPage(1);
     setCargando(true);
     setListo(false);
-    setError("");
-    setMensaje("");
     alCambiarVista?.();
-  }
+  }, [vista, cargar, alCambiarVista]);
   useEffect(() => {
     if (vista === "venta") return;
     const listener = BackHandler.addEventListener("hardwareBackPress", () => {
-      setVista(
-        vista === "cargas" || vista === "devolucion" ? "custodia" : "venta",
-      );
-      alCambiarVista?.();
+      cambiarVista(vista === "cargas" || vista === "devolucion" ? "custodia" : "venta");
       return true;
     });
     return () => listener.remove();
-  }, [vista, alCambiarVista]);
+  }, [vista, cambiarVista]);
   function cerrarDetalle() {
     revisionDetalle.current++;
     setDetalleAbierto(false);
@@ -155,6 +164,11 @@ export function VentasDirectas({
       const d = await consultarOperacion(token, id);
       if (revision === revisionDetalle.current) setDetalle(d);
     } catch (e) {
+      if (e instanceof ApiError && e.status === 401) {
+        cerrarDetalle();
+        informarError(e);
+        return;
+      }
       if (revision === revisionDetalle.current)
         setErrorDetalle(
           e instanceof Error ? e.message : "No se pudo cargar el detalle.",
@@ -167,16 +181,13 @@ export function VentasDirectas({
     if (bloqueo.current) return;
     bloqueo.current = true;
     setOcupado(true);
-    setError("");
-    setMensaje("");
     try {
       const resultado = await ejecutarOperacionPersistida(usuario, token, p);
-      setComprobante(resultado);
       setPendiente(null);
       setCantidades({});
       setDevoluciones({});
       setMotivo("");
-      setMensaje(
+      notificarExito(
         resultado.tipo === "SALIDA_DIRECTA"
           ? "Venta registrada correctamente."
           : resultado.tipo === "CARGA"
@@ -185,7 +196,7 @@ export function VentasDirectas({
       );
       await cargar();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "No se recibió confirmación.");
+      informarError(e);
       try {
         setPendiente(await leerOperacionPendiente(usuario));
       } catch {
@@ -213,12 +224,11 @@ export function VentasDirectas({
       })),
     );
     if (errorCantidades) {
-      setError(errorCantidades);
+      notificarError(errorCantidades);
       return;
     }
     bloqueo.current = true;
     setOcupado(true);
-    setError("");
     try {
       const posicion = await capturarUbicacionPuntual(Location);
       if (posicion.coords.accuracy === null)
@@ -259,7 +269,7 @@ export function VentasDirectas({
         await enviar(p);
       }
     } catch (e) {
-      setError(
+      notificarError(
         e instanceof Error ? e.message : "No se pudo obtener ubicación.",
       );
     } finally {
@@ -284,7 +294,7 @@ export function VentasDirectas({
       100,
     );
     if (errorCantidades || !motivo.trim()) {
-      setError(errorCantidades ?? "Describe el motivo de devolución.");
+      notificarError(errorCantidades ?? "Describe el motivo de devolución.");
       return;
     }
     const resumen = seleccion
@@ -350,7 +360,7 @@ export function VentasDirectas({
         await enviar(p);
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "No se pudo consultar.");
+      informarError(e);
     } finally {
       bloqueo.current = false;
       setOcupado(false);
@@ -410,24 +420,6 @@ export function VentasDirectas({
           }
         />
       )}
-      {!!error && (
-        <Text accessibilityRole="alert" style={ui.error}>
-          {error}
-        </Text>
-      )}
-      {!!mensaje && (
-        <View style={ui.exito}>
-          <Text accessibilityLiveRegion="polite" style={ui.exitoTexto}>
-            {mensaje}
-          </Text>
-          {comprobante && (
-            <Boton
-              titulo="Ver detalle"
-              onPress={() => void abrirDetalle(comprobante.id)}
-            />
-          )}
-        </View>
-      )}
       {pendiente && (
         <View style={[s.tarjeta, ui.pendiente]}>
           <Text style={ui.nombre}>Pendiente de verificar</Text>
@@ -460,7 +452,7 @@ export function VentasDirectas({
             value={busqueda}
             onChangeText={setBusqueda}
           />
-          {!cargando &&
+          {!cargando && listo &&
             stockVisible.map((p) => (
               <View
                 style={[
@@ -505,7 +497,7 @@ export function VentasDirectas({
                 )}
               </View>
             ))}
-          {!cargando && !stockVisible.length && (
+          {!cargando && listo && !stockVisible.length && (
             <View style={s.vacio}>
               <Text style={s.textoSecundario}>
                 {stock.length
@@ -566,7 +558,7 @@ export function VentasDirectas({
               />
             </View>
           )}
-          {!cargando &&
+          {!cargando && listo &&
             custodia
               .filter(
                 (c) =>
@@ -586,7 +578,7 @@ export function VentasDirectas({
                   <Text style={ui.disponible}>
                     {c.finalidad === "PEDIDO"
                       ? `${c.cantidad} reservadas para pedidos`
-                      : `${c.libre} disponibles para vender`}
+                      : vista === "devolucion" ? `${c.libre} disponibles para devolver` : `${c.elegible ? c.libre : 0} disponibles para vender`}
                   </Text>
                   {c.pendiente > 0 && (
                     <Text style={ui.avisoTexto}>
@@ -598,7 +590,7 @@ export function VentasDirectas({
                   </Text>
                   {!c.elegible && (
                     <Text style={ui.errorTexto}>
-                      No apto para venta · {nombreOperacion(c.condicion)}
+                      No habilitado para venta. Puedes devolverlo al despacho.
                     </Text>
                   )}
                   {vista === "devolucion" && (
@@ -627,7 +619,7 @@ export function VentasDirectas({
                   )}
                 </View>
               ))}
-          {!cargando &&
+          {!cargando && listo &&
             !custodia.some(
               (c) =>
                 vista === "custodia" ||
@@ -722,7 +714,7 @@ export function VentasDirectas({
               ))}
             </View>
           )}
-          {!cargando &&
+          {!cargando && listo &&
             historial.map((o) => (
               <View
                 key={o.id}
@@ -761,7 +753,7 @@ export function VentasDirectas({
                 </View>
               </View>
             ))}
-          {!cargando && !historial.length && (
+          {!cargando && listo && !historial.length && (
             <View style={s.vacio}>
               <Text style={s.textoSecundario}>
                 {vista === "cargas"
@@ -799,6 +791,7 @@ export function VentasDirectas({
         cargando={cargandoDetalle}
         error={errorDetalle}
         cerrar={cerrarDetalle}
+        cerrarError={() => setErrorDetalle("")}
       />
     </View>
   );
