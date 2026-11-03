@@ -19,7 +19,7 @@ const etiquetas: Record<string, string> = {
   REVERSION: "Devolución de venta",
   CONFIRMADA: "Confirmada",
   PENDIENTE_RECEPCION: "Por recibir",
-  LIBERADO: "Apto para venta",
+  LIBERADO: "Liberado",
   BLOQUEADO: "Bloqueado",
   CUARENTENA: "En revisión",
 };

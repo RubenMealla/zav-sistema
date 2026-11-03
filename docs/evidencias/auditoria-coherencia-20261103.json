@@ -1,0 +1,39 @@
+{
+  "fecha": "2026-11-03",
+  "base": "e9dc1a40476a72034f38e4dabb0e178c62af0066",
+  "codigo": "9f9f4ef2281c25e693dad9c0a2cc2bce9b3f7d3e",
+  "version": "1.1.0-rc.1",
+  "pr": 74,
+  "local": {
+    "apiUnitarias": 26,
+    "apiE2E": 65,
+    "webPlaywright": 40,
+    "movilUnitarias": 20,
+    "openApiSintaxis": "ambos archivos aprobados",
+    "postmanAserciones": 3,
+    "postmanStatus": "no soportado por el CLI instalado"
+  },
+  "neon": {
+    "proyecto": "fancy-darkness-96751098",
+    "rama": "br-dawn-cake-b6cs8va8",
+    "lectura": {
+      "base": "zav_catalogo_qa",
+      "migraciones": "11",
+      "saldos_negativos": "0",
+      "custodias_negativas": "0",
+      "sku_sin_jerarquia": "0",
+      "familias_catalogo_original": "7",
+      "productos_con_foto_original": "13",
+      "consumidores_genericos": "1",
+      "pedidos_genericos": "0",
+      "operaciones": "23",
+      "movimientos": "34"
+    }
+  },
+  "incidenciaQA": {
+    "registroCreado": "d8a4f20f-b6f6-4f7b-9638-7f07fabd5358",
+    "causa": "La comprobación de duplicados usó un nombre que el propietario había cambiado durante su revisión.",
+    "correccion": "Registro identificado como Ensayo de avisos QA 20261103, desactivado y oculto, sin productos asociados; no se eliminó historial.",
+    "registrosUsuario": "Conservados"
+  }
+}

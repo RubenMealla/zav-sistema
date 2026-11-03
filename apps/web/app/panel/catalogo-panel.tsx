@@ -326,7 +326,7 @@ export function CatalogoPanel() {
                         {i.precioBob}
                         <small className="gestion-bloque">
                           {i.validacionComercial === "VALIDADO"
-                            ? "Listo para venta"
+                            ? "Datos confirmados"
                             : i.validacionComercial === "LEGADO"
                               ? "Pendiente de revisión"
                               : "Precio por confirmar"}
@@ -624,7 +624,7 @@ function Editor({
                   Por confirmar · aún no se puede vender
                 </option>
                 <option value="VALIDADO">
-                  Confirmados · habilitar para venta
+                  Confirmados
                 </option>
               </select>
             </label>

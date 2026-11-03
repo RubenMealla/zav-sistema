@@ -7,7 +7,7 @@ const etiquetas: Record<string, string> = {
   PENDIENTE_RECEPCION: "Por recibir",
   LIBRE: "Venta directa",
   PEDIDO: "Reservado para pedidos",
-  LIBERADO: "Apto para venta",
+  LIBERADO: "Liberado",
   BLOQUEADO: "Bloqueado",
   CUARENTENA: "En revisión",
   RECEPCION_CARGA: "Carga recibida",
