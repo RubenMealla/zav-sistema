@@ -178,6 +178,9 @@ test('muestra en la web un 400 al registrar un lote con fecha inválida', async 
   const valorProducto = await opcionProducto.getAttribute('value');
   expect(valorProducto).toBeTruthy();
   await selectorProducto.selectOption(valorProducto!);
+  // La sugerencia también rechaza fechas futuras. Usar una etiqueta manual
+  // permite verificar que el alta mantiene su validación independiente en la API.
+  await modal.getByLabel('Código de lote').fill('QA-FECHA-' + Date.now());
   const elaborado = modal.getByLabel('Fecha de elaboración');
   await elaborado.evaluate((elemento) => (elemento as HTMLInputElement).removeAttribute('max'));
   // Mantener una fecha de elaboración futura: una fecha fija dejó de ser

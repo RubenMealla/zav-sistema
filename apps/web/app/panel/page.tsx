@@ -18,6 +18,7 @@ import {
 import {
   configurarGeorreferenciaDespacho,
 } from './acciones';
+import { SelectorInventario } from '../componentes/selector-inventario';
 import { Paginacion } from '../componentes/paginacion';
 
 import { API_BASE_URL as API } from '../lib/api-servidor';
@@ -77,6 +78,7 @@ async function consultar<T>(ruta: string, token: string): Promise<{ estado: numb
   const respuesta = await fetch(`${API}${ruta}`, {
     headers: { Authorization: `Bearer ${token}` },
     cache: 'no-store',
+    signal: AbortSignal.timeout(30000),
   });
   if (!respuesta.ok) return { estado: respuesta.status };
   return { estado: respuesta.status, datos: (await respuesta.json()) as T };
@@ -248,8 +250,11 @@ export default async function Panel({
   const itemsMovimientos = movimientos?.datos?.items ?? [];
   const itemsCondiciones = condiciones?.datos?.items ?? [];
   const itemsPedidos = pedidos.datos?.items ?? [];
-  const loteHistorial = itemsLotes.find((lote) => lote.id === parametros.historialLoteId);
-  const loteHistorialCondicion = itemsLotes.find((lote) => lote.id === parametros.historialCondicionLoteId);
+  const idHistorial = vista === 'movimientos' ? parametros.historialLoteId : vista === 'condiciones' ? parametros.historialCondicionLoteId : undefined;
+  const loteSeleccionado = itemsLotes.find(l => l.id === idHistorial) ?? (idHistorial ? (await consultar<Lote>(`/api/v1/lotes/${encodeURIComponent(idHistorial)}`, token).catch(() => ({ estado: 503, datos: undefined }))).datos : undefined);
+  const opcionesHistorial = loteSeleccionado && !itemsLotes.some(l => l.id === loteSeleccionado.id) ? [loteSeleccionado, ...itemsLotes] : itemsLotes;
+  const loteHistorial = vista === 'movimientos' ? loteSeleccionado : undefined;
+  const loteHistorialCondicion = vista === 'condiciones' ? loteSeleccionado : undefined;
   const lotesLiberados = itemsLotes.filter((lote) => lote.condicion === 'LIBERADO').length;
   const lotesRetenidos = itemsLotes.filter((lote) => lote.condicion === 'RETENIDO').length;
   const lotesBloqueados = itemsLotes.filter((lote) => lote.condicion === 'BLOQUEADO').length;
@@ -467,10 +472,7 @@ export default async function Panel({
                   <div><span className="eyebrow">AUDITORÍA</span><h2>Historial de condición</h2></div>
                   <form method="get" className="filtro-inline">
                     <input type="hidden" name="vista" value="condiciones" />
-                    <select name="historialCondicionLoteId" defaultValue={parametros.historialCondicionLoteId ?? ''} required aria-label="Ver historial de condición">
-                      <option value="" disabled>Selecciona un lote</option>
-                      {itemsLotes.map((lote) => <option key={lote.id} value={lote.id}>{lote.codigo}</option>)}
-                    </select>
+                    <SelectorInventario key={parametros.historialCondicionLoteId ?? 'sin-lote'} tipo="lotes" iniciales={opcionesHistorial} id="historialCondicionLoteId" name="historialCondicionLoteId" value={parametros.historialCondicionLoteId} etiqueta="Ver historial de condición" />
                     <button type="submit" className="boton boton-secundario">Consultar</button>
                   </form>
                 </div>
@@ -631,10 +633,7 @@ export default async function Panel({
                 <div className="historial-etiqueta"><Icono nombre="historial" tamano={19} /><span>Historial por lote</span></div>
                 <form method="get" className="filtro-inline">
                   <input type="hidden" name="vista" value="movimientos" />
-                  <select name="historialLoteId" defaultValue={parametros.historialLoteId ?? ''} required aria-label="Ver historial del lote">
-                    <option value="" disabled>Selecciona un lote</option>
-                    {itemsLotes.map((lote) => <option key={lote.id} value={lote.id}>{lote.codigo}</option>)}
-                  </select>
+                  <SelectorInventario key={parametros.historialLoteId ?? 'sin-lote'} tipo="lotes" iniciales={opcionesHistorial} id="historialLoteId" name="historialLoteId" value={parametros.historialLoteId} etiqueta="Ver historial del lote" />
                   <button type="submit" className="boton boton-secundario">Consultar</button>
                 </form>
               </div>

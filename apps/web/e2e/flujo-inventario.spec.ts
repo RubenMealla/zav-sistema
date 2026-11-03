@@ -85,7 +85,9 @@ test('permite gestionar inventario desde módulos, modales y notificaciones', as
   const modalLote = page.getByRole('dialog');
   const hoy = fechaBolivia();
   const manana = fechaBolivia(1);
-  await modalLote.getByLabel('Producto').selectOption({ label: `${productoCodigo} · Producto QA UI ${ejecucion}` });
+  const opcion = modalLote.getByLabel('Producto', { exact: true }).locator('option').filter({ hasText: productoCodigo });
+  await expect(opcion).toHaveCount(1);
+  await modalLote.getByLabel('Producto', { exact: true }).selectOption((await opcion.getAttribute('value'))!);
   const codigoLoteCampo = modalLote.getByLabel('Código de lote');
   await expect(codigoLoteCampo).toHaveValue(new RegExp(`^TJ-ZAV-${productoCodigo}-${hoy.replaceAll('-', '')}-\\d{2,}$`));
   // Las fechas pueden recalcular el código sugerido; se fija el código QA al

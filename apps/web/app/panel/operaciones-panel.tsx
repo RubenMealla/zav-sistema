@@ -1,4 +1,5 @@
 "use client";
+import { useActualizacionVisible } from "./lib/use-actualizacion-visible";
 import Link from "next/link";
 import {
   useCallback,
@@ -161,7 +162,7 @@ export function OperacionesPanel({
     window.dispatchEvent(new Event("zav-operacion"));
   }
   const vendedorFiltro = vista === "inventario" ? vendedor : "";
-  const cargar = useCallback(() => {
+  const cargar = useCallback((silencioso = false) => {
     const revision = ++revisionLista.current;
     return Promise.all([
         vista === "nueva"
@@ -201,7 +202,7 @@ export function OperacionesPanel({
       if (revision === revisionLista.current) {
         setDatosListos(false);
         setError(mensajeError(e));
-        setAvisoId(id => id + 1);
+        if (!silencioso) setAvisoId(id => id + 1);
       }
     }).finally(() => {
       if (revision === revisionLista.current) setCargando(false);
@@ -213,6 +214,7 @@ export function OperacionesPanel({
       revisionLista.current++;
     };
   }, [cargar]);
+  useActualizacionVisible(() => cargar(true), cargando || enviando || detalleAbierto || !!pendiente);
   function cambiarVista(v: typeof vista) {
     if (v === vista) {
       setCargando(true);

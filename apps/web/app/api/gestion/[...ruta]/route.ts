@@ -8,7 +8,7 @@ async function reenviar(
   const { ruta } = await ctx.params;
   if (
     !ruta?.length ||
-    !["catalogo", "operaciones"].includes(ruta[0]) ||
+    (!["catalogo", "operaciones"].includes(ruta[0]) && !(req.method === "GET" && ruta.length === 1 && ["productos", "lotes"].includes(ruta[0]))) ||
     ruta.some((s) => !/^[a-zA-Z0-9-]+$/.test(s))
   )
     return Response.json({ message: "Ruta no permitida." }, { status: 404 });

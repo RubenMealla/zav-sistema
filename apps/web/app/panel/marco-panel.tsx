@@ -4,6 +4,7 @@ import { cerrarSesion } from '../acciones';
 import { Icono } from '../componentes/icono';
 import { BotonEnviar } from '../componentes/interacciones';
 import { Marca } from '../componentes/marca';
+import { ActualizacionPanel } from './actualizacion-panel';
 import { VERSION_WEB } from '../lib/version';
 
 export type Vista = 'catalogo' | 'venta-directa' | 'custodia' | 'resumen' | 'productos' | 'lotes' | 'condiciones' | 'movimientos' | 'pedidos' | 'distribucion';
@@ -76,6 +77,7 @@ export function MarcoPanel({ vista, perfil, children }: {
             <h1>{vistas[vista].titulo}</h1>
             <p>{vistas[vista].descripcion}</p>
           </div>
+          {!["catalogo", "productos", "venta-directa", "custodia"].includes(vista) && <ActualizacionPanel />}
           <div className="topbar-perfil">
             <span className="topbar-avatar" aria-hidden="true">{inicial}</span>
             <div><strong>{perfil.nombre}</strong><span>Administrador</span></div>

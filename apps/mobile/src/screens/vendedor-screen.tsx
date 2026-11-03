@@ -1,3 +1,4 @@
+import { useActualizacionActiva } from '@/lib/use-actualizacion-activa';
 import { NotificacionEstado } from '@/components/notificacion-estado';
 import { VentasDirectas } from '@/components/ventas-directas';
 import { capturarUbicacionPuntual } from '@/lib/ubicacion-puntual';
@@ -89,6 +90,9 @@ function mensajeError(error: unknown) {
 
 export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
   const [seccion, setSeccion] = useState<Seccion>('pedidos');
+  const revisionDatos = useRef(0);
+  const consultasEnCurso = useRef(0);
+  const paginasConsultadas = useRef(1);
   const [pedidos, setPedidos] = useState<PedidoResumen[]>([]);
   const [totalPedidos, setTotalPedidos] = useState(0);
   const [paginaPedidos, setPaginaPedidos] = useState(1);
@@ -173,24 +177,32 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
     );
   }, [onCerrarSesion]);
 
+  useEffect(() => { paginasConsultadas.current = paginaPedidos; }, [paginaPedidos]);
+
+  const consultarPedidos = useCallback(async () => {
+    const paginas = await Promise.all(Array.from({ length: paginasConsultadas.current }, (_, indice) => listarPedidosActivos(token, indice + 1)));
+    return { ...paginas[0], items: [...new Map(paginas.flatMap(p => p.items).map(p => [p.id, p])).values()], page: paginas.length };
+  }, [token]);
+
   const consultarDatos = useCallback(
     async () =>
       Promise.allSettled([
-        listarPedidosActivos(token),
+        consultarPedidos(),
         listarDirectorioClientes(token),
         obtenerDisponibilidad(token),
       ]),
-    [token],
+    [token, consultarPedidos],
   );
 
   const cargar = useCallback(
-    async (mostrarCarga = true) => {
-      if (mostrarCarga) setCargando(true);
-      setError('');
+    async () => {
+      consultasEnCurso.current++;
+      const revision = ++revisionDatos.current;
 
       try {
         const [pedidosResultado, clientesResultado, disponibilidadResultado] =
           await consultarDatos();
+        if (revision !== revisionDatos.current) return;
 
         const errores: { recurso: string; error: unknown }[] = [];
 
@@ -223,6 +235,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
           return;
         }
 
+        if (!errores.length) setError('');
         if (errores.length) {
           const detalle = errores
             .map(({ recurso, error }) => `${recurso}: ${mensajeError(error)}`)
@@ -230,8 +243,11 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
           setError(`ERROR DE CARGA · No se pudo actualizar ${detalle}`);
         }
       } finally {
-        setCargando(false);
-        setActualizando(false);
+        consultasEnCurso.current--;
+        if (!consultasEnCurso.current) {
+          setCargando(false);
+          setActualizando(false);
+        }
       }
     },
     [consultarDatos, manejarError],
@@ -239,10 +255,12 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
 
   // Tras modificar pedidos, evita volver a consultar el directorio de clientes.
   const refrescarPedidosYDisponibilidad = useCallback(async () => {
+    const revision = ++revisionDatos.current;
     const [pedidosResultado, disponibilidadResultado] = await Promise.allSettled([
       listarPedidosActivos(token),
       obtenerDisponibilidad(token),
     ]);
+    if (revision !== revisionDatos.current) return;
     if (pedidosResultado.status === 'fulfilled') {
       setPedidos(pedidosResultado.value.items);
       setTotalPedidos(pedidosResultado.value.total);
@@ -269,71 +287,26 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
   }, [token, manejarError]);
 
   useEffect(() => {
-    let activa = true;
+    void cargar();
+    return () => { revisionDatos.current++; };
+  }, [cargar]);
 
-    async function inicializar() {
-      setError('');
-      const [pedidosResultado, clientesResultado, disponibilidadResultado] =
-        await consultarDatos();
-
-      if (!activa) return;
-
-      const errores: { recurso: string; error: unknown }[] = [];
-
-      if (pedidosResultado.status === 'fulfilled') {
-        setPedidos(pedidosResultado.value.items);
-        setTotalPedidos(pedidosResultado.value.total);
-        setPaginaPedidos(pedidosResultado.value.page);
-      } else {
-        errores.push({ recurso: 'pedidos', error: pedidosResultado.reason });
-      }
-
-      if (clientesResultado.status === 'fulfilled') {
-        setClientes(clientesResultado.value.items);
-      } else {
-        errores.push({ recurso: 'clientes', error: clientesResultado.reason });
-      }
-
-      if (disponibilidadResultado.status === 'fulfilled') {
-        setDisponibilidad(disponibilidadResultado.value);
-      } else {
-        errores.push({ recurso: 'productos', error: disponibilidadResultado.reason });
-      }
-
-      const errorSesion = errores.find(
-        ({ error }) =>
-          error instanceof ApiError && (error.status === 401 || error.status === 403),
-      );
-      if (errorSesion) {
-        await manejarError(errorSesion.error);
-      } else if (errores.length) {
-        const detalle = errores
-          .map(({ recurso, error }) => `${recurso}: ${mensajeError(error)}`)
-          .join(' · ');
-        setError(`ERROR DE CARGA · No se pudo actualizar ${detalle}`);
-      }
-
-      if (activa) setCargando(false);
-    }
-
-    void inicializar();
-    return () => {
-      activa = false;
-    };
-  }, [consultarDatos, manejarError]);
+  useActualizacionActiva(() => cargar(), cargando || actualizando || cargandoMasPedidos || guardandoCliente || guardandoPedido || !!accionPedido || !!cambiandoEstadoCliente || retirandoSeleccionados || planificando || historialVisible || !!clienteEditando || !!mapaOperativo || selectorUbicacionVisible || selectorClientePedidoVisible || selectorProductosPedidoVisible || seccion === 'venta-directa');
 
   async function refrescar() {
     setActualizando(true);
-    await cargar(false);
+    await cargar();
   }
 
   async function cargarMasPedidos() {
     if (cargandoMasPedidos || cargando || actualizando || pedidos.length >= totalPedidos) return;
 
+    const revision = revisionDatos.current;
     setCargandoMasPedidos(true);
     setError('');
     try {
       const respuesta = await listarPedidosActivos(token, paginaPedidos + 1);
+      if (revision !== revisionDatos.current) return;
       setPedidos((actuales) => [...new Map(
         [...actuales, ...respuesta.items].map((pedido) => [pedido.id, pedido]),
       ).values()]);
@@ -357,6 +330,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
       return;
     }
 
+    revisionDatos.current++;
     setGuardandoCliente(true);
     setError('');
     try {
@@ -433,6 +407,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
       return;
     }
 
+    revisionDatos.current++;
     setGuardandoCliente(true);
     setError('');
     try {
@@ -477,6 +452,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
 
   async function cambiarEstadoClienteDesdeApp(cliente: Cliente, activo: boolean) {
     if (cambiandoEstadoCliente) return;
+    revisionDatos.current++;
     setCambiandoEstadoCliente(cliente.id);
     setError('');
     try {
@@ -568,6 +544,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
       return;
     }
 
+    revisionDatos.current++;
     setGuardandoPedido(true);
     setError('');
     try {
@@ -593,7 +570,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
       setClienteSeleccionado('');
       setObservacion('');
       setCantidades({});
-      await cargar(false);
+      await cargar();
       requestAnimationFrame(() => scrollPrincipalRef.current?.scrollTo({ y: 0, animated: true }));
     } catch (e) {
       await manejarError(e);
@@ -654,13 +631,14 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
     const claveAccion = `cancelar:${id}`;
     if (accionesEnCursoRef.current.has(claveAccion)) return;
     accionesEnCursoRef.current.add(claveAccion);
+    revisionDatos.current++;
     setAccionPedido(id);
     setError('');
     try {
       await cancelarPedido(token, id, 'Registro incorrecto anulado antes del retiro');
       setPedidosSeleccionados((actuales) => actuales.filter((pedidoId) => pedidoId !== id));
       setPlanificacion(null);
-      await cargar(false);
+      await cargar();
       setAviso('Pedido anulado. Se conserva en el historial y dejó de comprometer stock.');
     } catch (e) {
       await manejarError(e);
@@ -740,6 +718,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
     if (accionesEnCursoRef.current.has(claveAccion)) return;
     accionesEnCursoRef.current.add(claveAccion);
 
+    revisionDatos.current++;
     setAccionPedido(id);
     setError('');
     setAviso('');
@@ -801,6 +780,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
     if (accionesEnCursoRef.current.has(claveAccion)) return;
     accionesEnCursoRef.current.add(claveAccion);
 
+    revisionDatos.current++;
     setAccionPedido(pedido.id);
     setError('');
     setAviso('');
@@ -863,6 +843,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
     if (accionesEnCursoRef.current.has(claveAccion)) return;
     accionesEnCursoRef.current.add(claveAccion);
 
+    revisionDatos.current++;
     setAccionPedido(id);
     setError('');
     setAviso('');
@@ -1088,6 +1069,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
       return;
     }
 
+    revisionDatos.current++;
     setRetirandoSeleccionados(true);
     setError('');
     try {

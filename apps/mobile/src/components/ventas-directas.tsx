@@ -1,3 +1,4 @@
+import { useActualizacionActiva } from '@/lib/use-actualizacion-activa';
 import {
   DetalleOperacion,
   EstadoOperacion,
@@ -128,6 +129,7 @@ export function VentasDirectas({
       revisionLista.current++;
     };
   }, [cargar]);
+  useActualizacionActiva(cargar, cargando || ocupado || detalleAbierto || !!pendiente || Object.values(cantidades).some(v => Number(v) > 0) || Object.values(devoluciones).some(v => Number(v) > 0));
   const cambiarVista = useCallback((v: typeof vista) => {
     if (v === vista) {
       setCargando(true);
@@ -179,6 +181,7 @@ export function VentasDirectas({
   }
   async function enviar(p: OperacionPendiente) {
     if (bloqueo.current) return;
+    revisionLista.current++;
     bloqueo.current = true;
     setOcupado(true);
     try {
@@ -227,6 +230,7 @@ export function VentasDirectas({
       notificarError(errorCantidades);
       return;
     }
+    revisionLista.current++;
     bloqueo.current = true;
     setOcupado(true);
     try {
@@ -315,6 +319,7 @@ export function VentasDirectas({
         })),
       },
     };
+    revisionLista.current++;
     bloqueo.current = true;
     setOcupado(true);
     try {
@@ -335,6 +340,7 @@ export function VentasDirectas({
   }
   async function prepararRecepcion(id: string) {
     if (bloqueo.current || pendiente || !listo) return;
+    revisionLista.current++;
     bloqueo.current = true;
     setOcupado(true);
     try {

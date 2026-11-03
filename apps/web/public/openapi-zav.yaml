@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: ZAV API
-  version: 1.1.0-rc.1
+  version: 1.1.0-rc.2
   description: >
     Contrato interactivo de la API REST de ZAV para comprobación manual y automatizada. Usa "Authorize" con un
     JWT obtenido desde POST /api/v1/auth/login. Los cuerpos y parámetros incluyen ejemplos editables para
@@ -25,6 +25,57 @@ tags:
   - name: Catálogo
   - name: Operaciones
 paths:
+  /api/v1/codigos/producto:
+    get:
+      tags: [ Catálogo ]
+      summary: Sugerir el siguiente SKU interno (Administrador)
+      description: Usa familiaId del catálogo o familia para compatibilidad anterior, nunca ambos. La sugerencia no reserva el código; el alta valida unicidad y devuelve 409 si otro usuario ya lo registró. No representa registro sanitario ni GTIN.
+      parameters:
+        - { in: query, name: familiaId, schema: { type: string, format: uuid } }
+        - { in: query, name: familia, schema: { type: string, maxLength: 70 } }
+      responses:
+        '200':
+          description: Código editable sugerido
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [codigo, prefijo, convencion]
+                properties:
+                  codigo: {type: string, example: SAL-001}
+                  prefijo: {type: string, example: SAL}
+                  convencion: {type: string, enum: [interna]}
+        '400': { $ref: '#/components/responses/Error400' }
+        '401': { $ref: '#/components/responses/Error401' }
+        '403': { $ref: '#/components/responses/Error403' }
+        '404': { $ref: '#/components/responses/Error404' }
+        '409': { $ref: '#/components/responses/Error409' }
+
+  /api/v1/codigos/lote:
+    get:
+      tags: [ Lotes ]
+      summary: Sugerir código interno editable de lote (Administrador)
+      description: Propuesta TJ-ZAV-SKU-AAAAMMDD-NN. La fecha debe ser real y no futura en Bolivia. Debe coincidir con la etiqueta física; nunca se cambia al guardar sin intervención del usuario.
+      parameters:
+        - { in: query, name: productoId, required: true, schema: { type: string, format: uuid } }
+        - { in: query, name: elaboradoEl, required: true, schema: { type: string, format: date } }
+      responses:
+        '200':
+          description: Código de lote editable
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [codigo, convencion]
+                properties:
+                  codigo: {type: string, maxLength: 60, example: TJ-ZAV-SAL-001-20260101-01}
+                  convencion: {type: string, enum: [interna-editable]}
+        '400': { $ref: '#/components/responses/Error400' }
+        '401': { $ref: '#/components/responses/Error401' }
+        '403': { $ref: '#/components/responses/Error403' }
+        '404': { $ref: '#/components/responses/Error404' }
+        '409': { $ref: '#/components/responses/Error409' }
+
   /api/v1/salud:
     get:
       tags: [ Salud ]

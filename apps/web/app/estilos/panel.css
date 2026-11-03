@@ -133,8 +133,11 @@
   background: #fbfaf7;
 }
 
+.topbar-titulo { min-width: 0; flex: 1; }
+
 .breadcrumb {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 7px;
   margin-bottom: 5px;

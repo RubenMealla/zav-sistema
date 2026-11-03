@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-const LIMITES=[10,20,30,50,100,150];
+const LIMITES=[10,20,30,50,100];
 function rangoPaginas(actual:number,total:number):Array<number|'…'>{if(total<=7)return Array.from({length:total},(_,i)=>i+1);const p=new Set([1,total,actual-1,actual,actual+1].filter(x=>x>=1&&x<=total));const o=[...p].sort((a,b)=>a-b);const r:Array<number|'…'>=[];o.forEach((x,i)=>{const a=o[i-1];if(a&&x-a>1)r.push('…');r.push(x)});return r}
 export function Paginacion({pagina,total,limite,parametro,parametros}:{pagina:number;total:number;limite:number;parametro:string;parametros:Record<string,string|undefined>}){
  const paginas=Math.max(1,Math.ceil(total/limite));const inicio=total===0?0:(pagina-1)*limite+1;const fin=Math.min(total,pagina*limite);

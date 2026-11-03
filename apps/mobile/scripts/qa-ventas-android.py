@@ -200,7 +200,6 @@ try:
     l = api('lotes', {'operacionClave':str(uuid.uuid4()),'productoId':p['id'],'codigo':'L-'+codigo,'elaboradoEl':str(date.today()-timedelta(days=1)),'venceEl':str(date.today()+timedelta(days=30)),'cantidadInicial':10,'ubicacionCodigo':'PRODUCCION_ALMACENAMIENTO'}, at)
     api('lotes/'+l['id']+'/liberar',{'operacionClave':str(uuid.uuid4()),'motivo':'Liberación sintética QA'},at)
     api('movimientos/traslado',{'operacionClave':str(uuid.uuid4()),'loteId':l['id'],'cantidad':10,'origenCodigo':'PRODUCCION_ALMACENAMIENTO','destinoCodigo':'VENTA_DESPACHO'},at)
-    carga = api('operaciones/cargas',{'operacionClave':str(uuid.uuid4()),'vendedorId':vendedor['usuario']['id'],'detalles':[{'productoId':p['id'],'cantidad':5}]},at)
     assert saldo(vt,p['id'])==0, 'Carga sin recepción no vendible.'
     apk = glob.glob('apk-qa/**/*-qa.apk', recursive=True)
     assert len(apk)==1
@@ -222,6 +221,11 @@ try:
     tocar('Venta directa')
     tocar('Mi mercancía')
     tocar('Recibir cargas')
+    esperar('No hay cargas por recibir.')
+    carga = api('operaciones/cargas',{'operacionClave':str(uuid.uuid4()),'vendedorId':vendedor['usuario']['id'],'detalles':[{'productoId':p['id'],'cantidad':5}]},at)
+    # La carga se crea con la pantalla ya abierta: debe llegar sin pulsar Actualizar.
+    esperar('Confirmar recepción')
+    captura('00-carga-sincronizada')
     tocar('Confirmar recepción')
     tocar('Recibí la carga')
     hasta(lambda:saldo(vt,p['id'])==5)
@@ -292,7 +296,7 @@ try:
     assert api('operaciones/conciliacion',token=at)['conciliado']
     tocar('Actualizar')
     captura('04-devolucion-recibida')
-    resultado={'apk':Path(apk[0]).name,'apkSha256':hashlib.sha256(Path(apk[0]).read_bytes()).hexdigest(),'apkRunId':os.environ.get('QA_APK_RUN_ID'),'pruebaCommit':os.environ.get('GITHUB_SHA'),'carga':carga['id'],'venta':venta['id'],'devolucion':devolucion['id'],'stockLibreFinal':saldo(vt,p['id']),'gpsPuntual':True,'notificacionesFlotantes':True,'permisoDenegadoSinSalida':True,'respuestaInciertaRecuperadaTrasReabrir':True,'reintentoMismaSolicitud':True,'conciliado':True,'api':'local','base':'zav_test'}
+    resultado={'apk':Path(apk[0]).name,'apkSha256':hashlib.sha256(Path(apk[0]).read_bytes()).hexdigest(),'apkRunId':os.environ.get('QA_APK_RUN_ID'),'pruebaCommit':os.environ.get('GITHUB_SHA'),'cargaSincronizadaSinRecargar':True,'carga':carga['id'],'venta':venta['id'],'devolucion':devolucion['id'],'stockLibreFinal':saldo(vt,p['id']),'gpsPuntual':True,'notificacionesFlotantes':True,'permisoDenegadoSinSalida':True,'respuestaInciertaRecuperadaTrasReabrir':True,'reintentoMismaSolicitud':True,'conciliado':True,'api':'local','base':'zav_test'}
     (SALIDA/'resultado.json').write_text(json.dumps(resultado,indent=2)+'\n',encoding='utf8')
     print(json.dumps(resultado))
 finally:

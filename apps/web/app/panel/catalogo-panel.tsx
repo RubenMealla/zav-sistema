@@ -1,14 +1,15 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BotonEnviar, Notificacion } from "../componentes/interacciones";
+import { useActualizacionVisible } from "./lib/use-actualizacion-visible";
 import Image from "next/image";
+import { CodigoPresentacion } from "../componentes/codigo-presentacion";
 import { Ventana } from "../componentes/ventana";
 import { Icono } from "../componentes/icono";
 import { FamiliaIcono } from "../componentes/familia-icono";
 import {
   manejarInvalido,
   limpiarInvalido,
-  PATRON_CODIGO_SKU,
   PATRON_NOMBRE,
   PATRON_TEXTO_REQUERIDO,
 } from "../componentes/validacion-formularios";
@@ -97,9 +98,9 @@ export function CatalogoPanel() {
     setEdicion(undefined);
     setMensaje("");
   }
-  const cargar = useCallback(async () => {
+  const cargar = useCallback(async (silencioso = false) => {
     const actual = ++revision.current;
-    setCargando(true);
+    if (!silencioso) setCargando(true);
     try {
       const q = new URLSearchParams({
         page: String(page),
@@ -119,7 +120,7 @@ export function CatalogoPanel() {
       setItems(r.items);
       setTotal(r.total);
     } catch (e) {
-      if (actual === revision.current) { setError(mensajeError(e)); setAvisoId(id => id + 1); }
+      if (actual === revision.current) { setError(mensajeError(e)); if (!silencioso) setAvisoId(id => id + 1); }
     } finally {
       if (actual === revision.current) setCargando(false);
     }
@@ -131,6 +132,7 @@ export function CatalogoPanel() {
       revision.current++;
     };
   }, [cargar]);
+  useActualizacionVisible(async () => { await cargar(true); setReferencias(r => r + 1); }, cargando || edicion !== undefined);
   return (
     <section className="gestion-modulo">
       <nav className="gestion-tabs" aria-label="Catálogo">
@@ -543,26 +545,7 @@ function Editor({
                   ))}
               </select>
             </label>
-            <label className="campo">
-              Código SKU
-              <input
-                name="codigo"
-                aria-label="Código SKU"
-                defaultValue={item?.codigo}
-                required
-                readOnly={!!item}
-                minLength={2}
-                maxLength={40}
-                pattern={PATRON_CODIGO_SKU}
-                data-validacion="Usa de 2 a 40 letras, números, puntos, guiones o guiones bajos. Empieza con una letra o un número."
-                onBlur={(e) => {
-                  e.currentTarget.value = e.currentTarget.value
-                    .trim()
-                    .toUpperCase();
-                }}
-              />
-              <small>Único y permanente. Ejemplo: CH-PARR-500.</small>
-            </label>
+            <CodigoPresentacion familiaId={familiaId} existente={item?.codigo} />
             <label className="campo">
               Presentación
               <input

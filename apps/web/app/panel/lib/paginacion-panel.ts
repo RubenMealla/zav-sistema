@@ -1,4 +1,4 @@
-const LIMITES_TABLA = [10, 20, 30, 50, 100, 150] as const;
+const LIMITES_TABLA = [10, 20, 30, 50, 100] as const;
 
 export function limiteSeguro(valor: string | undefined): number {
   if (valor === undefined || !/^[1-9]\d*$/.test(valor)) return 20;
