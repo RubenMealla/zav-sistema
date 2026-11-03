@@ -127,7 +127,7 @@ export class OperacionesService {
     exigeHabilitado = true,
   ) {
     return m.query(
-      `SELECT p.* FROM producto p JOIN producto_comercial c ON c.id=p.producto_comercial_id JOIN familia f ON f.id=c.familia_id
+      `SELECT p.*, c.nombre AS nombre, f.nombre AS familia FROM producto p JOIN producto_comercial c ON c.id=p.producto_comercial_id JOIN familia f ON f.id=c.familia_id
       WHERE p.id=ANY($1::uuid[]) ${exigeHabilitado ? "AND p.activo AND c.activo AND f.activo AND p.validacion_comercial<>'PROVISIONAL'" : ''}`,
       [ids],
     ) as Promise<Producto[]>;
@@ -616,11 +616,11 @@ export class OperacionesService {
       };
     }
     const rows = (await this.db.query(
-      `SELECT p.id AS producto_id,p.codigo,p.nombre,p.presentacion,sum(c.disponible)::int AS cantidad_disponible
+      `SELECT p.id AS producto_id,p.codigo,pc.nombre,p.presentacion,sum(c.disponible)::int AS cantidad_disponible
       FROM custodia_libre c JOIN lote l ON l.id=c.lote_id JOIN producto p ON p.id=l.producto_id JOIN producto_comercial pc ON pc.id=p.producto_comercial_id JOIN familia f ON f.id=pc.familia_id
       WHERE c.vendedor_id=$1 AND c.disponible>0 AND l.condicion='LIBERADO' AND l.vence_el>=${FECHA_HOY_BOLIVIA_SQL}
         AND p.activo AND pc.activo AND f.activo AND p.validacion_comercial<>'PROVISIONAL'
-      GROUP BY p.id ORDER BY p.nombre,p.codigo`,
+      GROUP BY p.id,pc.nombre ORDER BY pc.nombre,p.codigo`,
       [actor.id],
     )) as Fila[];
     return { items: rows.map(respuestaCatalogo) };
@@ -644,14 +644,14 @@ export class OperacionesService {
     )
       throw new ForbiddenException('Solo puede consultar su propia custodia.');
     const filas = (await this.db.query(
-      `SELECT s.vendedor_id,u.nombre AS vendedor_nombre,s.lote_id,l.codigo AS lote_codigo,l.producto_id,p.nombre,p.codigo,p.presentacion,l.condicion,l.vence_el,s.finalidad,s.cantidad,
+      `SELECT s.vendedor_id,u.nombre AS vendedor_nombre,s.lote_id,l.codigo AS lote_codigo,l.producto_id,pc.nombre,p.codigo,p.presentacion,l.condicion,l.vence_el,s.finalidad,s.cantidad,
         CASE WHEN s.finalidad='LIBRE' THEN c.disponible ELSE 0 END AS libre,
         COALESCE(c.pendiente,0) AS pendiente, (l.condicion='LIBERADO' AND l.vence_el>=${FECHA_HOY_BOLIVIA_SQL}
           AND p.activo AND pc.activo AND f.activo AND p.validacion_comercial<>'PROVISIONAL') AS elegible
       FROM saldo_custodia s JOIN lote l ON l.id=s.lote_id JOIN producto p ON p.id=l.producto_id
       JOIN producto_comercial pc ON pc.id=p.producto_comercial_id JOIN familia f ON f.id=pc.familia_id LEFT JOIN usuario u ON u.id=s.vendedor_id
       LEFT JOIN custodia_libre c ON c.vendedor_id=s.vendedor_id AND c.lote_id=s.lote_id AND s.finalidad='LIBRE'
-      WHERE s.cantidad<>0 AND ($1::uuid IS NULL OR s.vendedor_id=$1) ORDER BY u.nombre,p.nombre,l.vence_el,l.id,s.finalidad LIMIT $2 OFFSET $3`,
+      WHERE s.cantidad<>0 AND ($1::uuid IS NULL OR s.vendedor_id=$1) ORDER BY u.nombre,pc.nombre,l.vence_el,l.id,s.finalidad LIMIT $2 OFFSET $3`,
       [vendedor, limit, (page - 1) * limit],
     )) as Fila[];
     return { items: filas.map(respuestaCatalogo), page, limit };

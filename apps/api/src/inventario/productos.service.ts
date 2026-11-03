@@ -86,9 +86,9 @@ export class ProductosService {
     ]);
     const q = consultaTexto(consulta.q, 'q', 100);
     const activo = activoFiltro(consulta.activo);
-    const qb = this.productos.createQueryBuilder('p');
+    const qb = this.productos.createQueryBuilder('p').leftJoin('producto_comercial', 'pc', 'pc.id=p.producto_comercial_id');
     if (q)
-      qb.andWhere('(p.nombre ILIKE :q OR p.codigo ILIKE :q)', { q: `%${q}%` });
+      qb.andWhere('(pc.nombre ILIKE :q OR p.nombre ILIKE :q OR p.codigo ILIKE :q OR p.presentacion ILIKE :q)', { q: `%${q}%` });
     if (activo !== undefined) qb.andWhere('p.activo = :activo', { activo });
     const [items, total] = await qb
       .orderBy('p.creado_en', 'DESC')
@@ -96,14 +96,22 @@ export class ProductosService {
       .skip((page - 1) * limit)
       .take(limit)
       .getManyAndCount();
-    return { items, total, page, limit };
+    return { items: await this.nombresVigentes(items), total, page, limit };
   }
 
   async obtener(id: string) {
     const valido = uuid(id, 'id');
     const producto = await this.productos.findOneBy({ id: valido });
     if (!producto) throw new NotFoundException('Producto no encontrado.');
-    return producto;
+    return (await this.nombresVigentes([producto]))[0];
+  }
+
+  private async nombresVigentes(items: ProductoEntity[]) {
+    if (!items.length) return items;
+    const nombres = await this.productos.manager.query<{ id: string; nombre: string; familia: string }[]>(
+      `SELECT p.id, pc.nombre, f.nombre AS familia FROM producto p JOIN producto_comercial pc ON pc.id=p.producto_comercial_id JOIN familia f ON f.id=pc.familia_id WHERE p.id=ANY($1::uuid[])`, [items.map(p => p.id)]);
+    const porId = new Map(nombres.map(p => [p.id, p]));
+    return items.map(p => Object.assign(p, porId.get(p.id)));
   }
 
   async editar(id: string, entrada: unknown, actor: string) {

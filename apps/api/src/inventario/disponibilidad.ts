@@ -29,17 +29,19 @@ export async function disponibilidadDespacho(
          WHERE pe.estado = 'REGISTRADO'
          GROUP BY d.producto_id
        )
-       SELECT p.id, p.codigo, p.nombre, p.familia, p.presentacion,
+       SELECT p.id, p.codigo, pc.nombre, fa.nombre AS familia, p.presentacion,
               p.peso_gramos, p.precio_bob,
               COALESCE(f.cantidad, 0)::int AS fisico,
               COALESCE(c.cantidad, 0)::int AS comprometido,
               GREATEST(COALESCE(f.cantidad, 0) - COALESCE(c.cantidad, 0), 0)::int AS disponible
        FROM producto p
+       JOIN producto_comercial pc ON pc.id=p.producto_comercial_id
+       JOIN familia fa ON fa.id=pc.familia_id
        LEFT JOIN fisico f ON f.producto_id = p.id
        LEFT JOIN comprometido c ON c.producto_id = p.id
        WHERE p.activo = TRUE AND p.validacion_comercial <> 'PROVISIONAL'
-         AND EXISTS(SELECT 1 FROM producto_comercial pc JOIN familia fa ON fa.id=pc.familia_id WHERE pc.id=p.producto_comercial_id AND pc.activo AND fa.activo) ${filtro}
-       ORDER BY p.nombre, p.codigo`,
+         AND pc.activo AND fa.activo ${filtro}
+       ORDER BY pc.nombre, p.codigo`,
     parametros,
   ) as Promise<FilaDisponibilidad[]>;
 }

@@ -238,6 +238,12 @@ describe('Catálogo relacional y publicación (PostgreSQL real)', () => {
       [skuId],
     );
     expect(posterior.rows).toEqual(anterior.rows);
+    for (const [ruta, token] of [['productos', admin], ['operaciones/disponibilidad', admin], ['pedidos/disponibilidad', vendedor]]) {
+      const lista = await request(app.getHttpServer()).get(`/api/v1/${ruta}${ruta === 'productos' ? '?q=' + encodeURIComponent(nombre) : ''}`).set('Authorization', `Bearer ${token}`).expect(200);
+      const fila = lista.body.items.find((p: { id?: string; productoId?: string }) => (p.productoId ?? p.id) === skuId);
+      expect(fila.nombre).toBe(nombre);
+    }
+
   });
 
   it('valida contenido de imágenes y las sirve solo cuando existe publicación autorizada', async () => {

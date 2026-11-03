@@ -11,6 +11,7 @@ import { ProductoEntity } from '../database/entities/producto.entity.js';
 import {
   codigo,
   codigoPostgres,
+  consultaTexto,
   enteroPositivo,
   fechaHoyBolivia,
   FECHA_HOY_BOLIVIA_SQL,
@@ -83,10 +84,13 @@ export class LotesService {
   }
 
   async listar(consulta: Record<string, unknown>) {
-    const { page, limit } = paginacion(consulta, ['productoId', 'vigencia', 'page', 'limit']);
+    const { page, limit } = paginacion(consulta, ['productoId', 'vigencia', 'page', 'limit', 'q']);
     const productoId = consulta.productoId === undefined ? undefined : uuid(consulta.productoId, 'productoId');
     const vigencia = vigenciaFiltro(consulta.vigencia);
     const qb = this.lotes.createQueryBuilder('l');
+    const q = consultaTexto(consulta.q, 'q', 100);
+    if (q) qb.leftJoin('producto', 'p', 'p.id=l.producto_id').leftJoin('producto_comercial', 'pc', 'pc.id=p.producto_comercial_id')
+      .andWhere('(l.codigo ILIKE :q OR p.codigo ILIKE :q OR pc.nombre ILIKE :q)', { q: `%${q}%` });
     if (productoId) qb.andWhere('l.producto_id = :productoId', { productoId });
     if (vigencia === 'vigente') qb.andWhere(`l.vence_el >= ${FECHA_HOY_BOLIVIA_SQL}`);
     if (vigencia === 'vencido') qb.andWhere(`l.vence_el < ${FECHA_HOY_BOLIVIA_SQL}`);

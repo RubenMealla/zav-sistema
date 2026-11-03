@@ -92,6 +92,25 @@ describe('Salidas directas y custodia: HTTP y PostgreSQL real', () => {
       token,
     ).expect(201);
   }
+  it('actualiza nombres entre catálogo y custodia conservando los comprobantes anteriores', async () => {
+    const p = await stock(10);
+    const carga = await cargar(p.id, 4);
+    await recibirCarga(carga.id);
+    const anterior = carga.detalles[0].productoHistorico.nombre;
+    const referencia = await db.query('SELECT producto_comercial_id FROM producto WHERE id=$1', [p.id]);
+    const nombre = `Nombre vigente ${randomUUID().slice(0, 8)}`;
+    await request(app.getHttpServer()).patch(`/api/v1/catalogo/productos/${referencia.rows[0].producto_comercial_id}`)
+      .set('Authorization', `Bearer ${admin}`).send({ nombre }).expect(200);
+    for (const ruta of ['operaciones/disponibilidad', 'operaciones/custodia']) {
+      const lista = await get(ruta, vendedor).expect(200);
+      expect(lista.body.items.find((x: { productoId: string }) => x.productoId === p.id).nombre).toBe(nombre);
+    }
+    const venta = await post('operaciones/salidas-directas', salida(p.id, 1, gps), vendedor).expect(201);
+    expect(venta.body.detalles[0].productoHistorico.nombre).toBe(nombre);
+    const historica = await get(`operaciones/${carga.id}`, vendedor).expect(200);
+    expect(historica.body.detalles[0].productoHistorico.nombre).toBe(anterior);
+    expect((await get('operaciones/conciliacion').expect(200)).body.conciliado).toBe(true);
+  });
   it('custodia distingue unidades libres de vendibles y permite devolver mercancía inhabilitada', async () => {
     const p = await stock(10);
     const carga = await cargar(p.id, 4);
