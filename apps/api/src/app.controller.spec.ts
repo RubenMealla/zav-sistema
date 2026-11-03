@@ -32,7 +32,7 @@ describe('AppController', () => {
         version: VERSION_API,
         contrato: 'v1',
       });
-      expect(VERSION_API).toMatch(/^\d+\.\d+\.\d+$/);
+      expect(VERSION_API).toMatch(/^\d+\.\d+\.\d+(?:-rc\.[1-9]\d*)?$/);
       expect(query).not.toHaveBeenCalled();
     });
   });

@@ -251,7 +251,13 @@ export class CatalogoService {
     const q = consultaTexto(consulta.q, 'q', 100);
     if (q)
       filtro(
-        '(p.codigo ILIKE ? OR p.nombre ILIKE $' + (params.length + 1) + ')',
+        '(p.codigo ILIKE ? OR p.nombre ILIKE $' +
+          (params.length + 1) +
+          ' OR c.nombre ILIKE $' +
+          (params.length + 1) +
+          ' OR p.presentacion ILIKE $' +
+          (params.length + 1) +
+          ')',
         `%${q}%`,
       );
     const activo = activoFiltro(consulta.activo);

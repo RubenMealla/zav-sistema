@@ -213,6 +213,33 @@ describe('Catálogo relacional y publicación (PostgreSQL real)', () => {
     expect(historico.rows[0].precio_unitario_bob).toBe('27.30');
   });
 
+  it('busca presentaciones por el nombre comercial editado sin reescribir la identidad histórica del SKU', async () => {
+    const anterior = await db.query('SELECT nombre FROM producto WHERE id=$1', [
+      skuId,
+    ]);
+    const nombre = `Nombre comercial actualizado ${sufijo}`;
+    await request(app.getHttpServer())
+      .patch(`/api/v1/catalogo/productos/${comercialId}`)
+      .set(auth())
+      .send({ nombre })
+      .expect(200);
+    const resultado = await request(app.getHttpServer())
+      .get('/api/v1/catalogo/presentaciones')
+      .query({ q: nombre })
+      .set(auth())
+      .expect(200);
+    expect(resultado.body.items).toHaveLength(1);
+    expect(resultado.body.items[0]).toMatchObject({
+      id: skuId,
+      nombreComercial: nombre,
+    });
+    const posterior = await db.query(
+      'SELECT nombre FROM producto WHERE id=$1',
+      [skuId],
+    );
+    expect(posterior.rows).toEqual(anterior.rows);
+  });
+
   it('valida contenido de imágenes y las sirve solo cuando existe publicación autorizada', async () => {
     await request(app.getHttpServer())
       .post('/api/v1/catalogo/imagenes')
