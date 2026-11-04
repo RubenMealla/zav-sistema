@@ -2,12 +2,21 @@ name: 06 · QA especial — Pedidos y recuperación
 
 on:
   workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - apps/api/scripts/qa-medir-pedidos.mjs
+      - apps/api/scripts/migraciones.mjs
+      - apps/api/migrations/**
+      - .github/workflows/qa-recuperacion-rendimiento.yml
   push:
     branches:
       - pruebas/cierre-operativo-recuperacion-pedidos
       - main
     paths:
       - apps/api/scripts/qa-medir-pedidos.mjs
+      - apps/api/scripts/migraciones.mjs
+      - apps/api/migrations/**
       - .github/workflows/qa-recuperacion-rendimiento.yml
 
 permissions:
@@ -71,7 +80,7 @@ jobs:
           echo "El servidor de QA no arrancó correctamente."
           tail -n 50 "$RUNNER_TEMP/servidor-qa.log"
           exit 1
-      - name: Medir 100 pedidos sintéticos a través de la API autenticada
+      - name: Medir la consulta autenticada de 100 pedidos sintéticos
         run: node apps/api/scripts/qa-medir-pedidos.mjs
       - name: Generar copia en formato PostgreSQL de la base QA
         shell: bash
@@ -89,24 +98,25 @@ jobs:
           origen="$(docker run --rm --network host -e PGPASSWORD=postgres postgres:18 psql -h 127.0.0.1 -U postgres -d zav_test -Atqc "$consulta")"
           recuperado="$(docker run --rm --network host -e PGPASSWORD=postgres postgres:18 psql -h 127.0.0.1 -U postgres -d zav_restaurada_qa -Atqc "$consulta")"
           echo "Origen: $origen; restaurado: $recuperado"
-          test "$origen" = "100|100|7"
+          migraciones="$(node --input-type=module -e "import { MIGRACIONES_ZAV } from './apps/api/scripts/migraciones.mjs'; console.log(MIGRACIONES_ZAV.length)")"
+          test "$origen" = "100|100|$migraciones"
           test "$recuperado" = "$origen"
+          export MIGRACIONES_ESPERADAS="$migraciones"
           python3 - <<'PY'
-          import datetime,json
+          import datetime,json,os
           resultado={"fecha_utc":datetime.datetime.now(datetime.timezone.utc).isoformat(),
             "metodo":"pg_dump -Fc / pg_restore",
             "base_origen":"zav_test (datos sintéticos)",
             "base_restaurada":"zav_restaurada_qa",
             "pedidos_origen":100,"pedidos_restaurados":100,
             "detalles_origen":100,"detalles_restaurados":100,
-            "migraciones_origen":7,"migraciones_restauradas":7,
+            "migraciones_origen":int(os.environ['MIGRACIONES_ESPERADAS']),"migraciones_restauradas":int(os.environ['MIGRACIONES_ESPERADAS']),
             "resultado":"comprobación satisfactoria",
             "limitacion":"No utiliza ni restaura datos de producción. La recuperación mediante rama Neon se verifica por separado."}
           with open("evidencia-cierre/restauracion-qa.json","w",encoding="utf-8") as f:
             json.dump(resultado,f,indent=2,ensure_ascii=False)
           print(json.dumps(resultado,ensure_ascii=False))
           PY
-          rm evidencia-cierre/qa.dump
       - name: Resumen del ensayo
         if: always()
         shell: bash
