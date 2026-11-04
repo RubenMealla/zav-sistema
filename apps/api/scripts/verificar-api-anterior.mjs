@@ -8,7 +8,7 @@ import pg from 'pg';
 const url = new URL(process.env.DATABASE_URL ?? '');
 assert.equal(process.env.NODE_ENV, 'test');
 assert.ok(['127.0.0.1', 'localhost'].includes(url.hostname));
-assert.equal(url.pathname, '/zav_compat_catalogo_20261028');
+assert.match(url.pathname, /^\/zav_compat_(?:catalogo|publicacion)_\d{8}$/);
 const apiBase = 'http://127.0.0.1:3002/api/v1/';
 const db = new pg.Client({ connectionString: url.href });
 const sufijo = randomUUID().slice(0, 8);

@@ -2,7 +2,7 @@
   "expo": {
     "name": "ZAV Vendedor",
     "slug": "zav-vendedor",
-    "version": "1.1.0-rc.2",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "zav-vendedor",
@@ -13,7 +13,7 @@
       "config": {
         "usesNonExemptEncryption": false
       },
-      "buildNumber": "10103"
+      "buildNumber": "10104"
     },
     "android": {
       "package": "bo.zav.gestion.vendedor",
@@ -22,7 +22,7 @@
         "foregroundImage": "./assets/images/icon.png"
       },
       "predictiveBackGestureEnabled": false,
-      "versionCode": 10103
+      "versionCode": 10104
     },
     "plugins": [
       "expo-router",
