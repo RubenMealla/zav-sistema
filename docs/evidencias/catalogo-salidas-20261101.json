@@ -1,0 +1,65 @@
+{
+  "fechaUtc": "2026-11-01T18:57:41.677Z",
+  "shaCodigoVerificado": "5524233174e0e13d499e60fca21045ca7e30d83a",
+  "ci": {
+    "api": 41238029140,
+    "web": 41238029056,
+    "movil": 41238029138,
+    "android": 41238029096,
+    "resultado": "success"
+  },
+  "respaldo": {
+    "archivoLocal": "backups/catalogo-salidas-20261101-verificado/production-previa.dump",
+    "sha256": "c12eeb1230f30463dd71bc489a231b012ebc11819ff9ec59efe29e13fae2cbdd",
+    "baseRestaurada": "zav_restore_catalogo_20261101",
+    "fuenteEstable": true,
+    "restauracionCoincide": true,
+    "tablas": {
+      "cliente": 10,
+      "detalle_pedido": 10,
+      "lote": 13,
+      "lote_condicion_historial": 13,
+      "movimiento": 23,
+      "pedido": 10,
+      "producto": 13,
+      "typeorm_migraciones": 7,
+      "ubicacion": 10,
+      "usuario": 2
+    },
+    "huellasSinCambiosDesde29Octubre": true,
+    "tlsFuente": "verify-full"
+  },
+  "ensayo": {
+    "ejecutadas": [
+      "CatalogoAdministrable1791856800000",
+      "NormalizacionCatalogoCompatible1791856860000",
+      "OperacionesCustodia1791856920000",
+      "GuardasOperativasCompatibles1791856980000"
+    ],
+    "preservado": true,
+    "integridad": {
+      "saldos_negativos": 0,
+      "sku_sin_relacion": 0,
+      "familias_publicadas": 7,
+      "productos_publicados": 13
+    }
+  },
+  "android": {
+    "apk": "ZAV-Vendedor-1.1.0-build10100-qa.apk",
+    "apkSha256": "0983317ae8efeb026336af34d02fecabf50970f6a06268b579936045a1cf1c04",
+    "apkRunId": "41238029096",
+    "pruebaCommit": "293b2db97394d69d7c3b72d819ead531c3902874",
+    "carga": "1ae3296e-6a97-4f04-8a17-3832e9019e0c",
+    "venta": "8f1cf403-d748-4a7f-a6c2-c6300ef9957f",
+    "devolucion": "3be8840b-d5c8-4c3c-9f20-19f18b1bf3b5",
+    "stockLibreFinal": 2,
+    "gpsPuntual": true,
+    "permisoDenegadoSinSalida": true,
+    "respuestaInciertaRecuperadaTrasReabrir": true,
+    "reintentoMismaSolicitud": true,
+    "conciliado": true,
+    "api": "local",
+    "base": "zav_test"
+  },
+  "produccionModificada": false
+}

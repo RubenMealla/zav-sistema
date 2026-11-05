@@ -1,0 +1,37 @@
+# Prueba funcional de la ampliación
+
+La ampliación está en el [PR 74](https://github.com/RubenMealla/zav-sistema/pull/74), todavía sin integrar. Producción conserva la versión anterior. Versión de revisión **1.1.0-rc.2**, entrega del 04/11: [web Preview](https://zav-sistema-7j9ov0y7c-dariomealla24-6763.vercel.app), API `https://zav-api-catalogo-qa.onrender.com`. El Preview requiere la sesión de Vercel o el enlace temporal privado entregado al propietario. Las claves y los enlaces privados no se publican en este documento. No realizar ventas ficticias en producción.
+
+Los avisos de éxito y error aparecen flotando y se pueden cerrar. Si un guardado falla, los campos se conservan. Una operación pendiente de confirmación mantiene su botón Verificar/reintentar hasta conocer el resultado. **Datos confirmados** se refiere a la validación comercial; no afirma que haya stock ni que un lote esté vigente.
+
+## Administrador
+
+Los formularios validan nombres con letras (se admiten tildes, números y espacios), códigos de 2 a 40 caracteres para SKU y hasta 60 para lotes, peso entero positivo y precio no negativo con hasta dos decimales. Los códigos empiezan con letra o número y admiten punto, guion y guion bajo. Los nombres equivalentes y los códigos reutilizados se rechazan en la API. Cambiar de familia limpia el producto seleccionado. Una familia inactiva conserva sus relaciones históricas y permite corregir datos existentes, pero no recibir nuevas asociaciones. **Activo** controla las operaciones; **Publicado** controla la landing, incluso sin stock o estando inactivo para operaciones.
+
+1. Entrar en **Catálogo** y elegir **Familias**, **Productos** o **Presentaciones**. Crear y Editar abren una ventana; Cancelar, la cruz o Escape la cierran. **Ver productos** filtra por la familia elegida. Las tablas incluyen miniaturas. Los siete grupos y trece nombres/fotografías originales ya están importados en el ensayo. Activación y publicación son controles independientes.
+2. En Presentaciones, seleccionar familia y producto: el SKU se propone automáticamente. Puede editarse antes de guardar; **Sugerir** recupera el siguiente código disponible. Completar empaque, peso y precio. Un dato provisional no habilita operaciones. Validar comercialmente solo con información confirmada. El SKU existente se conserva y no se redefine para representar otro artículo.
+3. Publicar familia y producto y revisar la landing. Ocultarlos debe retirarlos del catálogo público; el inventario interno y los precios provisionales no aparecen. Para nuevas fotos, usar JPEG, PNG o WebP hasta 5 MB y 4096 píxeles por dimensión.
+4. Configurar el punto real de despacho en Distribución. **Venta directa → Nueva venta** muestra la selección de productos y el resumen. Confirmar registra una salida definitiva con lotes FEFO, usuario y copia de coordenadas. **Historial** cambia a la lista de operaciones; **Ver detalle** abre una ventana. No genera cobro ni factura.
+5. En **Mercancía en distribución → Nueva carga**, seleccionar vendedor y crear una carga libre. **Mercancía por vendedor** muestra cantidades y conciliación en una vista aparte. La carga pendiente ya salió físicamente del despacho, pero el vendedor no puede venderla hasta confirmar recepción.
+6. Usar **Devoluciones → Ver detalle** para revisar y recibir sobrantes. La recepción coloca los productos en `DEVOLUCIONES_INSPECCION`; no los vuelve automáticamente vendibles. Después de inspección, condición y vigencia válidas, el traslado auditado permite reintegrarlos. **Historial** permite consultar las demás operaciones del módulo.
+
+## Vendedor Android
+
+Las cantidades se conservan tal como se escriben: pegar `1.5` o `-3` muestra un error, sin convertirlos en `15` o `3`. Se comprueba toda la selección antes de enviar, incluidos productos ocultos por una búsqueda. Clientes exige nombre con letras, hasta 140 caracteres; el teléfono es opcional y, si se informa, admite de 7 a 15 dígitos, `+` inicial, espacios, paréntesis y guiones. Las mismas reglas se aplican a las solicitudes directas a la API.
+
+1. Instalar la [APK QA 1.1.0-rc.2, build 10103](https://github.com/RubenMealla/zav-sistema/actions/runs/41741246815/artifacts/13282776458), identificada con paquete distinto y etiqueta QA. Esta compilación ya apunta a la API QA remota. Para emulador local la URL es `http://10.0.2.2:3001`, sin añadir `/api/v1`. No utilizar la API productiva para esta prueba.
+2. Abrir la pestaña independiente **Venta directa → Mi mercancía → Recibir cargas**. Confirmar una carga propia tras verificar la recepción física.
+3. Volver a Nueva venta y seleccionar cantidades dentro del saldo libre propio. La mercancía de pedidos y de otros vendedores no está disponible para esta operación.
+4. Obtener ubicación puntual y revisar precisión. Confirmar la entrega. La pantalla solo afirma registro exitoso cuando responde la API. Si falla la red, conservar la operación pendiente y usar su reintento: mantiene la misma clave y datos, incluso al reabrir. No crear otra solicitud para reemplazar una respuesta incierta.
+5. Abrir **Historial** y elegir Ventas, Cargas o Devoluciones. **Ver detalle** abre el comprobante en una ventana con su botón Cerrar. Para sobrantes, entrar en **Mi mercancía → Devolver sobrantes**, elegir lotes/cantidades y un motivo. Quedan inmovilizados hasta la recepción administrativa, que los envía a inspección.
+6. Verificar también el recorrido anterior de Clientes → Pedidos → Retiro → Distribución → Entrega GPS. No fue sustituido.
+
+La APK release usa el identificador productivo y no habilita HTTP local. Compilarla no implica que la API productiva tenga ya desplegada esta ampliación. Los enlaces y resultados de pruebas se registran en `docs/pruebas/catalogo-salidas-directas.md`.
+
+## Códigos y actualización entre dispositivos
+
+En **Lotes → Nuevo lote**, buscar la presentación por nombre o SKU y definir la fecha de elaboración. El código interno se propone automáticamente; escribir el código físico de la etiqueta si es distinto. Cambiar la fecha conserva un código manual; **Regenerar** solicita expresamente una nueva sugerencia. No se genera el registro sanitario SENASAG. La fecha de vencimiento se informa según el producto real.
+
+Para comprobar la actualización, dejar **Pedidos** abierto en web y registrar un pedido desde el móvil; volver al navegador o esperar hasta 30 segundos con la pantalla visible. La lista y la disponibilidad se vuelven a consultar. También puede dejarse **Recibir cargas** abierto en Android y asignar una carga desde la web: aparecerá sin salir de esa pantalla. La app debe estar en primer plano y conectada. No se refresca encima de una edición, selección o confirmación protegida; puede utilizarse **Actualizar** al terminar.
+
+Las cantidades del despacho y las del vendedor no tienen por qué coincidir: el primero descuenta compromisos y el segundo muestra únicamente su mercancía libre recibida. Consulte el [informe de comparación y resultados rc.2](../informes/codigos-sincronizacion-1.1.0-rc.2.md).

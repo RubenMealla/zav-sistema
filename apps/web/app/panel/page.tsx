@@ -1,3 +1,5 @@
+import { CatalogoPanel } from './catalogo-panel';
+import { OperacionesPanel } from './operaciones-panel';
 import { MarcoPanel, vistas, type Vista } from './marco-panel';
 import { limiteSeguro, paginaSegura } from './lib/paginacion-panel';
 import { mensajes, mensajesOk } from './lib/mensajes-panel';
@@ -11,13 +13,12 @@ import { Modal, Notificacion } from '../componentes/interacciones';
 import {
   FormularioCondicionLote,
   FormularioNuevoLote,
-  FormularioNuevoProducto,
   FormularioTraslado,
 } from '../componentes/formularios-inventario';
 import {
   configurarGeorreferenciaDespacho,
 } from './acciones';
-import { AccionesProducto } from './acciones-producto';
+import { SelectorInventario } from '../componentes/selector-inventario';
 import { Paginacion } from '../componentes/paginacion';
 
 import { API_BASE_URL as API } from '../lib/api-servidor';
@@ -77,6 +78,7 @@ async function consultar<T>(ruta: string, token: string): Promise<{ estado: numb
   const respuesta = await fetch(`${API}${ruta}`, {
     headers: { Authorization: `Bearer ${token}` },
     cache: 'no-store',
+    signal: AbortSignal.timeout(30000),
   });
   if (!respuesta.ok) return { estado: respuesta.status };
   return { estado: respuesta.status, datos: (await respuesta.json()) as T };
@@ -89,7 +91,7 @@ function condicionClase(condicion: string) {
 }
 
 function fechaBolivia(valor: string) {
-  return new Date(valor).toLocaleString('es-BO', { dateStyle: 'short', timeStyle: 'short' });
+  return new Date(valor).toLocaleString('es-BO', { dateStyle: 'short', timeStyle: 'short', timeZone: 'America/La_Paz' });
 }
 
 export default async function Panel({
@@ -240,13 +242,19 @@ export default async function Panel({
   }
   if (perfil.datos.rol !== 'ADMINISTRADOR') redirect('/acceso?error=permisos&codigo=403');
 
+  if(vista==='catalogo'||vista==='productos') return <MarcoPanel vista="catalogo" perfil={perfil.datos}><div className="vista-contenido vista-catalogo"><CatalogoPanel/></div></MarcoPanel>;
+  if(vista==='venta-directa'||vista==='custodia') return <MarcoPanel vista={vista} perfil={perfil.datos}><div className={`vista-contenido vista-${vista}`}><OperacionesPanel key={vista} modo={vista} usuario={perfil.datos.identificador}/></div></MarcoPanel>;
+
   const itemsProductos = productos.datos?.items ?? [];
   const itemsLotes = lotes.datos?.items ?? [];
   const itemsMovimientos = movimientos?.datos?.items ?? [];
   const itemsCondiciones = condiciones?.datos?.items ?? [];
   const itemsPedidos = pedidos.datos?.items ?? [];
-  const loteHistorial = itemsLotes.find((lote) => lote.id === parametros.historialLoteId);
-  const loteHistorialCondicion = itemsLotes.find((lote) => lote.id === parametros.historialCondicionLoteId);
+  const idHistorial = vista === 'movimientos' ? parametros.historialLoteId : vista === 'condiciones' ? parametros.historialCondicionLoteId : undefined;
+  const loteSeleccionado = itemsLotes.find(l => l.id === idHistorial) ?? (idHistorial ? (await consultar<Lote>(`/api/v1/lotes/${encodeURIComponent(idHistorial)}`, token).catch(() => ({ estado: 503, datos: undefined }))).datos : undefined);
+  const opcionesHistorial = loteSeleccionado && !itemsLotes.some(l => l.id === loteSeleccionado.id) ? [loteSeleccionado, ...itemsLotes] : itemsLotes;
+  const loteHistorial = vista === 'movimientos' ? loteSeleccionado : undefined;
+  const loteHistorialCondicion = vista === 'condiciones' ? loteSeleccionado : undefined;
   const lotesLiberados = itemsLotes.filter((lote) => lote.condicion === 'LIBERADO').length;
   const lotesRetenidos = itemsLotes.filter((lote) => lote.condicion === 'RETENIDO').length;
   const lotesBloqueados = itemsLotes.filter((lote) => lote.condicion === 'BLOQUEADO').length;
@@ -346,68 +354,6 @@ export default async function Panel({
                   <MapaUbicacion latitud={ventaDespacho.datos.ubicacion?.latitud ?? null} longitud={ventaDespacho.datos.ubicacion?.longitud ?? null} />
                 </form>
               )}
-            </section>
-          )}
-
-          {vista === 'productos' && (
-            <section className="card card-modulo">
-              <div className="card-cabecera">
-                <div>
-                  <span className="eyebrow">CATÁLOGO INTERNO</span>
-                  <h2>Productos registrados</h2>
-                  <p>Registros disponibles para consulta administrativa: {productos.datos?.total ?? '—'}.</p>
-                </div>
-                <Modal boton="Nuevo producto" titulo="Registrar producto" descripcion="Agrega una presentación comercial al catálogo interno con código sugerido y validaciones guiadas." amplio>
-                  <FormularioNuevoProducto />
-                </Modal>
-              </div>
-
-              <form method="get" className="barra-filtros filtros-principales">
-                <input type="hidden" name="vista" value="productos" />
-                <label className="filtro-campo filtro-busqueda">
-                  <span>Buscar</span>
-                  <input name="productoQ" defaultValue={parametros.productoQ ?? ''} placeholder="Código o nombre del producto" />
-                </label>
-                <label className="filtro-campo">
-                  <span>Estado</span>
-                  <select name="productoActivo" defaultValue={parametros.productoActivo ?? ''}>
-                    <option value="">Todos</option>
-                    <option value="true">Activos</option>
-                    <option value="false">Inactivos</option>
-                  </select>
-                </label>
-                <div className="filtros-acciones">
-                  <button type="submit" className="boton boton-secundario">Aplicar filtros</button>
-                  <Link className="boton boton-terciario" href="/panel?vista=productos">Limpiar</Link>
-                </div>
-              </form>
-
-              {productos.estado !== 200 ? (
-                <div className="estado-vacio estado-error"><Icono nombre="alerta" /><p>No se pudo consultar la lista de productos (HTTP {productos.estado}).</p></div>
-              ) : (
-                <div className="tabla-contenedor" role="region" tabIndex={0} aria-label="Productos registrados; tabla desplazable">
-                  <table><caption className="solo-lectores">Productos registrados</caption>
-                    <thead><tr><th scope="col">Código</th><th scope="col">Producto</th><th scope="col">Familia</th><th scope="col">Presentación</th><th scope="col" className="numero">Peso</th><th scope="col" className="numero">Precio</th><th scope="col">Estado</th><th scope="col" className="acciones-columna">Acciones</th></tr></thead>
-                    <tbody>
-                      {itemsProductos.length === 0 ? (
-                        <tr><td colSpan={8}><div className="tabla-vacia"><strong>Todavía no hay productos registrados.</strong><span>Usa «Nuevo producto» para registrar la primera presentación.</span></div></td></tr>
-                      ) : itemsProductos.map((producto) => (
-                        <tr key={producto.id}>
-                          <td><span className="codigo">{producto.codigo}</span></td>
-                          <td><strong>{producto.nombre}</strong></td>
-                          <td>{producto.familia}</td>
-                          <td>{producto.presentacion}</td>
-                          <td className="numero">{producto.pesoGramos} g</td>
-                          <td className="numero"><strong>Bs {producto.precioBob}</strong></td>
-                          <td><span className={producto.activo ? 'badge badge-verde' : 'badge badge-neutro'}>{producto.activo ? 'ACTIVO' : 'INACTIVO'}</span></td>
-                          <td className="acciones-columna"><AccionesProducto producto={producto} /></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-              <Paginacion pagina={productoPagina} total={productos.datos?.total ?? 0} limite={limiteTabla} parametro="productoPagina" parametros={{ vista: 'productos', productoQ: parametros.productoQ, productoActivo: parametros.productoActivo }} />
             </section>
           )}
 
@@ -526,10 +472,7 @@ export default async function Panel({
                   <div><span className="eyebrow">AUDITORÍA</span><h2>Historial de condición</h2></div>
                   <form method="get" className="filtro-inline">
                     <input type="hidden" name="vista" value="condiciones" />
-                    <select name="historialCondicionLoteId" defaultValue={parametros.historialCondicionLoteId ?? ''} required aria-label="Ver historial de condición">
-                      <option value="" disabled>Selecciona un lote</option>
-                      {itemsLotes.map((lote) => <option key={lote.id} value={lote.id}>{lote.codigo}</option>)}
-                    </select>
+                    <SelectorInventario key={parametros.historialCondicionLoteId ?? 'sin-lote'} tipo="lotes" iniciales={opcionesHistorial} id="historialCondicionLoteId" name="historialCondicionLoteId" value={parametros.historialCondicionLoteId} etiqueta="Ver historial de condición" />
                     <button type="submit" className="boton boton-secundario">Consultar</button>
                   </form>
                 </div>
@@ -690,10 +633,7 @@ export default async function Panel({
                 <div className="historial-etiqueta"><Icono nombre="historial" tamano={19} /><span>Historial por lote</span></div>
                 <form method="get" className="filtro-inline">
                   <input type="hidden" name="vista" value="movimientos" />
-                  <select name="historialLoteId" defaultValue={parametros.historialLoteId ?? ''} required aria-label="Ver historial del lote">
-                    <option value="" disabled>Selecciona un lote</option>
-                    {itemsLotes.map((lote) => <option key={lote.id} value={lote.id}>{lote.codigo}</option>)}
-                  </select>
+                  <SelectorInventario key={parametros.historialLoteId ?? 'sin-lote'} tipo="lotes" iniciales={opcionesHistorial} id="historialLoteId" name="historialLoteId" value={parametros.historialLoteId} etiqueta="Ver historial del lote" />
                   <button type="submit" className="boton boton-secundario">Consultar</button>
                 </form>
               </div>

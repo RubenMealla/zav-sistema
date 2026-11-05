@@ -14,6 +14,24 @@ import type {
 
 import { obtenerDireccionApi } from './configuracion-api';
 import { registrarSolicitudQa } from './diagnostico-qa';
+import type { CustodiaLibre,OperacionDetalle,OperacionResumen,StockLibre } from './operaciones-tipos';
+
+export function consultarStockLibre(token:string) {return solicitud<{items:StockLibre[]}>('/api/v1/operaciones/disponibilidad',{},token);}
+export function consultarCustodia(token:string,page=1) {return solicitud<{items:CustodiaLibre[]}>('/api/v1/operaciones/custodia?limit=50&page='+page,{},token);}
+export function consultarOperaciones(token:string,page=1,tipo?:OperacionResumen['tipo'],estado?:OperacionResumen['estado']) {
+  const q=new URLSearchParams({limit:'20',page:String(page)});
+  if(tipo) q.set('tipo',tipo);
+  if(estado) q.set('estado',estado);
+  return solicitud<{items:OperacionResumen[];total:number}>('/api/v1/operaciones?'+q,{},token);
+}
+export function consultarOperacion(token:string,id:string) {return solicitud<OperacionDetalle>('/api/v1/operaciones/'+encodeURIComponent(id),{},token);}
+export async function enviarOperacion(token:string,ruta:string,datos:Record<string,unknown>) {
+  if(!/^operaciones\/(salidas-directas|devoluciones|[a-f0-9-]{36}\/recepcion)$/.test(ruta)) throw new Error('Operación móvil no permitida.');
+  const resultado = await solicitud<OperacionDetalle>('/api/v1/'+ruta,{method:'POST',body:JSON.stringify(datos)},token);
+  if (!resultado?.id || !resultado.estado || !Array.isArray(resultado.detalles))
+    throw new ApiError(502, {message:'No se recibió un comprobante válido. Verifica o reintenta la misma operación.'});
+  return resultado;
+}
 
 export class ApiError extends Error {
   constructor(

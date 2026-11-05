@@ -1,20 +1,66 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { DataSource } from 'typeorm';
-import { consultaTexto, objeto, paginacion, texto, uuid } from '../inventario/validacion.js';
+import {
+  consultaTexto,
+  nombreTexto,
+  objeto,
+  paginacion,
+  texto,
+  uuid,
+} from '../inventario/validacion.js';
 
-const CAMPOS_CLIENTE = ['nombre', 'telefono', 'direccion', 'latitud', 'longitud'] as const;
+const CAMPOS_CLIENTE = [
+  'nombre',
+  'telefono',
+  'direccion',
+  'latitud',
+  'longitud',
+] as const;
 const CAMPOS_UBICACION = ['direccion', 'latitud', 'longitud'] as const;
-const CAMPOS_EDICION = ['nombre', 'telefono', 'direccion', 'latitud', 'longitud'] as const;
+const CAMPOS_EDICION = [
+  'nombre',
+  'telefono',
+  'direccion',
+  'latitud',
+  'longitud',
+] as const;
 const CAMPOS_ESTADO = ['activo'] as const;
 
 function telefonoOpcional(valor: unknown): string | null {
-  if (valor === undefined || valor === null || valor === '') return null;
-  return texto(valor, 'telefono', 30);
+  if (
+    valor === undefined ||
+    valor === null ||
+    (typeof valor === 'string' && !valor.trim())
+  )
+    return null;
+  const telefono = texto(valor, 'telefono', 30);
+  const digitos = telefono.replace(/\D/g, '').length;
+  if (!/^\+?[0-9][0-9 ()-]*$/.test(telefono) || digitos < 7 || digitos > 15)
+    throw new BadRequestException(
+      'telefono debe contener entre 7 y 15 dígitos; admite + inicial, espacios, paréntesis y guiones.',
+    );
+  return telefono;
 }
 
-function coordenada(valor: unknown, campo: string, minimo: number, maximo: number): number {
-  if (typeof valor !== 'number' || !Number.isFinite(valor) || valor < minimo || valor > maximo) {
-    throw new BadRequestException(`${campo} debe estar entre ${minimo} y ${maximo}.`);
+function coordenada(
+  valor: unknown,
+  campo: string,
+  minimo: number,
+  maximo: number,
+): number {
+  if (
+    typeof valor !== 'number' ||
+    !Number.isFinite(valor) ||
+    valor < minimo ||
+    valor > maximo
+  ) {
+    throw new BadRequestException(
+      `${campo} debe estar entre ${minimo} y ${maximo}.`,
+    );
   }
   return valor;
 }
@@ -38,7 +84,7 @@ export class ClientesService {
 
   async crear(entrada: unknown) {
     const datos = objeto(entrada, CAMPOS_CLIENTE);
-    const nombre = texto(datos.nombre, 'nombre', 140);
+    const nombre = nombreTexto(datos.nombre, 140);
     const telefono = telefonoOpcional(datos.telefono);
     const direccion = texto(datos.direccion, 'direccion', 240);
     const { latitud, longitud } = coordenadasOpcionales(datos);
@@ -48,14 +94,14 @@ export class ClientesService {
       );
     }
 
-    const filas = await this.db.query(
+    const filas = (await this.db.query(
       `INSERT INTO cliente
          (nombre, telefono, direccion, latitud, longitud, ubicacion_confirmada_en)
        VALUES ($1, $2, $3, $4, $5, CASE WHEN $4::numeric IS NULL THEN NULL ELSE now() END)
        RETURNING id, nombre, telefono, direccion, latitud, longitud,
                  ubicacion_confirmada_en, activo, creado_en, actualizado_en`,
       [nombre, telefono, direccion, latitud, longitud],
-    ) as Array<Record<string, unknown>>;
+    )) as Array<Record<string, unknown>>;
 
     return this.respuesta(filas[0]);
   }
@@ -63,7 +109,7 @@ export class ClientesService {
   async actualizar(idEntrada: string, entrada: unknown) {
     const id = uuid(idEntrada, 'id');
     const datos = objeto(entrada, CAMPOS_EDICION);
-    const nombre = texto(datos.nombre, 'nombre', 140);
+    const nombre = nombreTexto(datos.nombre, 140);
     const telefono = telefonoOpcional(datos.telefono);
     const direccion = texto(datos.direccion, 'direccion', 240);
     const { latitud, longitud } = coordenadasOpcionales(datos);
@@ -74,7 +120,7 @@ export class ClientesService {
       );
     }
 
-    const [, cantidadActualizada] = await this.db.query(
+    const [, cantidadActualizada] = (await this.db.query(
       `UPDATE cliente
        SET nombre = $2,
            telefono = $3,
@@ -83,10 +129,11 @@ export class ClientesService {
            longitud = $6,
            ubicacion_confirmada_en = now(),
            actualizado_en = now()
-       WHERE id = $1::uuid AND activo = TRUE RETURNING id`,
+       WHERE id = $1::uuid AND NOT es_consumidor_final AND activo = TRUE RETURNING id`,
       [id, nombre, telefono, direccion, latitud, longitud],
-    ) as [Array<{ id: string }>, number];
-    if (!cantidadActualizada) throw new NotFoundException('Cliente activo no encontrado.');
+    )) as [Array<{ id: string }>, number];
+    if (!cantidadActualizada)
+      throw new NotFoundException('Cliente activo no encontrado.');
 
     return this.obtener(id);
   }
@@ -96,32 +143,42 @@ export class ClientesService {
     const datos = objeto(entrada, CAMPOS_UBICACION);
     const { latitud, longitud } = coordenadasOpcionales(datos);
     if (latitud === null || longitud === null) {
-      throw new BadRequestException('La ubicacion confirmada requiere latitud y longitud.');
+      throw new BadRequestException(
+        'La ubicacion confirmada requiere latitud y longitud.',
+      );
     }
 
     const direccion =
-      datos.direccion === undefined ? null : texto(datos.direccion, 'direccion', 240);
+      datos.direccion === undefined
+        ? null
+        : texto(datos.direccion, 'direccion', 240);
 
-    const [, cantidadActualizada] = await this.db.query(
+    const [, cantidadActualizada] = (await this.db.query(
       `UPDATE cliente
        SET direccion = COALESCE($2, direccion),
            latitud = $3,
            longitud = $4,
            ubicacion_confirmada_en = now(),
            actualizado_en = now()
-       WHERE id = $1::uuid AND activo = TRUE RETURNING id`,
+       WHERE id = $1::uuid AND NOT es_consumidor_final AND activo = TRUE RETURNING id`,
       [id, direccion, latitud, longitud],
-    ) as [Array<{ id: string }>, number];
-    if (!cantidadActualizada) throw new NotFoundException('Cliente activo no encontrado.');
+    )) as [Array<{ id: string }>, number];
+    if (!cantidadActualizada)
+      throw new NotFoundException('Cliente activo no encontrado.');
 
     return this.obtener(id);
   }
 
   async listar(consulta: Record<string, unknown>) {
-    const { page, limit } = paginacion(consulta, ['q', 'activo', 'page', 'limit']);
+    const { page, limit } = paginacion(consulta, [
+      'q',
+      'activo',
+      'page',
+      'limit',
+    ]);
     const q = consultaTexto(consulta.q, 'q', 100);
     const parametros: unknown[] = [];
-    const condiciones: string[] = [];
+    const condiciones: string[] = ['NOT es_consumidor_final'];
 
     if (consulta.activo === undefined || consulta.activo === 'true') {
       condiciones.push('activo = TRUE');
@@ -133,7 +190,9 @@ export class ClientesService {
 
     if (q) {
       parametros.push(`%${q}%`);
-      condiciones.push(`(nombre ILIKE $${parametros.length} OR COALESCE(telefono, '') ILIKE $${parametros.length})`);
+      condiciones.push(
+        `(nombre ILIKE $${parametros.length} OR COALESCE(telefono, '') ILIKE $${parametros.length})`,
+      );
     }
 
     parametros.push(limit, (page - 1) * limit);
@@ -172,14 +231,14 @@ export class ClientesService {
       throw new BadRequestException('activo debe ser booleano.');
     }
 
-    const filas = await this.db.query(
+    const filas = (await this.db.query(
       `UPDATE cliente
        SET activo = $2,
            actualizado_en = now()
-       WHERE id = $1::uuid
+       WHERE id = $1::uuid AND NOT es_consumidor_final
        RETURNING id`,
       [id, datos.activo],
-    ) as Array<{ id: string }>;
+    )) as Array<{ id: string }>;
 
     if (!filas.length) throw new NotFoundException('Cliente no encontrado.');
     return this.obtener(id);
@@ -187,12 +246,12 @@ export class ClientesService {
 
   async obtener(idEntrada: string) {
     const id = uuid(idEntrada, 'id');
-    const filas = await this.db.query(
+    const filas = (await this.db.query(
       `SELECT id, nombre, telefono, direccion, latitud, longitud,
               ubicacion_confirmada_en, activo, creado_en, actualizado_en
-       FROM cliente WHERE id = $1::uuid`,
+       FROM cliente WHERE id = $1::uuid AND NOT es_consumidor_final`,
       [id],
-    ) as Array<Record<string, unknown>>;
+    )) as Array<Record<string, unknown>>;
 
     if (!filas.length) throw new NotFoundException('Cliente no encontrado.');
     return this.respuesta(filas[0]);

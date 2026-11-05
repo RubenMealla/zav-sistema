@@ -13,8 +13,22 @@ await client.connect();
 try {
   const vendedor = await client.query("SELECT id FROM usuario WHERE rol='VENDEDOR' LIMIT 1");
   if (vendedor.rowCount !== 1) throw new Error('No existe la cuenta sintética del Vendedor.');
+  const admin = await client.query("SELECT id FROM usuario WHERE rol='ADMINISTRADOR' LIMIT 1");
+  if (admin.rowCount !== 1) throw new Error('No existe la cuenta sintética del Administrador.');
   const producto = await client.query(
-    "INSERT INTO producto (codigo,nombre,familia,presentacion,peso_gramos,precio_bob) VALUES ('QA-REND-100', 'Producto sintético QA', 'PRUEBAS','Unidad',100,10.00) RETURNING id"
+    "INSERT INTO producto (codigo,nombre,familia,presentacion,peso_gramos,precio_bob,validacion_comercial,validado_por,validado_en) VALUES ('QA-REND-100', 'Producto sintético QA', 'PRUEBAS','Unidad',100,10.00,'VALIDADO',$1,now()) RETURNING id",
+    [admin.rows[0].id]
+  );
+  const lote = await client.query(
+    `INSERT INTO lote(codigo,producto_id,elaborado_el,vence_el,condicion)
+     VALUES('QA-REND-LOTE',$1,(now() AT TIME ZONE 'America/La_Paz')::date,
+       (now() AT TIME ZONE 'America/La_Paz')::date+30,'LIBERADO') RETURNING id`,
+    [producto.rows[0].id]
+  );
+  await client.query(
+    `INSERT INTO movimiento(operacion_clave,lote_id,tipo,destino_id,cantidad,usuario_id)
+     VALUES(gen_random_uuid(),$1,'INGRESO',(SELECT id FROM ubicacion WHERE codigo='VENTA_DESPACHO'),100,$2)`,
+    [lote.rows[0].id,admin.rows[0].id]
   );
   const cliente = await client.query(
     "INSERT INTO cliente (nombre,direccion) VALUES ('Cliente sintético QA', 'Dirección ficticia de pruebas') RETURNING id"
@@ -28,8 +42,8 @@ try {
   if (pedido.rowCount !== 100) throw new Error('No se generaron exactamente cien pedidos sintéticos.');
   const detalles = await client.query(
     `INSERT INTO detalle_pedido (pedido_id,producto_id,cantidad,precio_unitario_bob)
-     SELECT p.id,$1::uuid,1,10.00 FROM pedido p RETURNING id`,
-    [producto.rows[0].id]
+     SELECT p.id,$1::uuid,1,10.00 FROM pedido p WHERE p.id=ANY($2::uuid[]) RETURNING id`,
+    [producto.rows[0].id,pedido.rows.map(p=>p.id)]
   );
   if (detalles.rowCount !== 100) throw new Error('El ensayo necesita cien detalles de pedido.');
 } finally {

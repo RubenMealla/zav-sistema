@@ -32,17 +32,21 @@ export function Campo({
   onChangeText,
   multiline = false,
   keyboardType,
+  maxLength,
 }: {
   label: string;
   value: string;
   onChangeText: (v: string) => void;
   multiline?: boolean;
   keyboardType?: 'default' | 'phone-pad';
+  maxLength?: number;
 }) {
   return (
     <View style={styles.campo}>
       <Text style={styles.label}>{label}</Text>
       <TextInput
+        accessibilityLabel={label}
+        maxLength={maxLength}
         value={value}
         onChangeText={onChangeText}
         multiline={multiline}

@@ -60,7 +60,7 @@ for (const ancho of [390, 768, 1440]) {
     await captura(page, `identidad-resumen-${ancho}.png`);
     const navegacion = page.getByRole('navigation', { name: ancho <= 820 ? 'Módulos' : 'Módulos del sistema', exact: true });
     for (const [nombre, boton, dialogo, archivo] of [
-      ['Productos', 'Nuevo producto', 'Registrar producto', 'productos'],
+      ['Catálogo', 'Crear familia', 'Crear catálogo', 'catalogo'],
       ['Lotes', 'Nuevo lote', 'Registrar lote e ingreso inicial', 'lotes'],
       ['Condiciones', 'Gestionar condición', 'Cambiar condición del lote', 'condiciones'],
       ['Movimientos', 'Nuevo traslado', 'Registrar traslado', 'movimientos'],
@@ -71,13 +71,22 @@ for (const ancho of [390, 768, 1440]) {
       await captura(page, `identidad-${archivo}-${ancho}.png`);
       const abrir = page.getByRole('button', { name: boton, exact: true });
       await abrir.click();
-      const modal = page.getByRole('dialog', { name: dialogo, exact: true });
+      const modal = page.getByRole(nombre==='Catálogo'?'region':'dialog', { name: dialogo, exact: true });
       await expect(modal).toBeVisible();
       const caja = await modal.boundingBox();
       expect(caja).not.toBeNull();
       expect(caja!.x).toBeGreaterThanOrEqual(0);
       expect(caja!.x + caja!.width).toBeLessThanOrEqual(ancho + 1);
       expect(caja!.height).toBeLessThanOrEqual(900);
+      if(nombre==='Catálogo'){
+        await modal.getByLabel('Nombre',{exact:true}).focus();
+        await page.keyboard.press('Tab');
+        expect(await modal.evaluate(el=>el.contains(document.activeElement))).toBeTruthy();
+        await captura(page,`identidad-editor-${archivo}-${ancho}.png`);
+        await modal.getByRole('button',{name:'Cancelar'}).click();
+        await expect(modal).not.toBeVisible();
+        continue;
+      }
       await modal.getByRole('button', { name: 'Cerrar ventana' }).focus();
       await page.keyboard.press('Shift+Tab');
       expect(await modal.evaluate((el) => el.contains(document.activeElement))).toBeTruthy();
@@ -126,12 +135,16 @@ test('landing pública conserva la nueva jerarquía editorial', async ({ page })
   await expect(page.locator('#novedades')).toBeVisible();
   await expect(page.locator('#productos')).toBeVisible();
   await expect(page.locator('#zav')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Siete familias de productos ZAV.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '7 familias de productos ZAV.' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Mortadelas' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Fiambres especiales' })).toBeVisible();
   const mortadelaOriginal = page.locator('#productos').getByRole('img', { name: 'Mortadela Primavera' });
   await expect(mortadelaOriginal).toBeVisible();
-  await expect(mortadelaOriginal).toHaveAttribute('src', '/catalogo-original/mortadela-primavera.png');
+  expect(new URL(await mortadelaOriginal.getAttribute('src') ?? '', 'http://127.0.0.1:3000').searchParams.get('url')).toBe('/catalogo-original/mortadela-primavera.png');
+  await expect(mortadelaOriginal).toHaveAttribute('srcset', /w=640/);
+  await expect(page.locator('.familia-icono img')).toHaveCount(0);
+  await expect(page.locator('.familia-icono svg')).toHaveCount(7);
+  await expect(page.locator('#zav [data-marca]')).toHaveCount(0);
   await expect(page.locator('.foto-sprite')).toHaveCount(0);
 
   await nav.getByRole('link', { name: 'Productos' }).click();
@@ -156,17 +169,17 @@ test('teclado, contraste y movimiento reducido', async ({ page }) => {
   await page.keyboard.press('Enter');
   await expect(page.locator('#principal')).toBeFocused();
   await ingresar(page);
-  await page.getByRole('link', { name: 'Productos', exact: true }).filter({ visible: true }).click();
-  await page.getByRole('button', { name: 'Nuevo producto' }).click();
-  const modalProducto = page.getByRole('dialog', { name: 'Registrar producto' });
-  const codigoProducto = modalProducto.getByLabel('Código', { exact: true });
+  await page.getByRole('link', { name: 'Catálogo', exact: true }).filter({ visible: true }).click();
+  await page.getByRole('button', { name: 'Crear familia' }).click();
+  const modalProducto = page.getByRole('region', { name: 'Crear catálogo' });
+  const codigoProducto = modalProducto.getByLabel('Nombre', { exact: true });
   await codigoProducto.focus();
   const focoVisible = await codigoProducto.evaluate((el) => {
     const estilo = getComputedStyle(el);
     return estilo.outlineStyle !== 'none' || estilo.boxShadow !== 'none';
   });
   expect(focoVisible).toBeTruthy();
-  await page.keyboard.press('Escape');
+  await modalProducto.getByRole('button',{name:'Cancelar'}).click();
   const contrastes = await page.locator('.boton-primario, .sidebar .nav-item, th, td, .codigo, .badge, .eyebrow').evaluateAll((elementos) => {
     const rgb = (valor: string) => valor.match(/[\d.]+/g)!.slice(0, 3).map(Number);
     const luminancia = (color: number[]) => color.map((n) => { const v = n / 255; return v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; }).reduce((a, v, i) => a + v * [.2126, .7152, .0722][i], 0);

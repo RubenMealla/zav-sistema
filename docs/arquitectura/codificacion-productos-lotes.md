@@ -85,3 +85,14 @@ No se genera una fecha de vencimiento ficticia ni se infiere vida útil sin evid
 - Codex Alimentarius, CXS 1-1985, *General Standard for the Labelling of Pre-packaged Foods*, apartado 4.6 Lot Identification. Portal oficial Codex/FAO: https://www.fao.org/fao-who-codexalimentarius/codex-texts/list-standards/en/?ids=91
 
 **Pendiente de validar con ZAV:** si la empresa ya utiliza una codificación física de lotes aprobada/declarada, esa convención real debe prevalecer sobre la propuesta interna del sistema.
+
+## Revisión 1.1.0-rc.2 — 3 de noviembre de 2026
+
+- La sugerencia ahora se calcula en la API mediante `GET /api/v1/codigos/producto` y `GET /api/v1/codigos/lote`, ambos exclusivos del Administrador. La web reenvía la sesión sin exponer el JWT al formulario.
+- El nuevo editor de presentaciones completa el SKU al seleccionar familia; permite editarlo o pulsar **Sugerir**. Editar una presentación registrada conserva su SKU de sólo lectura.
+- Se conserva la convención anterior. El consecutivo consulta todos los códigos registrados, incluidos inactivos, sin descargar hasta 50 páginas desde el navegador. PostgreSQL calcula el siguiente número con precisión decimal exacta y valida la longitud resultante.
+- Una sugerencia no es una reserva. Dos formularios pueden ver el mismo código; sólo uno lo registra y el otro recibe conflicto. El segundo conserva sus datos y puede pedir otra sugerencia. No se renumera silenciosamente un SKU o una etiqueta física al confirmar.
+- Cambiar la fecha o el producto de un lote conserva un código escrito manualmente. **Regenerar** restaura explícitamente la sugerencia. La fecha civil sigue siendo Bolivia; no se inventa fecha de vencimiento.
+- UUID de entidades y claves idempotentes siguen generándose internamente. El usuario elige nombres, presentaciones y lotes; no debe memorizar UUID.
+
+La consulta oficial [Aprobación de etiquetas en idioma español](https://www.gob.bo/tramites/aprobacion-de-etiquetas-en-idioma-espanol), revisada el 03/11/2026, identifica la R.A. 042/2023 como marco legal. El documento completo de SENASAG devolvió HTTP 403 en esta revisión: no se afirma haber comprobado nuevamente su texto íntegro. `SAL-001` y `TJ-ZAV-…` son convenciones internas de ZAV; no constituyen un registro sanitario, GTIN ni aprobación de etiqueta. No se generó un número sanitario ficticio ni se declaró validada una etiqueta comercial. Si ZAV utiliza otra convención física, puede introducirla sin perder la identificación histórica.

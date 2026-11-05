@@ -119,11 +119,13 @@ export function Clientes({
 
         <Campo
           label="Nombre"
+          maxLength={140}
           value={formNombre}
           onChangeText={editando ? setEditNombre : setNombre}
         />
         <Campo
           label="Teléfono (opcional)"
+          maxLength={30}
           value={formTelefono}
           onChangeText={editando ? setEditTelefono : setTelefono}
           keyboardType="phone-pad"

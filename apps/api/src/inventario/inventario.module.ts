@@ -12,10 +12,12 @@ import { MovimientosController } from './movimientos.controller.js';
 import { MovimientosService } from './movimientos.service.js';
 import { CondicionesLoteController } from './condiciones-lote.controller.js';
 import { CondicionesLoteService } from './condiciones-lote.service.js';
+import { CodigosController } from './codigos.controller.js';
+import { CodigosService } from './codigos.service.js';
 
 @Module({
   imports: [AuthModule, TypeOrmModule.forFeature([ProductoEntity, LoteEntity, UsuarioEntity])],
-  controllers: [ProductosController, LotesController, MovimientosController, CondicionesLoteController],
-  providers: [ProductosService, LotesService, MovimientosService, CondicionesLoteService],
+  controllers: [CodigosController, ProductosController, LotesController, MovimientosController, CondicionesLoteController],
+  providers: [CodigosService, ProductosService, LotesService, MovimientosService, CondicionesLoteService],
 })
 export class InventarioModule {}

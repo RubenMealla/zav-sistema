@@ -132,6 +132,12 @@ async function desautorizar(page: Page) {
 
 test.describe.serial('Evidencias verificables de Swagger UI', () => {
   test.beforeEach(async ({ page }) => {
+    // Las pruebas interactivas deben usar la API del entorno local, nunca producción.
+    const contrato = await page.request.get('/openapi-zav.yaml');
+    const yaml = await contrato.text();
+    expect(yaml).toContain('url: /api/swagger/proxy');
+    expect(yaml).not.toContain('url: https://zav-api-2026.onrender.com');
+    await page.route('https://zav-api-2026.onrender.com/**', route => route.abort('blockedbyclient'));
     await page.goto('/swagger');
     await expect(page.getByText('ZAV · Swagger API')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'ZAV API' })).toBeVisible({ timeout: 15000 });
@@ -167,7 +173,7 @@ test.describe.serial('Evidencias verificables de Swagger UI', () => {
       familia: 'QA',
       presentacion: 'Unidad',
       pesoGramos: 250,
-      precioBob: 19.5,
+      precioBob: 19.5, validacionComercial: 'VALIDADO',
     }, null, 2));
     await ejecutar(producto);
     await esperarCodigo(producto, '201');
@@ -184,6 +190,8 @@ test.describe.serial('Evidencias verificables de Swagger UI', () => {
   });
 
   test('ejecuciones correctas de los flujos principales desde Swagger', async ({ page, request }) => {
+    // Recorrido serial con varios formularios y capturas; cada aserción conserva su timeout.
+    test.setTimeout(120_000);
     const ahora = Date.now();
     const admin = await token(request, 'admin');
     const vendedor = await token(request, 'vendedor');
@@ -204,7 +212,7 @@ test.describe.serial('Evidencias verificables de Swagger UI', () => {
         familia: 'QA',
         presentacion: 'Unidad',
         pesoGramos: 250,
-        precioBob: 18.5,
+        precioBob: 18.5, validacionComercial: 'VALIDADO',
       });
 
     const prepararStock = async (sufijo: string, cantidad = 20) => {
@@ -369,6 +377,7 @@ test.describe.serial('Evidencias verificables de Swagger UI', () => {
   });
 
   test('errores de negocio de los requisitos principales visibles en Swagger', async ({ page, request }) => {
+    test.setTimeout(120_000);
     const ahora = Date.now();
     const admin = await token(request, 'admin');
     const vendedor = await token(request, 'vendedor');
@@ -388,7 +397,7 @@ test.describe.serial('Evidencias verificables de Swagger UI', () => {
       familia: 'QA',
       presentacion: 'Unidad',
       pesoGramos: 250,
-      precioBob: 15,
+      precioBob: 15, validacionComercial: 'VALIDADO',
     });
 
     await autorizar(page, admin);
@@ -556,7 +565,7 @@ test.describe.serial('Evidencias verificables de Swagger UI', () => {
         familia: 'QA',
         presentacion: 'Unidad',
         pesoGramos: 250,
-        precioBob: 10,
+        precioBob: 10, validacionComercial: 'VALIDADO',
       },
     });
     expect(creado.status()).toBe(201);
@@ -578,7 +587,7 @@ test.describe.serial('Evidencias verificables de Swagger UI', () => {
       familia: 'QA',
       presentacion: 'Unidad',
       pesoGramos: 250,
-      precioBob: 10,
+      precioBob: 10, validacionComercial: 'VALIDADO',
     }, null, 2));
     await ejecutar(producto409);
     await esperarCodigo(producto409, '409');

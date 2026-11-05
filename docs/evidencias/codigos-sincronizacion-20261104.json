@@ -1,0 +1,182 @@
+{
+  "fechaEntrega": "2026-11-04",
+  "base": "e9dc1a40476a72034f38e4dabb0e178c62af0066",
+  "codigo": "86f49788a789ae299151d3ce2ab5e7488d23a3b6",
+  "version": "1.1.0-rc.2",
+  "rama": "desarrollo/ventas-directas-catalogo",
+  "pr": 74,
+  "fusionado": false,
+  "commitsFuncionales": [
+    "e71a49593f628ccea8a9e5daf8c9e3b538133e55",
+    "86f49788a789ae299151d3ce2ab5e7488d23a3b6"
+  ],
+  "validacion": {
+    "apiUnitarias": 26,
+    "apiE2EPostgreSQL": 69,
+    "webPlaywright": 42,
+    "movilUnitarias": 20,
+    "webLocalFinal": "42 passed (15.3m)",
+    "webIntentoInicial": {
+      "aprobadas": 39,
+      "fallidas": 3,
+      "evidenciaConservada": "backups/codigos-rc2-intento1/test-results",
+      "correcciones": [
+        "Encabezado flexible a 390 px",
+        "Selector por identidad de opción, etiqueta incluye presentación",
+        "Código físico manual para verificar rechazo HTTP de fecha futura"
+      ]
+    },
+    "openApiSintaxis": "ambos contratos aprobados",
+    "postmanSolicitudes": 2,
+    "postmanAserciones": 3
+  },
+  "actions": {
+    "api": {
+      "run": 41741246699,
+      "resultado": "success",
+      "url": "https://github.com/RubenMealla/zav-sistema/actions/runs/41741246699"
+    },
+    "web": {
+      "run": 41741246838,
+      "resultado": "success",
+      "url": "https://github.com/RubenMealla/zav-sistema/actions/runs/41741246838"
+    },
+    "movil": {
+      "run": 41741246831,
+      "resultado": "success",
+      "url": "https://github.com/RubenMealla/zav-sistema/actions/runs/41741246831"
+    },
+    "android": {
+      "run": 41741246815,
+      "resultado": "success",
+      "url": "https://github.com/RubenMealla/zav-sistema/actions/runs/41741246815"
+    }
+  },
+  "android": {
+    "sha256": "cb62365377a1599f9d75b5ab8740509b4bdf5eae956f7e722e7a7a8752382821",
+    "bytes": 149410197,
+    "apk": "ZAV-Vendedor-1.1.0-rc.2-build10103-qa.apk",
+    "version": "1.1.0-rc.2",
+    "versionCode": 10103,
+    "package": "bo.zav.gestion.vendedor.qa",
+    "source": "86f49788a789ae299151d3ce2ab5e7488d23a3b6",
+    "prMergeCheckout": "9989ef0113476abaa0b607142783955bcd25859c",
+    "tree": "baab0d822e51f98556597afcdd026a2ffdf69760",
+    "sameTree": true,
+    "run": 41741246815,
+    "artifact": 13282776458,
+    "resultadoAndroid": {
+      "apk": "ZAV-Vendedor-1.1.0-rc.2-build10103-qa.apk",
+      "apkSha256": "cb62365377a1599f9d75b5ab8740509b4bdf5eae956f7e722e7a7a8752382821",
+      "apkRunId": "41741246815",
+      "pruebaCommit": "9989ef0113476abaa0b607142783955bcd25859c",
+      "cargaSincronizadaSinRecargar": true,
+      "carga": "1709567e-b1f1-4565-8bd6-ff673339c697",
+      "venta": "87c8ab7a-bf11-462a-b4b2-092158f8801c",
+      "devolucion": "0a5319a7-d0e0-4909-ad8d-b27b0182afef",
+      "stockLibreFinal": 2,
+      "gpsPuntual": true,
+      "notificacionesFlotantes": true,
+      "permisoDenegadoSinSalida": true,
+      "respuestaInciertaRecuperadaTrasReabrir": true,
+      "reintentoMismaSolicitud": true,
+      "conciliado": true,
+      "api": "local",
+      "base": "zav_test"
+    },
+    "resultadoHora": [
+      {
+        "zonaAndroid": "UTC",
+        "horaQaBolivia": "20:00:54",
+        "desdeUtc": 1793750451.7323074,
+        "hastaUtc": 1793750460.065711
+      },
+      {
+        "zonaAndroid": "Asia/Tokyo",
+        "horaQaBolivia": "20:01:25",
+        "desdeUtc": 1793750482.8107653,
+        "hastaUtc": 1793750490.5310473
+      }
+    ],
+    "apiCompilada": "https://zav-api-catalogo-qa.onrender.com",
+    "baseEnsayoNativo": "zav_test"
+  },
+  "neon": {
+    "proyecto": "fancy-darkness-96751098",
+    "rama": "br-dawn-cake-b6cs8va8",
+    "lecturaFinal": [
+      {
+        "base": "zav_catalogo_qa",
+        "consultado_en": "2026-11-04T06:36:52.791Z",
+        "migraciones": "11",
+        "presentaciones": "5",
+        "pedidos": "0",
+        "movimientos": "40",
+        "saldos_negativos": "0",
+        "custodias_negativas": "0",
+        "libres_negativos": "0",
+        "sku_sin_jerarquia": "0",
+        "custodias_sin_responsable": "0",
+        "diferencias_distribucion_custodia": "0"
+      }
+    ],
+    "sqlSoloLectura": "WITH fisico AS (\n SELECT s.lote_id,s.cantidad_fisica FROM saldo_inventario s JOIN ubicacion u ON u.id=s.ubicacion_id WHERE u.codigo='EN_DISTRIBUCION'\n),custodia AS (\n SELECT lote_id,sum(cantidad) AS cantidad FROM saldo_custodia GROUP BY lote_id\n),diferencias AS (\n SELECT COALESCE(f.lote_id,c.lote_id) AS lote_id FROM fisico f FULL JOIN custodia c USING(lote_id)\n WHERE COALESCE(f.cantidad_fisica,0)<>COALESCE(c.cantidad,0)\n)\nSELECT current_database() AS base,now() AS consultado_en,\n(SELECT count(*) FROM typeorm_migraciones) AS migraciones,\n(SELECT count(*) FROM producto) AS presentaciones,\n(SELECT count(*) FROM pedido) AS pedidos,\n(SELECT count(*) FROM movimiento) AS movimientos,\n(SELECT count(*) FROM saldo_inventario WHERE cantidad_fisica<0) AS saldos_negativos,\n(SELECT count(*) FROM saldo_custodia WHERE cantidad<0) AS custodias_negativas,\n(SELECT count(*) FROM custodia_libre WHERE disponible<0) AS libres_negativos,\n(SELECT count(*) FROM producto WHERE producto_comercial_id IS NULL) AS sku_sin_jerarquia,\n(SELECT count(*) FROM saldo_custodia WHERE vendedor_id IS NULL AND cantidad<>0) AS custodias_sin_responsable,\n(SELECT count(*) FROM diferencias) AS diferencias_distribucion_custodia;",
+    "migracionesNuevas": 0,
+    "escriturasEnEstaRevision": 0
+  },
+  "render": {
+    "servicio": "srv-dbj4ia8u01pc73ef4850",
+    "deploy": "dep-dbl72s61egvs73dvklkg",
+    "codigo": "86f49788a789ae299151d3ce2ab5e7488d23a3b6",
+    "estado": "live",
+    "api": "https://zav-api-catalogo-qa.onrender.com",
+    "deployAnterior": "dep-dbkt7lgae00c73c0v1mg",
+    "codigoAnterior": "9f9f4ef2281c25e693dad9c0a2cc2bce9b3f7d3e"
+  },
+  "vercel": {
+    "deploy": "dpl_8aq7m7uknVjpGagTUxwhj7rgLCLr",
+    "estado": "READY",
+    "codigo": "86f49788a789ae299151d3ce2ab5e7488d23a3b6",
+    "url": "https://zav-sistema-7j9ov0y7c-dariomealla24-6763.vercel.app",
+    "deployAnterior": "dpl_DrHUauCZfrAURdL3Cmg471tWsMGF"
+  },
+  "webDesplegada": {
+    "sha": "86f49788a789ae299151d3ce2ab5e7488d23a3b6",
+    "web": "https://zav-sistema-7j9ov0y7c-dariomealla24-6763.vercel.app",
+    "api": "https://zav-api-catalogo-qa.onrender.com/api/v1/",
+    "fecha": "2026-11-03T23:46:42.039Z",
+    "resultados": [
+      "Web y API identificadas como 1.1.0-rc.2, login QA real",
+      "SKU sugerido, ediciÃ³n y regeneraciÃ³n en formulario real; no se guardaron registros",
+      "Lote sugerido y cÃ³digo fÃ­sico manual conservado; formulario cerrado sin ingreso",
+      "Lotes, condiciones, movimientos, pedidos, venta y custodia sin desborde a 390 px",
+      "Nombres del contrato mÃ³vil coinciden con catÃ¡logo web; conciliaciÃ³n de custodia correcta"
+    ],
+    "errores": [],
+    "escriturasNegocio": 0
+  },
+  "produccion": {
+    "escriturasEnEstaRevision": false,
+    "codigo": "e9dc1a40476a72034f38e4dabb0e178c62af0066",
+    "version": "1.0.0",
+    "render": "dep-db6mk9qd0e5s73ass9hg",
+    "vercel": "dpl_928EeqAEWwUUuZdzNoRXrvEreHxh",
+    "neon": {
+      "rama": "br-dry-hat-b6mxo2xi",
+      "base": "neondb",
+      "migraciones": 7,
+      "saldosNegativos": 0
+    }
+  },
+  "respaldoPrevio": {
+    "archivo": "backups/catalogo-salidas-20261101-verificado/production-previa.dump",
+    "sha256": "c12eeb1230f30463dd71bc489a231b012ebc11819ff9ec59efe29e13fae2cbdd",
+    "nuevoEnEstaRevision": false
+  },
+  "limites": [
+    "Consulta periódica cada 30 segundos, foco/primer plano y conexión; edición protegida pausa el refresco",
+    "Convención de etiqueta física y registro sanitario real pendientes de confirmación empresarial",
+    "No se publicó APK productiva rc.2 ni se migró producción",
+    "Promoción productiva requiere resolver cambio externo de SKU y preparar respaldo y ensayo vigentes"
+  ]
+}

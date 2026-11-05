@@ -88,7 +88,12 @@ export function BotonEnviar({
             className={confirmacion.variante === 'peligro' ? 'boton boton-primario boton-peligro' : 'boton boton-primario'}
             disabled={pending}
             aria-busy={pending}
-            onClick={() => formularioRef.current?.requestSubmit()}
+            onClick={() => {
+              const formulario = formularioRef.current;
+              if (!formulario || !formulario.reportValidity()) return;
+              cerrarConfirmacion();
+              formulario.requestSubmit();
+            }}
           >
             {pending ? pendiente : (confirmacion.confirmar ?? 'Confirmar')}
           </button>
@@ -216,27 +221,41 @@ function etiquetaCodigoError(codigo?: string | number) {
   return valor;
 }
 
-export function Notificacion({
+export function Notificacion(props: {
+  tipo: 'exito' | 'error';
+  mensaje: string;
+  codigo?: string | number;
+  detalle?: string;
+  accion?: { texto: string; ejecutar: () => void };
+}) {
+  // Cada mensaje nuevo recupera visibilidad aunque el anterior se haya cerrado.
+  return <AvisoFlotante key={[props.tipo, props.mensaje, props.codigo, props.detalle].join('|')} {...props} />;
+}
+
+function AvisoFlotante({
   tipo,
   mensaje,
   codigo,
   detalle,
+  accion,
 }: {
   tipo: 'exito' | 'error';
   mensaje: string;
   codigo?: string | number;
   detalle?: string;
+  accion?: { texto: string; ejecutar: () => void };
 }) {
   const [visible, setVisible] = useState(true);
+  const tieneAccion = Boolean(accion);
   const etiquetaCodigo = tipo === 'error' ? etiquetaCodigoError(codigo) : null;
 
   useEffect(() => {
     const temporizador = window.setTimeout(
       () => setVisible(false),
-      tipo === 'error' ? 7600 : 4200,
+      tipo === 'error' || tieneAccion ? 7600 : 4200,
     );
     return () => window.clearTimeout(temporizador);
-  }, [tipo, mensaje, codigo, detalle]);
+  }, [tipo, mensaje, codigo, detalle, tieneAccion]);
 
   if (!visible) return null;
 
@@ -251,6 +270,7 @@ export function Notificacion({
           {etiquetaCodigo && <span className="toast-codigo">{etiquetaCodigo}</span>}
         </div>
         <p>{mensaje}</p>
+        {accion && <button type="button" className="boton boton-terciario" onClick={() => { setVisible(false); accion.ejecutar(); }}>{accion.texto}</button>}
         {detalle && detalle.trim() && detalle.trim() !== mensaje.trim() && (
           <small className="toast-detalle">{detalle}</small>
         )}

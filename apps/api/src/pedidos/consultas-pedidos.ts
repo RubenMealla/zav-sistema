@@ -1,7 +1,13 @@
+import { disponibilidadDespacho } from '../inventario/disponibilidad.js';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { DataSource, EntityManager } from 'typeorm';
-import { FECHA_HOY_BOLIVIA_SQL, fechaIso, paginacion, texto, uuid } from '../inventario/validacion.js';
-import type { EstadoPedido, FilaPedido, FilaDetalle, FilaDisponibilidad } from './tipos-pedidos.js';
+import { fechaIso, paginacion, texto, uuid } from '../inventario/validacion.js';
+import type {
+  EstadoPedido,
+  FilaPedido,
+  FilaDetalle,
+  FilaDisponibilidad,
+} from './tipos-pedidos.js';
 
 // Lecturas SQL compartidas. Las validaciones de stock reciben el manager de la transacción.
 export class ConsultasPedidos {
@@ -11,40 +17,7 @@ export class ConsultasPedidos {
     manager: EntityManager | DataSource,
     productoIds?: string[],
   ): Promise<FilaDisponibilidad[]> {
-    const filtro = productoIds?.length ? 'AND p.id = ANY($1::uuid[])' : '';
-    const parametros = productoIds?.length ? [productoIds] : [];
-
-    return manager.query(
-      `WITH fisico AS (
-         SELECT l.producto_id,
-                COALESCE(SUM(s.cantidad_fisica), 0)::int AS cantidad
-         FROM lote l
-         JOIN saldo_inventario s ON s.lote_id = l.id
-         JOIN ubicacion u ON u.id = s.ubicacion_id
-         WHERE u.codigo = 'VENTA_DESPACHO'
-           AND l.condicion = 'LIBERADO'
-           AND l.vence_el >= ${FECHA_HOY_BOLIVIA_SQL}
-         GROUP BY l.producto_id
-       ),
-       comprometido AS (
-         SELECT d.producto_id, COALESCE(SUM(d.cantidad), 0)::int AS cantidad
-         FROM detalle_pedido d
-         JOIN pedido pe ON pe.id = d.pedido_id
-         WHERE pe.estado = 'REGISTRADO'
-         GROUP BY d.producto_id
-       )
-       SELECT p.id, p.codigo, p.nombre, p.familia, p.presentacion,
-              p.peso_gramos, p.precio_bob,
-              COALESCE(f.cantidad, 0)::int AS fisico,
-              COALESCE(c.cantidad, 0)::int AS comprometido,
-              GREATEST(COALESCE(f.cantidad, 0) - COALESCE(c.cantidad, 0), 0)::int AS disponible
-       FROM producto p
-       LEFT JOIN fisico f ON f.producto_id = p.id
-       LEFT JOIN comprometido c ON c.producto_id = p.id
-       WHERE p.activo = TRUE ${filtro}
-       ORDER BY p.nombre, p.codigo`,
-      parametros,
-    ) as Promise<FilaDisponibilidad[]>;
+    return disponibilidadDespacho(manager, productoIds);
   }
 
   async disponibilidad() {
@@ -71,7 +44,13 @@ export class ConsultasPedidos {
     if (consulta.estado !== undefined) {
       if (
         typeof consulta.estado !== 'string' ||
-        !['REGISTRADO', 'EN_DISTRIBUCION', 'ENTREGADO', 'CANCELADO', 'ACTIVOS'].includes(consulta.estado)
+        ![
+          'REGISTRADO',
+          'EN_DISTRIBUCION',
+          'ENTREGADO',
+          'CANCELADO',
+          'ACTIVOS',
+        ].includes(consulta.estado)
       ) {
         throw new BadRequestException('estado de pedido no valido.');
       }
@@ -90,7 +69,7 @@ export class ConsultasPedidos {
     const limitePos = parametros.length - 1;
     const offsetPos = parametros.length;
 
-    const items = await this.db.query(
+    const items = (await this.db.query(
       `SELECT pe.id, pe.estado, pe.direccion_entrega, pe.destino_latitud, pe.destino_longitud,
               pe.creado_en, pe.retirado_en, pe.entregado_en,
               c.id AS cliente_id, c.nombre AS cliente_nombre,
@@ -104,7 +83,7 @@ export class ConsultasPedidos {
        ORDER BY pe.creado_en DESC, pe.id DESC
        LIMIT $${limitePos} OFFSET $${offsetPos}`,
       parametros,
-    ) as Array<Record<string, unknown>>;
+    )) as Array<Record<string, unknown>>;
 
     const totalParametros =
       estado && estado !== 'ACTIVOS' ? [vendedorId, estado] : [vendedorId];
@@ -114,12 +93,12 @@ export class ConsultasPedidos {
         : estado
           ? 'AND estado = $2'
           : '';
-    const total = await this.db.query(
+    const total = (await this.db.query(
       `SELECT count(*)::int AS total
        FROM pedido
        WHERE vendedor_id = $1::uuid ${totalFiltro}`,
       totalParametros,
-    ) as Array<{ total: number }>;
+    )) as Array<{ total: number }>;
 
     return {
       items: items.map((fila) => ({
@@ -147,14 +126,24 @@ export class ConsultasPedidos {
   }
 
   async listarAdmin(consulta: Record<string, unknown>) {
-    const { page, limit } = paginacion(consulta, ['estado', 'vendedorId', 'q', 'desde', 'hasta', 'page', 'limit']);
+    const { page, limit } = paginacion(consulta, [
+      'estado',
+      'vendedorId',
+      'q',
+      'desde',
+      'hasta',
+      'page',
+      'limit',
+    ]);
     const parametros: unknown[] = [];
     const filtros: string[] = [];
 
     if (consulta.estado !== undefined) {
       if (
         typeof consulta.estado !== 'string' ||
-        !['REGISTRADO', 'EN_DISTRIBUCION', 'ENTREGADO', 'CANCELADO'].includes(consulta.estado)
+        !['REGISTRADO', 'EN_DISTRIBUCION', 'ENTREGADO', 'CANCELADO'].includes(
+          consulta.estado,
+        )
       ) {
         throw new BadRequestException('estado de pedido no valido.');
       }
@@ -194,7 +183,7 @@ export class ConsultasPedidos {
     const limitePos = parametros.length - 1;
     const offsetPos = parametros.length;
 
-    const items = await this.db.query(
+    const items = (await this.db.query(
       `SELECT pe.id, pe.estado, pe.direccion_entrega, pe.creado_en,
               pe.retirado_en, pe.entregado_en,
               c.id AS cliente_id, c.nombre AS cliente_nombre,
@@ -211,17 +200,17 @@ export class ConsultasPedidos {
        ORDER BY pe.creado_en DESC, pe.id DESC
        LIMIT $${limitePos} OFFSET $${offsetPos}`,
       parametros,
-    ) as Array<Record<string, unknown>>;
+    )) as Array<Record<string, unknown>>;
 
     const totalParametros = parametros.slice(0, filtros.length);
-    const total = await this.db.query(
+    const total = (await this.db.query(
       `SELECT count(*)::int AS total
        FROM pedido pe
        JOIN cliente c ON c.id = pe.cliente_id
        JOIN usuario u ON u.id = pe.vendedor_id
        ${where}`,
       totalParametros,
-    ) as Array<{ total: number }>;
+    )) as Array<{ total: number }>;
 
     return {
       items: items.map((fila) => ({
@@ -251,7 +240,7 @@ export class ConsultasPedidos {
 
   async obtener(idEntrada: string, vendedorId: string) {
     const id = uuid(idEntrada, 'id');
-    const pedidos = await this.db.query(
+    const pedidos = (await this.db.query(
       `SELECT pe.*, c.nombre AS cliente_nombre, c.telefono AS cliente_telefono,
               u.nombre AS vendedor_nombre
        FROM pedido pe
@@ -259,10 +248,10 @@ export class ConsultasPedidos {
        JOIN usuario u ON u.id = pe.vendedor_id
        WHERE pe.id = $1::uuid AND pe.vendedor_id = $2::uuid`,
       [id, vendedorId],
-    ) as FilaPedido[];
+    )) as FilaPedido[];
     if (!pedidos.length) throw new NotFoundException('Pedido no encontrado.');
 
-    const detalles = await this.db.query(
+    const detalles = (await this.db.query(
       `SELECT d.id, d.producto_id, p.codigo AS producto_codigo, p.nombre AS producto_nombre,
               d.cantidad, d.precio_unitario_bob,
               (d.cantidad * d.precio_unitario_bob)::numeric(14,2) AS subtotal_bob
@@ -271,10 +260,13 @@ export class ConsultasPedidos {
        WHERE d.pedido_id = $1::uuid
        ORDER BY p.nombre, p.codigo`,
       [id],
-    ) as FilaDetalle[];
+    )) as FilaDetalle[];
 
     const pedido = pedidos[0];
-    const total = detalles.reduce((acum, d) => acum + Number(d.subtotal_bob), 0);
+    const total = detalles.reduce(
+      (acum, d) => acum + Number(d.subtotal_bob),
+      0,
+    );
 
     return {
       id: pedido.id,
@@ -293,17 +285,22 @@ export class ConsultasPedidos {
       entregadoEn: pedido.entregado_en,
       canceladoEn: pedido.cancelado_en,
       cancelacionMotivo: pedido.cancelacion_motivo,
-      entregaGps: pedido.entrega_latitud === null ? null : {
-        latitud: Number(pedido.entrega_latitud),
-        longitud: Number(pedido.entrega_longitud),
-        precisionMetros:
-          pedido.entrega_precision_m === null ? null : Number(pedido.entrega_precision_m),
-        distanciaDestinoMetros:
-          pedido.entrega_distancia_destino_m === null
-            ? null
-            : Number(pedido.entrega_distancia_destino_m),
-        observacion: pedido.entrega_observacion,
-      },
+      entregaGps:
+        pedido.entrega_latitud === null
+          ? null
+          : {
+              latitud: Number(pedido.entrega_latitud),
+              longitud: Number(pedido.entrega_longitud),
+              precisionMetros:
+                pedido.entrega_precision_m === null
+                  ? null
+                  : Number(pedido.entrega_precision_m),
+              distanciaDestinoMetros:
+                pedido.entrega_distancia_destino_m === null
+                  ? null
+                  : Number(pedido.entrega_distancia_destino_m),
+              observacion: pedido.entrega_observacion,
+            },
       cliente: {
         id: pedido.cliente_id,
         nombre: pedido.cliente_nombre,
@@ -325,5 +322,4 @@ export class ConsultasPedidos {
       totalBob: total.toFixed(2),
     };
   }
-
 }

@@ -1,3 +1,5 @@
+import { bloquearProductos } from '../inventario/bloqueos.js';
+import { lotesFefo } from '../inventario/disponibilidad.js';
 import {
   BadRequestException,
   ConflictException,
@@ -6,15 +8,22 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { DataSource, EntityManager } from 'typeorm';
-import { FECHA_HOY_BOLIVIA_SQL, objeto, texto, uuid } from '../inventario/validacion.js';
+import { objeto, texto, uuid } from '../inventario/validacion.js';
 import { distanciaHaversine } from './geografia.service.js';
 
 import type { EstadoPedido } from './tipos-pedidos.js';
 import { ConsultasPedidos } from './consultas-pedidos.js';
 import {
-  CAMPOS_PEDIDO, CAMPOS_RETIRO, CAMPOS_RETIROS, CAMPOS_RETIRO_ITEM,
-  CAMPOS_ENTREGA, CAMPOS_CANCELACION,
-  opcional, numeroRango, numeroOpcionalNoNegativo, detallesEntrada,
+  CAMPOS_PEDIDO,
+  CAMPOS_RETIRO,
+  CAMPOS_RETIROS,
+  CAMPOS_RETIRO_ITEM,
+  CAMPOS_ENTREGA,
+  CAMPOS_CANCELACION,
+  opcional,
+  numeroRango,
+  numeroOpcionalNoNegativo,
+  detallesEntrada,
 } from './validacion-pedidos.js';
 
 @Injectable()
@@ -25,17 +34,24 @@ export class PedidosService {
     this.consultas = new ConsultasPedidos(db);
   }
 
-  disponibilidad() { return this.consultas.disponibilidad(); }
+  disponibilidad() {
+    return this.consultas.disponibilidad();
+  }
   listar(vendedorId: string, consulta: Record<string, unknown>) {
     return this.consultas.listar(vendedorId, consulta);
   }
-  listarAdmin(consulta: Record<string, unknown>) { return this.consultas.listarAdmin(consulta); }
-  obtener(id: string, vendedorId: string) { return this.consultas.obtener(id, vendedorId); }
+  listarAdmin(consulta: Record<string, unknown>) {
+    return this.consultas.listarAdmin(consulta);
+  }
+  obtener(id: string, vendedorId: string) {
+    return this.consultas.obtener(id, vendedorId);
+  }
 
-  private async bloquearProductos(manager: EntityManager, productoIds: string[]) {
-    for (const productoId of [...productoIds].sort()) {
-      await manager.query('SELECT pg_advisory_xact_lock(hashtext($1::text))', [`producto:${productoId}`]);
-    }
+  private async bloquearProductos(
+    manager: EntityManager,
+    productoIds: string[],
+  ) {
+    await bloquearProductos(manager, productoIds);
   }
 
   async crear(entrada: unknown, vendedorId: string) {
@@ -45,20 +61,32 @@ export class PedidosService {
     const observacion = opcional(datos.observacion, 'observacion', 300);
 
     const pedidoId = await this.db.transaction(async (manager) => {
-      const clientes = await manager.query(
-        'SELECT id, direccion, latitud, longitud FROM cliente WHERE id = $1::uuid AND activo = TRUE',
+      const clientes = (await manager.query(
+        'SELECT id, direccion, latitud, longitud FROM cliente WHERE id = $1::uuid AND activo = TRUE AND NOT es_consumidor_final',
         [clienteId],
-      ) as Array<{ id: string; direccion: string; latitud: string | null; longitud: string | null }>;
-      if (!clientes.length) throw new NotFoundException('Cliente activo no encontrado.');
+      )) as Array<{
+        id: string;
+        direccion: string;
+        latitud: string | null;
+        longitud: string | null;
+      }>;
+      if (!clientes.length)
+        throw new NotFoundException('Cliente activo no encontrado.');
 
-      const direccionEntrega = datos.direccionEntrega === undefined || datos.direccionEntrega === null || datos.direccionEntrega === ''
-        ? clientes[0].direccion
-        : texto(datos.direccionEntrega, 'direccionEntrega', 240);
+      const direccionEntrega =
+        datos.direccionEntrega === undefined ||
+        datos.direccionEntrega === null ||
+        datos.direccionEntrega === ''
+          ? clientes[0].direccion
+          : texto(datos.direccionEntrega, 'direccionEntrega', 240);
 
       const productoIds = detalles.map((d) => d.productoId);
       await this.bloquearProductos(manager, productoIds);
 
-      const disponibilidad = await this.consultas.disponibilidadIds(manager, productoIds);
+      const disponibilidad = await this.consultas.disponibilidadIds(
+        manager,
+        productoIds,
+      );
       if (disponibilidad.length !== productoIds.length) {
         throw new NotFoundException('Uno o mas productos activos no existen.');
       }
@@ -73,7 +101,7 @@ export class PedidosService {
         }
       }
 
-      const pedidos = await manager.query(
+      const pedidos = (await manager.query(
         `INSERT INTO pedido
            (cliente_id, vendedor_id, direccion_entrega, observacion, destino_latitud, destino_longitud)
          VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6)
@@ -86,7 +114,7 @@ export class PedidosService {
           clientes[0].latitud,
           clientes[0].longitud,
         ],
-      ) as Array<{ id: string }>;
+      )) as Array<{ id: string }>;
       const id = pedidos[0].id;
 
       for (const detalle of detalles) {
@@ -113,13 +141,13 @@ export class PedidosService {
     const observacion = opcional(datos.observacion, 'observacion', 300);
 
     await this.db.transaction(async (manager) => {
-      const pedidos = await manager.query(
+      const pedidos = (await manager.query(
         `SELECT id, vendedor_id, estado
          FROM pedido
          WHERE id = $1::uuid
          FOR UPDATE`,
         [id],
-      ) as Array<{ id: string; vendedor_id: string; estado: EstadoPedido }>;
+      )) as Array<{ id: string; vendedor_id: string; estado: EstadoPedido }>;
 
       if (!pedidos.length || pedidos[0].vendedor_id !== vendedorId) {
         throw new NotFoundException('Pedido no encontrado.');
@@ -130,11 +158,17 @@ export class PedidosService {
         );
       }
 
-      const clientes = await manager.query(
-        'SELECT id, direccion, latitud, longitud FROM cliente WHERE id = $1::uuid AND activo = TRUE',
+      const clientes = (await manager.query(
+        'SELECT id, direccion, latitud, longitud FROM cliente WHERE id = $1::uuid AND activo = TRUE AND NOT es_consumidor_final',
         [clienteId],
-      ) as Array<{ id: string; direccion: string; latitud: string | null; longitud: string | null }>;
-      if (!clientes.length) throw new NotFoundException('Cliente activo no encontrado.');
+      )) as Array<{
+        id: string;
+        direccion: string;
+        latitud: string | null;
+        longitud: string | null;
+      }>;
+      if (!clientes.length)
+        throw new NotFoundException('Cliente activo no encontrado.');
 
       const direccionEntrega =
         datos.direccionEntrega === undefined ||
@@ -143,12 +177,16 @@ export class PedidosService {
           ? clientes[0].direccion
           : texto(datos.direccionEntrega, 'direccionEntrega', 240);
 
-      const anteriores = await manager.query(
+      const anteriores = (await manager.query(
         `SELECT producto_id, cantidad, precio_unitario_bob
          FROM detalle_pedido
          WHERE pedido_id = $1::uuid`,
         [id],
-      ) as Array<{ producto_id: string; cantidad: number; precio_unitario_bob: string }>;
+      )) as Array<{
+        producto_id: string;
+        cantidad: number;
+        precio_unitario_bob: string;
+      }>;
 
       const idsProductos = [
         ...new Set([
@@ -158,8 +196,13 @@ export class PedidosService {
       ];
       await this.bloquearProductos(manager, idsProductos);
 
-      const disponibilidad = await this.consultas.disponibilidadIds(manager, idsProductos);
-      const porProducto = new Map(disponibilidad.map((producto) => [producto.id, producto]));
+      const disponibilidad = await this.consultas.disponibilidadIds(
+        manager,
+        idsProductos,
+      );
+      const porProducto = new Map(
+        disponibilidad.map((producto) => [producto.id, producto]),
+      );
       const anteriorPorProducto = new Map(
         anteriores.map((detalle) => [detalle.producto_id, detalle]),
       );
@@ -167,11 +210,17 @@ export class PedidosService {
       for (const detalle of detalles) {
         const producto = porProducto.get(detalle.productoId);
         if (!producto) {
-          throw new NotFoundException('Uno o mas productos activos no existen.');
+          throw new NotFoundException(
+            'Uno o mas productos activos no existen.',
+          );
         }
-        const cantidadAnterior = anteriorPorProducto.get(detalle.productoId)?.cantidad ?? 0;
+        const cantidadAnterior =
+          anteriorPorProducto.get(detalle.productoId)?.cantidad ?? 0;
         // No usar el disponible truncado a cero: un lote vencido puede dejar déficit.
-        const capacidad = Math.max(0, producto.fisico - producto.comprometido + cantidadAnterior);
+        const capacidad = Math.max(
+          0,
+          producto.fisico - producto.comprometido + cantidadAnterior,
+        );
         if (detalle.cantidad > capacidad) {
           throw new ConflictException(
             `Stock disponible insuficiente para ${producto.nombre}. Disponible para esta edición: ${capacidad}.`,
@@ -198,7 +247,10 @@ export class PedidosService {
         ],
       );
 
-      await manager.query('DELETE FROM detalle_pedido WHERE pedido_id = $1::uuid', [id]);
+      await manager.query(
+        'DELETE FROM detalle_pedido WHERE pedido_id = $1::uuid',
+        [id],
+      );
 
       for (const detalle of detalles) {
         const producto = porProducto.get(detalle.productoId)!;
@@ -220,16 +272,18 @@ export class PedidosService {
   async cancelar(idEntrada: string, entrada: unknown, vendedorId: string) {
     const id = uuid(idEntrada, 'id');
     const datos = objeto(entrada, CAMPOS_CANCELACION);
-    const motivo = opcional(datos.motivo, 'motivo', 300) ?? 'Anulado por el Vendedor antes del retiro';
+    const motivo =
+      opcional(datos.motivo, 'motivo', 300) ??
+      'Anulado por el Vendedor antes del retiro';
 
     await this.db.transaction(async (manager) => {
-      const pedidos = await manager.query(
+      const pedidos = (await manager.query(
         `SELECT id, vendedor_id, estado
          FROM pedido
          WHERE id = $1::uuid
          FOR UPDATE`,
         [id],
-      ) as Array<{ id: string; vendedor_id: string; estado: EstadoPedido }>;
+      )) as Array<{ id: string; vendedor_id: string; estado: EstadoPedido }>;
 
       if (!pedidos.length || pedidos[0].vendedor_id !== vendedorId) {
         throw new NotFoundException('Pedido no encontrado.');
@@ -257,23 +311,36 @@ export class PedidosService {
 
   async retirarVarios(entrada: unknown, vendedorId: string) {
     const datos = objeto(entrada, CAMPOS_RETIROS);
-    if (!Array.isArray(datos.retiros) || datos.retiros.length < 1 || datos.retiros.length > 20) {
-      throw new BadRequestException('retiros debe contener entre 1 y 20 pedidos.');
+    if (
+      !Array.isArray(datos.retiros) ||
+      datos.retiros.length < 1 ||
+      datos.retiros.length > 20
+    ) {
+      throw new BadRequestException(
+        'retiros debe contener entre 1 y 20 pedidos.',
+      );
     }
 
     const retiros = datos.retiros.map((elemento, indice) => {
       const item = objeto(elemento, CAMPOS_RETIRO_ITEM);
       return {
         pedidoId: uuid(item.pedidoId, `retiros[${indice}].pedidoId`),
-        operacionClave: uuid(item.operacionClave, `retiros[${indice}].operacionClave`),
+        operacionClave: uuid(
+          item.operacionClave,
+          `retiros[${indice}].operacionClave`,
+        ),
       };
     });
 
     if (new Set(retiros.map((r) => r.pedidoId)).size !== retiros.length) {
-      throw new BadRequestException('Un pedido no puede repetirse en el mismo retiro múltiple.');
+      throw new BadRequestException(
+        'Un pedido no puede repetirse en el mismo retiro múltiple.',
+      );
     }
     if (new Set(retiros.map((r) => r.operacionClave)).size !== retiros.length) {
-      throw new BadRequestException('Cada retiro debe utilizar una operacionClave diferente.');
+      throw new BadRequestException(
+        'Cada retiro debe utilizar una operacionClave diferente.',
+      );
     }
 
     const resultados: Array<{
@@ -328,7 +395,11 @@ export class PedidosService {
 
     return {
       resultado:
-        fallidos === 0 ? 'COMPLETO' : exitosos === 0 ? 'SIN_CAMBIOS' : 'PARCIAL',
+        fallidos === 0
+          ? 'COMPLETO'
+          : exitosos === 0
+            ? 'SIN_CAMBIOS'
+            : 'PARCIAL',
       exitosos,
       fallidos,
       items: resultados,
@@ -341,21 +412,33 @@ export class PedidosService {
     const operacionClave = uuid(datos.operacionClave, 'operacionClave');
 
     await this.db.transaction(async (manager) => {
-      await manager.query('SELECT pg_advisory_xact_lock(hashtext($1::text))', [operacionClave]);
+      await manager.query('SELECT pg_advisory_xact_lock(hashtext($1::text))', [
+        operacionClave,
+      ]);
 
-      const porClave = await manager.query(
+      const porClave = (await manager.query(
         'SELECT id, vendedor_id FROM pedido WHERE retiro_operacion_clave = $1::uuid',
         [operacionClave],
-      ) as Array<{ id: string; vendedor_id: string }>;
-      if (porClave.length && (porClave[0].id !== id || porClave[0].vendedor_id !== vendedorId)) {
-        throw new ConflictException('La clave de retiro ya se utilizo en otro pedido.');
+      )) as Array<{ id: string; vendedor_id: string }>;
+      if (
+        porClave.length &&
+        (porClave[0].id !== id || porClave[0].vendedor_id !== vendedorId)
+      ) {
+        throw new ConflictException(
+          'La clave de retiro ya se utilizo en otro pedido.',
+        );
       }
 
-      const pedidos = await manager.query(
+      const pedidos = (await manager.query(
         `SELECT id, vendedor_id, estado, retiro_operacion_clave
          FROM pedido WHERE id = $1::uuid FOR UPDATE`,
         [id],
-      ) as Array<{ id: string; vendedor_id: string; estado: EstadoPedido; retiro_operacion_clave: string | null }>;
+      )) as Array<{
+        id: string;
+        vendedor_id: string;
+        estado: EstadoPedido;
+        retiro_operacion_clave: string | null;
+      }>;
       if (!pedidos.length || pedidos[0].vendedor_id !== vendedorId) {
         throw new NotFoundException('Pedido no encontrado.');
       }
@@ -363,51 +446,52 @@ export class PedidosService {
 
       if (pedido.retiro_operacion_clave === operacionClave) return;
       if (pedido.estado !== 'REGISTRADO') {
-        throw new ConflictException('El pedido no se encuentra disponible para retiro.');
+        throw new ConflictException(
+          'El pedido no se encuentra disponible para retiro.',
+        );
       }
 
-      const detalles = await manager.query(
+      const detalles = (await manager.query(
         `SELECT producto_id, cantidad
          FROM detalle_pedido WHERE pedido_id = $1::uuid ORDER BY producto_id`,
         [id],
-      ) as Array<{ producto_id: string; cantidad: number }>;
+      )) as Array<{ producto_id: string; cantidad: number }>;
 
-      await this.bloquearProductos(manager, detalles.map((d) => d.producto_id));
+      await this.bloquearProductos(
+        manager,
+        detalles.map((d) => d.producto_id),
+      );
 
-      const ubicaciones = await manager.query(
+      const ubicaciones = (await manager.query(
         `SELECT id, codigo FROM ubicacion
          WHERE codigo = ANY($1::text[]) AND activa = TRUE`,
         [['VENTA_DESPACHO', 'EN_DISTRIBUCION']],
-      ) as Array<{ id: string; codigo: string }>;
+      )) as Array<{ id: string; codigo: string }>;
       const ids = new Map(ubicaciones.map((u) => [u.codigo, u.id]));
       const origenId = ids.get('VENTA_DESPACHO');
       const destinoId = ids.get('EN_DISTRIBUCION');
       if (!origenId || !destinoId) {
-        throw new ConflictException('Las ubicaciones de distribucion no estan disponibles.');
+        throw new ConflictException(
+          'Las ubicaciones de distribucion no estan disponibles.',
+        );
       }
 
-      const disponibilidad = await this.consultas.disponibilidadIds(manager, detalles.map((d) => d.producto_id));
+      const disponibilidad = await this.consultas.disponibilidadIds(
+        manager,
+        detalles.map((d) => d.producto_id),
+      );
       const porProducto = new Map(disponibilidad.map((d) => [d.id, d]));
 
       for (const detalle of detalles) {
         const actual = porProducto.get(detalle.producto_id);
         if (!actual || actual.fisico < actual.comprometido) {
-          throw new ConflictException('El stock comprometido ya no puede cubrir todos los pedidos registrados.');
+          throw new ConflictException(
+            'El stock comprometido ya no puede cubrir todos los pedidos registrados.',
+          );
         }
 
         let restante = detalle.cantidad;
-        const lotes = await manager.query(
-          `SELECT l.id, s.cantidad_fisica::int AS cantidad_fisica
-           FROM lote l
-           JOIN saldo_inventario s ON s.lote_id = l.id
-           WHERE l.producto_id = $1::uuid
-             AND s.ubicacion_id = $2::uuid
-             AND l.condicion = 'LIBERADO'
-             AND l.vence_el >= ${FECHA_HOY_BOLIVIA_SQL}
-             AND s.cantidad_fisica > 0
-           ORDER BY l.vence_el ASC, l.creado_en ASC, l.id ASC`,
-          [detalle.producto_id, origenId],
-        ) as Array<{ id: string; cantidad_fisica: number }>;
+        const lotes = await lotesFefo(manager, detalle.producto_id, origenId);
 
         for (const lote of lotes) {
           if (restante <= 0) break;
@@ -422,7 +506,9 @@ export class PedidosService {
         }
 
         if (restante !== 0) {
-          throw new ConflictException('No fue posible asignar lotes suficientes al retiro.');
+          throw new ConflictException(
+            'No fue posible asignar lotes suficientes al retiro.',
+          );
         }
       }
 
@@ -446,27 +532,42 @@ export class PedidosService {
     const operacionClave = uuid(datos.operacionClave, 'operacionClave');
     const latitud = numeroRango(datos.latitud, 'latitud', -90, 90);
     const longitud = numeroRango(datos.longitud, 'longitud', -180, 180);
-    const precisionMetros = numeroOpcionalNoNegativo(datos.precisionMetros, 'precisionMetros', 10000);
-    const observacionDistancia = opcional(datos.observacionDistancia, 'observacionDistancia', 300);
+    const precisionMetros = numeroOpcionalNoNegativo(
+      datos.precisionMetros,
+      'precisionMetros',
+      10000,
+    );
+    const observacionDistancia = opcional(
+      datos.observacionDistancia,
+      'observacionDistancia',
+      300,
+    );
 
     await this.db.transaction(async (manager) => {
-      await manager.query('SELECT pg_advisory_xact_lock(hashtext($1::text))', [operacionClave]);
+      await manager.query('SELECT pg_advisory_xact_lock(hashtext($1::text))', [
+        operacionClave,
+      ]);
 
-      const porClave = await manager.query(
+      const porClave = (await manager.query(
         'SELECT id, vendedor_id FROM pedido WHERE entrega_operacion_clave = $1::uuid',
         [operacionClave],
-      ) as Array<{ id: string; vendedor_id: string }>;
-      if (porClave.length && (porClave[0].id !== id || porClave[0].vendedor_id !== vendedorId)) {
-        throw new ConflictException('La clave de entrega ya se utilizo en otro pedido.');
+      )) as Array<{ id: string; vendedor_id: string }>;
+      if (
+        porClave.length &&
+        (porClave[0].id !== id || porClave[0].vendedor_id !== vendedorId)
+      ) {
+        throw new ConflictException(
+          'La clave de entrega ya se utilizo en otro pedido.',
+        );
       }
 
-      const pedidos = await manager.query(
+      const pedidos = (await manager.query(
         `SELECT id, vendedor_id, estado, entrega_operacion_clave,
                 destino_latitud, destino_longitud,
                 entrega_latitud, entrega_longitud
          FROM pedido WHERE id = $1::uuid FOR UPDATE`,
         [id],
-      ) as Array<{
+      )) as Array<{
         id: string;
         vendedor_id: string;
         estado: EstadoPedido;
@@ -486,17 +587,21 @@ export class PedidosService {
           Number(pedido.entrega_latitud) !== latitud ||
           Number(pedido.entrega_longitud) !== longitud
         ) {
-          throw new ConflictException('La clave de entrega ya se utilizo con otras coordenadas.');
+          throw new ConflictException(
+            'La clave de entrega ya se utilizo con otras coordenadas.',
+          );
         }
         return;
       }
       if (pedido.estado !== 'EN_DISTRIBUCION') {
-        throw new ConflictException('El pedido debe estar en distribucion antes de registrar la entrega.');
+        throw new ConflictException(
+          'El pedido debe estar en distribucion antes de registrar la entrega.',
+        );
       }
 
       // El bloqueo del pedido y la clave conservan la idempotencia. PostgreSQL
       // inserta todos los movimientos en una sentencia y en la misma transacción.
-      const entregas = await manager.query(
+      const entregas = (await manager.query(
         `INSERT INTO movimiento
            (operacion_clave, lote_id, tipo, origen_id, destino_id, cantidad, usuario_id, referencia, motivo)
          SELECT gen_random_uuid(), lote_id, 'ENTREGA', destino_id, NULL, cantidad,
@@ -506,9 +611,11 @@ export class PedidosService {
          ORDER BY creado_en, id
          RETURNING id`,
         [id, vendedorId],
-      ) as Array<{ id: string }>;
+      )) as Array<{ id: string }>;
       if (!entregas.length) {
-        throw new ConflictException('El pedido no tiene movimientos de retiro registrados.');
+        throw new ConflictException(
+          'El pedido no tiene movimientos de retiro registrados.',
+        );
       }
 
       const distanciaDestinoMetros =

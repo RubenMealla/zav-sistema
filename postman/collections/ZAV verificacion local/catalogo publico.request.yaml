@@ -1,0 +1,27 @@
+$kind: http-request
+method: GET
+url: '{{baseUrl}}/api/v1/publico/catalogo'
+order: 1000
+auth:
+  type: noauth
+scripts:
+  - type: beforeRequest
+    language: text/javascript
+    code: |-
+      if (!/^http:\/\/(127\.0\.0\.1|localhost):3001$/.test(pm.variables.get('baseUrl'))) {
+        pm.execution.skipRequest();
+        throw new Error('Solo API local de QA en puerto 3001.');
+      }
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Catálogo público accesible sin JWT', () => pm.response.to.have.status(200));
+      pm.test('Proyección pública sin inventario ni precios', () => {
+        const body = pm.response.json();
+        pm.expect(Object.keys(body)).to.eql(['familias']);
+        pm.expect(body.familias.length).to.be.at.least(7);
+        for (const f of body.familias) {
+          pm.expect(Object.keys(f).sort()).to.eql(['descripcion','id','imagen','nombre','orden','productos','slug']);
+          for (const p of f.productos) pm.expect(Object.keys(p).sort()).to.eql(['caracteristicas','descripcion','id','imagen','nombre','orden']);
+        }
+      });

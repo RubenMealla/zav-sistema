@@ -1,0 +1,18 @@
+$kind: http-request
+method: GET
+url: '{{baseUrl}}/api/v1/operaciones/disponibilidad'
+order: 2000
+auth:
+  type: noauth
+scripts:
+  - type: beforeRequest
+    language: text/javascript
+    code: |-
+      if (!/^http:\/\/(127\.0\.0\.1|localhost):3001$/.test(pm.variables.get('baseUrl'))) {
+        pm.execution.skipRequest();
+        throw new Error('Solo API local de QA en puerto 3001.');
+      }
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('El inventario no se publica', () => pm.response.to.have.status(401));

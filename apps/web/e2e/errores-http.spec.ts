@@ -229,7 +229,7 @@ test.describe('Evidencias HTTP E3', () => {
       familia: 'QA HTTP',
       presentacion: 'Unidad',
       pesoGramos: 250,
-      precioBob: 20,
+      precioBob: 20, validacionComercial: 'VALIDADO',
     };
 
     const creado = await request.post(`${API}/api/v1/productos`, {

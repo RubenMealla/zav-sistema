@@ -3,7 +3,8 @@ import { limiteSeguro, paginaSegura } from '../app/panel/lib/paginacion-panel';
 
 test('limites permitidos y parametros invalidos', () => {
   expect(limiteSeguro('20')).toBe(20);
-  expect(limiteSeguro('150')).toBe(150);
+  expect(limiteSeguro('100')).toBe(100);
+  expect(limiteSeguro('150')).toBe(20);
   expect(limiteSeguro('20xyz')).toBe(20);
   expect(limiteSeguro('999')).toBe(20);
   expect(limiteSeguro(undefined)).toBe(20);

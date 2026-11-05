@@ -1,5 +1,18 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  JwtAuthGuard,
+  type SolicitudAutenticada,
+} from '../auth/jwt-auth.guard.js';
 import { Roles } from '../auth/roles.decorator.js';
 import { RolesGuard } from '../auth/roles.guard.js';
 import { ProductosService } from './productos.service.js';
@@ -11,8 +24,8 @@ export class ProductosController {
   constructor(private readonly productos: ProductosService) {}
 
   @Post()
-  crear(@Body() datos: unknown) {
-    return this.productos.crear(datos);
+  crear(@Body() datos: unknown, @Req() r: SolicitudAutenticada) {
+    return this.productos.crear(datos, r.usuario!.id);
   }
 
   @Get()
@@ -22,13 +35,17 @@ export class ProductosController {
   }
 
   @Patch(':id/baja')
-  darBaja(@Param('id') id: string) {
-    return this.productos.darBaja(id);
+  darBaja(@Param('id') id: string, @Req() r: SolicitudAutenticada) {
+    return this.productos.darBaja(id, r.usuario!.id);
   }
 
   @Patch(':id')
-  editar(@Param('id') id: string, @Body() datos: unknown) {
-    return this.productos.editar(id, datos);
+  editar(
+    @Param('id') id: string,
+    @Body() datos: unknown,
+    @Req() r: SolicitudAutenticada,
+  ) {
+    return this.productos.editar(id, datos, r.usuario!.id);
   }
 
   @Get(':id')

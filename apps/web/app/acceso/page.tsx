@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { IlustracionDespacho } from '../componentes/ilustracion-despacho';
 import { iniciarSesion } from '../acciones';
 import { BotonEnviar, CampoContrasena, Notificacion } from '../componentes/interacciones';
 import { Icono } from '../componentes/icono';
@@ -21,7 +22,7 @@ export default async function Acceso({searchParams}:{searchParams:Promise<{error
  return <main className="acceso-layout">
   <section className="acceso-identidad" aria-label="ZAV, acceso interno">
    <div className="acceso-identidad-cabecera"><Link href="/" aria-label="ZAV, inicio" className="acceso-identidad-marca"><Marca compacta/></Link><span>GESTIÓN INTERNA</span></div>
-   <div className="acceso-identidad-centro"><div className="acceso-emblema"><Marca grande soloSimbolo/></div><div className="acceso-identidad-copy"><span>ADMINISTRACIÓN</span><h2>Gestión interna clara y segura.</h2><p>Inventario, trazabilidad, pedidos y distribución en un entorno reservado para el personal autorizado.</p></div></div>
+   <div className="acceso-identidad-centro"><div className="acceso-ilustracion"><IlustracionDespacho/></div><div className="acceso-identidad-copy"><span>ADMINISTRACIÓN</span><h2>Todo listo<br/>para el día.</h2><p>Productos, pedidos y entregas. El trabajo de ZAV, en un solo lugar.</p></div></div>
    <div className="acceso-identidad-pie"><span>Tarija · Bolivia</span><span>Personal autorizado</span></div>
   </section>
   <section className="acceso-panel" aria-labelledby="acceso-titulo">
