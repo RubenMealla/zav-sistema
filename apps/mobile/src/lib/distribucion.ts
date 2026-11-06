@@ -13,7 +13,7 @@ export function fechaCorta(valor: string) {
   });
 }
 
-export function claveFechaBolivia(valor: string | Date) {
+function claveFechaBolivia(valor: string | Date) {
   const fecha = typeof valor === 'string' ? new Date(valor) : valor;
   if (Number.isNaN(fecha.getTime())) return '';
   return new Intl.DateTimeFormat('en-CA', {

@@ -343,7 +343,7 @@ describe('Salidas directas y custodia: HTTP y PostgreSQL real', () => {
       post('operaciones/salidas-directas', salida(p.id, 4)),
       post('operaciones/salidas-directas', salida(p.id, 4)),
     ]);
-    expect(r.map((x) => x.status).sort()).toEqual([201, 409]);
+    expect(r.map((x) => x.status).sort((a, b) => a - b)).toEqual([201, 409]);
   });
   it('protege reservas y permite retiro simultáneo con salida del saldo libre', async () => {
     const p = await stock(20);
@@ -390,7 +390,7 @@ describe('Salidas directas y custodia: HTTP y PostgreSQL real', () => {
         vendedor,
       ),
     ]);
-    expect(r.map((x) => x.status).sort()).toEqual([201, 409]);
+    expect(r.map((x) => x.status).sort((a, b) => a - b)).toEqual([201, 409]);
   });
   it('recepción por destinatario, GPS obligatorio y separación de stock ajeno', async () => {
     const p = await stock(20);
@@ -524,7 +524,7 @@ describe('Salidas directas y custodia: HTTP y PostgreSQL real', () => {
         vendedor,
       ),
     ]);
-    expect(r.map((x) => x.status).sort()).toEqual([201, 409]);
+    expect(r.map((x) => x.status).sort((a, b) => a - b)).toEqual([201, 409]);
   });
   it('rechaza lotes vencidos y bloqueados para venta; admite su retorno a inspección', async () => {
     const p = await stock(10);

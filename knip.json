@@ -1,0 +1,37 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "workspaces": {
+    ".": {
+      "entry": [
+        "scripts/*.mjs"
+      ]
+    },
+    "apps/api": {
+      "entry": [
+        "scripts/*.mjs",
+        "src/main.ts"
+      ]
+    },
+    "apps/web": {
+      "entry": [
+        "scripts/*.mjs",
+        "e2e/**/*.ts"
+      ]
+    },
+    "apps/mobile": {
+      "entry": [
+        "src/lib/configuracion-api-release.ts",
+        "src/lib/qa-desactivado.ts",
+        "plugins/*.js",
+        "scripts/*.mjs"
+      ],
+      "ignoreDependencies": [
+        "@expo/ui",
+        "expo-font",
+        "expo-glass-effect",
+        "expo-symbols",
+        "expo-updates"
+      ]
+    }
+  }
+}

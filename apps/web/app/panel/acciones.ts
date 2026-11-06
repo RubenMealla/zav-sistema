@@ -18,7 +18,7 @@ function extraerDetalle(cuerpo: unknown) {
   return typeof mensaje === 'string' && mensaje.trim() ? mensaje.trim() : undefined;
 }
 
-export async function enviar(ruta: string, datos: Record<string, unknown>, metodo: 'POST' | 'PATCH' = 'POST'): Promise<ResultadoEnvio> {
+async function enviar(ruta: string, datos: Record<string, unknown>, metodo: 'POST' | 'PATCH' = 'POST'): Promise<ResultadoEnvio> {
   const token = (await cookies()).get('zav_acceso')?.value;
   if (!token) redirect('/acceso?error=sesion&codigo=401');
   try {
@@ -40,22 +40,6 @@ export async function enviar(ruta: string, datos: Record<string, unknown>, metod
   } catch {
     return { estado: 'conexion', detalle: 'No fue posible obtener una respuesta de la API.' };
   }
-}
-
-export async function registrarProducto(formulario: FormData) {
-  const resultado = await enviar('/api/v1/productos', {
-    codigo: String(formulario.get('codigo') ?? ''),
-    nombre: String(formulario.get('nombre') ?? ''),
-    familia: String(formulario.get('familia') ?? ''),
-    presentacion: String(formulario.get('presentacion') ?? ''),
-    pesoGramos: Number(formulario.get('pesoGramos')),
-    precioBob: String(formulario.get('precioBob') ?? ''),
-  });
-  if (resultado.estado === 401 || resultado.estado === 403) redirect(`/acceso?error=sesion&codigo=${resultado.estado}`);
-  if (resultado.estado === 201) {
-    redirect('/panel?vista=productos&mensaje=producto');
-  }
-  redirect(`/panel?vista=productos&${parametrosError(resultado.estado, claveErrorOperacion(resultado.estado, 'producto', 'codigo'), resultado.detalle)}`);
 }
 
 export async function registrarLote(formulario: FormData) {

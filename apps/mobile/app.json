@@ -2,7 +2,7 @@
   "expo": {
     "name": "ZAV Vendedor",
     "slug": "zav-vendedor",
-    "version": "1.1.0",
+    "version": "1.1.1-rc.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "zav-vendedor",
@@ -13,7 +13,7 @@
       "config": {
         "usesNonExemptEncryption": false
       },
-      "buildNumber": "10104"
+      "buildNumber": "10105"
     },
     "android": {
       "package": "bo.zav.gestion.vendedor",
@@ -22,7 +22,7 @@
         "foregroundImage": "./assets/images/icon.png"
       },
       "predictiveBackGestureEnabled": false,
-      "versionCode": 10104
+      "versionCode": 10105
     },
     "plugins": [
       "expo-router",
@@ -38,7 +38,7 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "ZAV necesita tu ubicaciÃ³n Ãºnicamente al confirmar una entrega o cuando eliges usar tu posiciÃ³n actual."
+          "locationWhenInUsePermission": "ZAV necesita tu ubicación únicamente al confirmar una entrega o cuando eliges usar tu posición actual."
         }
       ],
       [

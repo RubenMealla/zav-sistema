@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: ZAV API
-  version: 1.1.0
+  version: 1.1.1-rc.1
   description: >
     Contrato interactivo de la API REST de ZAV para comprobación manual y automatizada. Usa "Authorize" con un
     JWT obtenido desde POST /api/v1/auth/login. Los cuerpos y parámetros incluyen ejemplos editables para

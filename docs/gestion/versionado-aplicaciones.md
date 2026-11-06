@@ -1,5 +1,7 @@
 # Versionado de las aplicaciones ZAV
 
+Documento histórico de 1.0.0. La política vigente desde 1.1.0 está en [Versionado y publicación](../operacion/versionado.md).
+
 ## Versiones iniciales estables
 
 | Componente | Versión funcional | Fuente de verdad | Identificación visible |
