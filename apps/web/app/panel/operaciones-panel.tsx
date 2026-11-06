@@ -211,7 +211,7 @@ export function OperacionesPanel({
   useEffect(() => {
     void cargar();
     return () => {
-      revisionLista.current++;
+      revisionLista.current += 1;
     };
   }, [cargar]);
   useActualizacionVisible(() => cargar(true), cargando || enviando || detalleAbierto || !!pendiente);
@@ -221,7 +221,7 @@ export function OperacionesPanel({
       void cargar();
       return;
     }
-    revisionLista.current++;
+    revisionLista.current += 1;
     setCargando(true);
     setVista(v);
     setPage(1);

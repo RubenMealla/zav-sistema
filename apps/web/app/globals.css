@@ -5,6 +5,7 @@
 @import "./estilos/controles.css";
 @import "./estilos/responsive.css";
 @import "./estilos/gestion.css";
+@import "./estilos/selector-imagen.css";
 
 :root {
   color-scheme: light;
