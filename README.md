@@ -2,13 +2,19 @@
 
 Sistema web y móvil para la gestión de productos terminados, pedidos y distribución de Fiambres y Embutidos ZAV. Trabajo Final del Diplomado en Desarrollo Web y Aplicaciones Móviles de la Universidad Autónoma Juan Misael Saracho (UAJMS), Tarija, Bolivia, gestión 2026.
 
+## Estado de esta revisión
+
+La versión estable publicada es **1.1.0**. Esta rama prepara **1.1.1-rc.1** (Android/iOS build **10105**), pendiente de revisión antes de fusionarse o publicarse. Incluye limpieza de código sin uso, controles de credenciales y mejoras en selección y previsualización de fotografías.
+
+La configuración de cada aplicación se explica en [Entornos y archivos privados](docs/desarrollo/entornos.md). Solo se publican plantillas `.env.example`; los archivos reales permanecen ignorados. Ejecutar `pnpm security:files`, `pnpm version:check` y las comprobaciones indicadas más adelante.
+
 ## Alcance y roles
 
 La solución se organiza como un monorepo con una API REST central y dos clientes diferenciados por rol:
 
-- **Administrador — aplicación web:** autenticación, productos, lotes, condición comercial, inventario administrativo, auditoría de pedidos y configuración de Venta y Despacho.
-- **Vendedor — aplicación móvil:** clientes, pedidos, retiro, organización de reparto y entrega con ubicación GPS puntual.
-- **Acceso público:** únicamente las funciones que se habiliten expresamente sin autenticación. El catálogo dinámico para clientes no forma parte de las funciones internas prioritarias implementadas.
+- **Administrador — aplicación web:** autenticación, catálogo relacional, fotografías y publicación; lotes, condición comercial, inventario, pedidos, Venta y Despacho; ventas directas, cargas, custodia y devoluciones.
+- **Vendedor — aplicación móvil:** clientes, pedidos, retiro, organización de reparto y entrega con GPS puntual; mercancía libre propia, ventas directas y devolución de sobrantes.
+- **Acceso público:** landing y catálogo dinámico publicado, sin acceso al inventario ni a datos personales.
 
 No se incluyen materias primas, recetas, proveedores, compras, costos de producción, facturación fiscal, seguimiento GPS continuo ni optimización automática de rutas.
 
@@ -36,9 +42,11 @@ La aplicación móvil utiliza MapLibre React Native con OpenFreeMap y `expo-loca
 
 ## Modelo de inventario
 
-El modelo principal se limita a ocho entidades de negocio:
+El modelo original conserva sus entidades de negocio:
 
 `Usuario, Cliente, Producto, Lote, Ubicacion, Movimiento, Pedido, DetallePedido`.
+
+Desde 1.1.0 se añaden familia, producto comercial, fotografías y operaciones de venta directa/custodia. `Producto` conserva su identidad como presentación o SKU para mantener las relaciones históricas.
 
 **Movimiento es la fuente de verdad del inventario físico.** El saldo actual se obtiene mediante la vista SQL `saldo_inventario`, calculada desde los movimientos de entrada y salida por lote y ubicación. No existe un endpoint para sobrescribir saldos.
 
@@ -66,13 +74,13 @@ La primera línea estable se versiona de forma independiente:
 
 | Componente | Versión estable | Fuente |
 |---|---|---|
-| ZAV Web | **1.0.0** | `apps/web/package.json` |
-| ZAV API | **1.0.0** | `apps/api/package.json` |
-| ZAV Vendedor (Android) | **1.0.0** · compilación **10000** | `apps/mobile/package.json` y `apps/mobile/app.json` |
+| ZAV Web | **1.1.0** | `apps/web/package.json` |
+| ZAV API | **1.1.0** | `apps/api/package.json` |
+| ZAV Vendedor (Android) | **1.1.0** · compilación **10104** | `apps/mobile/package.json` y `apps/mobile/app.json` |
 
-La API expone `GET /api/v1/version`. El prefijo `/api/v1` identifica el contrato HTTP y no debe confundirse con la versión del paquete. Cada aplicación puede cambiar de versión sin obligar a las demás a cambiar. Se sigue el esquema `MAYOR.MENOR.PARCHE`; el monorepositorio raíz no es una versión distribuida.
+La API expone `GET /api/v1/version`. El prefijo `/api/v1` identifica el contrato HTTP y no debe confundirse con la versión del paquete. Desde 1.1.0 se sincronizan las versiones de raíz, API, web, móvil y contratos; `pnpm version:check` comprueba su coherencia.
 
-La política de publicación y el historial se documentan en [Versionado de aplicaciones](docs/gestion/versionado-aplicaciones.md) e [Historial de versiones](docs/gestion/historial-versiones.md). Los cambios en la rama `mejora/calidad-arquitectura` todavía **no constituyen una versión publicada**.
+La política vigente está en [Versionado y publicación](docs/operacion/versionado.md). Se conservan [Versionado inicial](docs/gestion/versionado-aplicaciones.md) e [Historial de versiones](docs/gestion/historial-versiones.md) como antecedentes.
 
 ## Entornos y URLs de revisión
 
@@ -236,6 +244,8 @@ La documentación de QA y sus antecedentes incluye:
 
 ## Verificación operativa, rendimiento y recuperación
 
+Las mediciones siguientes corresponden a entregas anteriores. Se conservan como historial y no representan nuevas ejecuciones de esta candidata.
+
 La ruta pública `GET /api/v1/salud` ejecuta `SELECT 1` sobre PostgreSQL; responde HTTP 200 con `{"estado":"ok"}` cuando la consulta funciona y HTTP 503 ante un error de acceso a base, sin divulgar detalles de la conexión.
 
 - **Disponibilidad:** el workflow `.github/workflows/verificacion-publica-e4.yml` programa una comprobación aproximada una vez por hora de API y acceso web, con reintentos, historial de ejecución y alertas por incidencias de GitHub. El horario programado de GitHub no es un acuerdo de nivel de servicio; deben revisarse las ejecuciones efectivamente generadas. La ejecución tras la integración en `main` resultó satisfactoria: https://github.com/RubenMealla/zav-sistema/actions/runs/38098308673
@@ -263,6 +273,8 @@ El límite WIP de la columna **En desarrollo es 1**, coherente con un desarrollo
 Tablero: https://trello.com/b/Tn5elZCY/zav-2026-desarrollo-del-sistema-kanban
 
 ## Estado integrado
+
+La lista siguiente documenta la base original. La versión 1.1.0 incorpora además el catálogo administrable, ventas directas y custodia descritos al inicio.
 
 **Integrado y estable en `main`:**
 

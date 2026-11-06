@@ -1,0 +1,18 @@
+.selector-imagen { min-width: 0; margin: 0; padding: 16px; border: 1px solid var(--gris-200); border-radius: 6px; background: var(--papel); }
+.selector-imagen legend { padding: 0 6px; font-size: 14px; font-weight: 650; }
+.selector-imagen-contenido { display: grid; grid-template-columns: minmax(160px, 240px) minmax(0, 1fr); align-items: center; gap: 20px; }
+.selector-imagen-vista { position: relative; display: grid; place-items: center; aspect-ratio: 4 / 3; overflow: hidden; border: 1px solid var(--gris-200); border-radius: 4px; background: white; }
+.selector-imagen-vista img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.selector-imagen-vacia { display: grid; justify-items: center; gap: 10px; color: var(--gris-600); font-size: 13px; }
+.selector-imagen-vacia svg { color: var(--marca-oscura); }
+.selector-imagen-progreso { position: absolute; inset: auto 0 0; padding: 6px; text-align: center; background: var(--marca-suave); color: var(--marca-oscura); font-size: 12px; }
+.selector-imagen-controles { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+.selector-imagen-controles p { margin: 0; font-size: 13px; color: var(--gris-600); }
+.selector-imagen-controles .boton { min-height: 42px; max-width: 100%; white-space: normal; }
+.selector-imagen-entrada { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.selector-imagen-nombre { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--gris-600); }
+@media (max-width: 540px) {
+  .selector-imagen-contenido { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  .selector-imagen-vista { width: min(100%, 240px); justify-self: center; }
+  .selector-imagen-controles { align-items: stretch; }
+}

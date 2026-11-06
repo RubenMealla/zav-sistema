@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { BotonEnviar, Notificacion } from "../componentes/interacciones";
 import { useActualizacionVisible } from "./lib/use-actualizacion-visible";
 import Image from "next/image";
+import { SelectorImagen } from "../componentes/selector-imagen";
 import { CodigoPresentacion } from "../componentes/codigo-presentacion";
 import { Ventana } from "../componentes/ventana";
 import { Icono } from "../componentes/icono";
@@ -85,7 +86,7 @@ export function CatalogoPanel() {
     };
   }, [referencias]);
   function cambiarGrupo(g: Grupo, familia = "") {
-    revision.current++;
+    revision.current += 1;
     setCargando(true);
     setItems([]);
     setTotal(0);
@@ -129,7 +130,7 @@ export function CatalogoPanel() {
     const t = setTimeout(() => void cargar(), 200);
     return () => {
       clearTimeout(t);
-      revision.current++;
+      revision.current += 1;
     };
   }, [cargar]);
   useActualizacionVisible(async () => { await cargar(true); setReferencias(r => r + 1); }, cargando || edicion !== undefined);
@@ -437,6 +438,7 @@ function Editor({
   const [error, setError] = useState("");
   const [avisoId, setAvisoId] = useState(0);
   async function guardar(form: FormData) {
+    if (subiendo) return;
     setAvisoId(id => id + 1);
     setError("");
     const valor = (n: string) => String(form.get(n) ?? "");
@@ -657,64 +659,20 @@ function Editor({
                 defaultValue={item?.orden ?? 0}
               />
             </label>
-            <label className="campo">
-              Fotografía · PNG, JPEG o WebP hasta 5 MB
-              <input
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                disabled={subiendo}
-                onChange={async (e) => {
-                  const archivo = e.target.files?.[0];
-                  if (!archivo) return;
-                  setAvisoId(id => id + 1);
-                  if (
-                    !["image/png", "image/jpeg", "image/webp"].includes(
-                      archivo.type,
-                    ) ||
-                    archivo.size === 0 ||
-                    archivo.size > 5 * 1024 * 1024
-                  ) {
-                    setError(
-                      "Selecciona una fotografía PNG, JPEG o WebP de hasta 5 MB que no esté vacía.",
-                    );
-                    e.target.value = "";
-                    return;
-                  }
-                  setSubiendo(true);
-                  setError("");
-                  try {
-                    const form = new FormData();
-                    form.append("archivo", archivo);
-                    const i = await gestion<{ id: string }>(
-                      "catalogo/imagenes",
-                      "POST",
-                      form,
-                    );
-                    setImagenId(i.id);
-                  } catch (err) {
-                    setError(mensajeError(err));
-                  } finally {
-                    setSubiendo(false);
-                  }
-                }}
-              />
-            </label>
-            {(imagenId || item?.imagenOriginal) && (
-              <Image
-                className="gestion-foto"
-                width={160}
-                height={110}
-                sizes="160px"
-                unoptimized={!!imagenId}
-                src={
-                  imagenId
-                    ? `/api/gestion/catalogo/imagenes/${imagenId}`
-                    : (item?.imagenOriginal ?? "")
-                }
-                alt="Vista previa de la fotografía"
-              />
-            )}
-            {subiendo && <p role="status">Validando fotografía…</p>}
+            <SelectorImagen
+              imagenId={imagenId}
+              imagenInicialId={item?.imagenId ?? null}
+              imagenOriginal={item?.imagenOriginal}
+              cambiar={setImagenId}
+              alCargar={setSubiendo}
+              alError={mensaje => { setAvisoId(id => id + 1); setError(mensaje); }}
+              subir={async archivo => {
+                const form = new FormData();
+                form.append("archivo", archivo);
+                const imagen = await gestion<{ id: string }>("catalogo/imagenes", "POST", form);
+                return imagen.id;
+              }}
+            />
             <label className="gestion-check">
               <input
                 name="publicado"

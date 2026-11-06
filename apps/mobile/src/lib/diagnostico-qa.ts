@@ -1,6 +1,6 @@
 import { ES_COMPILACION_QA } from './configuracion-api';
 
-export type SolicitudQa = {
+type SolicitudQa = {
   id: number;
   momento: string;
   metodo: string;

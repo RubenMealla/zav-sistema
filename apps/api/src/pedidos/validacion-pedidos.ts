@@ -3,7 +3,7 @@ import { enteroPositivo, objeto, texto, uuid } from '../inventario/validacion.js
 import type { DetalleEntrada } from './tipos-pedidos.js';
 
 export const CAMPOS_PEDIDO = ['clienteId', 'direccionEntrega', 'observacion', 'detalles'] as const;
-export const CAMPOS_DETALLE = ['productoId', 'cantidad'] as const;
+const CAMPOS_DETALLE = ['productoId', 'cantidad'] as const;
 export const CAMPOS_RETIRO = ['operacionClave'] as const;
 export const CAMPOS_RETIROS = ['retiros'] as const;
 export const CAMPOS_RETIRO_ITEM = ['pedidoId', 'operacionClave'] as const;

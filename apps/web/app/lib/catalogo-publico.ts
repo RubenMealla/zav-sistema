@@ -1,4 +1,4 @@
-export type ProductoPublico = {
+type ProductoPublico = {
   id: string;
   nombre: string;
   imagen: string | null;

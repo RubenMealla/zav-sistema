@@ -9,7 +9,6 @@ import type {
   PuntoGeografico,
   ResultadoRetiroMultiple,
   Sesion,
-  VentaDespacho,
 } from './tipos';
 
 import { obtenerDireccionApi } from './configuracion-api';
@@ -122,7 +121,7 @@ export function perfil(token: string) {
   return solicitud<Sesion['usuario']>('/api/v1/auth/me', {}, token);
 }
 
-export function listarClientes(
+function listarClientes(
   token: string,
   q = '',
   activo?: 'true' | 'false' | 'todos',
@@ -243,19 +242,6 @@ export function retirarPedidosSeleccionados(
   );
 }
 
-export function entregarPedido(
-  token: string,
-  id: string,
-  datos: { operacionClave: string; latitud: number; longitud: number },
-) {
-  return solicitud<PedidoDetalle>(
-    `/api/v1/pedidos/${id}/entrega`,
-    { method: 'POST', body: JSON.stringify(datos) },
-    token,
-  );
-}
-
-
 export function actualizarCliente(
   token: string,
   id: string,
@@ -305,22 +291,6 @@ export function cancelarPedido(token: string, id: string, motivo?: string) {
     { method: 'POST', body: JSON.stringify({ motivo }) },
     token,
   );
-}
-
-export function actualizarUbicacionCliente(
-  token: string,
-  id: string,
-  datos: PuntoGeografico & { direccion?: string },
-) {
-  return solicitud<Cliente>(
-    `/api/v1/clientes/${id}/ubicacion`,
-    { method: 'PATCH', body: JSON.stringify(datos) },
-    token,
-  );
-}
-
-export function obtenerVentaDespacho(token: string) {
-  return solicitud<VentaDespacho>('/api/v1/ubicaciones/venta-despacho', {}, token);
 }
 
 export function planificarReparto(

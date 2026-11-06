@@ -7,7 +7,7 @@ const PREFIJOS: Record<string, string> = {
   JAMONES: 'JAM', 'TOCINOS Y AHUMADOS': 'TOA', 'FIAMBRES ESPECIALES': 'FES',
 };
 
-export function prefijoFamilia(nombre: string): string {
+function prefijoFamilia(nombre: string): string {
   const normalizado = nombre.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().trim().replace(/\s+/g, ' ');
   if (PREFIJOS[normalizado]) return PREFIJOS[normalizado];
   const palabras = normalizado.split(/[^A-Z0-9]+/).filter(p => p && !['Y', 'DE', 'DEL', 'LA', 'LAS', 'LOS'].includes(p));

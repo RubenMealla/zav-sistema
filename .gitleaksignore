@@ -1,0 +1,15 @@
+# Hallazgos históricos revisados el 2026-11-05. No se excluyen archivos ni commits completos.
+# JWT sintético en workflow contra PostgreSQL local zav_test.
+a43e7fe446a5ed48ef5dc0ccfc8bbccecf292ca4:.github/workflows/qa-mobile-apk.yml:generic-api-key:293
+# JWT sintético en workflow contra PostgreSQL local zav_test.
+39171a54d3ee8ead1638d90e6b7b2bf9df7b496c:.github/workflows/qa-recuperacion-rendimiento.yml:generic-api-key:38
+# JWT sintético en workflow contra PostgreSQL local zav_test.
+07ae4b2a351f98b763c20caab1c8c4da652a7eff:.github/workflows/qa-mobile-apk.yml:generic-api-key:222
+# JWT sintético en workflow contra PostgreSQL local zav_test.
+917d89b7097521011ab7b6b3bfd158cbeca06993:.github/workflows/evidencias-movil-qa.yml:generic-api-key:41
+# Falso positivo: nombre de migración dentro de una oración de arquitectura.
+3699a096a52fa7aacdba1f08210897a8b44c63bd:docs/arquitectura/modelo-datos-e3.md:generic-api-key:15
+# JWT sintético en workflow contra PostgreSQL local zav_test.
+70b0327424a3585a9d75362f12637e8d1c24d067:.github/workflows/qa-web-playwright.yml:generic-api-key:39
+# JWT sintético en workflow contra PostgreSQL local zav_test.
+c13acba94037d303e3f830a81891012943c74239:.github/workflows/qa-backend.yml:generic-api-key:41

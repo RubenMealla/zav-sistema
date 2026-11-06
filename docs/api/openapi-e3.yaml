@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: ZAV API
-  version: 1.1.0
+  version: 1.1.1-rc.1
   description: >
     Contrato de las rutas públicas de ZAV API 1.1.0, identificado mediante el prefijo /api/v1. La versión del
     servicio y la versión mayor del contrato evolucionan de forma independiente.

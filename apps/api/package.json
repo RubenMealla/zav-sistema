@@ -1,6 +1,6 @@
 {
   "name": "@zav/api",
-  "version": "1.1.0",
+  "version": "1.1.1-rc.1",
   "description": "API backend del sistema ZAV - Trabajo Final de Diplomado UAJMS 2026",
   "private": true,
   "license": "UNLICENSED",
@@ -46,7 +46,6 @@
     "oxlint": "^1.58.0",
     "oxlint-tsgolint": "^7.0.2001",
     "prettier": "^3.4.2",
-    "source-map-support": "^0.5.21",
     "supertest": "^7.0.0",
     "typescript": "^6.0.2",
     "vitest": "^4.1.2"
