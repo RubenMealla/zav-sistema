@@ -126,7 +126,7 @@ export function VentasDirectas({
   useEffect(() => {
     void cargar();
     return () => {
-      revisionLista.current++;
+      revisionLista.current += 1;
     };
   }, [cargar]);
   useActualizacionActiva(cargar, cargando || ocupado || detalleAbierto || !!pendiente || Object.values(cantidades).some(v => Number(v) > 0) || Object.values(devoluciones).some(v => Number(v) > 0));
@@ -136,7 +136,7 @@ export function VentasDirectas({
       void cargar();
       return;
     }
-    revisionLista.current++;
+    revisionLista.current += 1;
     setVista(v);
     setPage(1);
     setCustodiaPage(1);
@@ -181,7 +181,7 @@ export function VentasDirectas({
   }
   async function enviar(p: OperacionPendiente) {
     if (bloqueo.current) return;
-    revisionLista.current++;
+    revisionLista.current += 1;
     bloqueo.current = true;
     setOcupado(true);
     try {
@@ -230,7 +230,7 @@ export function VentasDirectas({
       notificarError(errorCantidades);
       return;
     }
-    revisionLista.current++;
+    revisionLista.current += 1;
     bloqueo.current = true;
     setOcupado(true);
     try {
@@ -319,7 +319,7 @@ export function VentasDirectas({
         })),
       },
     };
-    revisionLista.current++;
+    revisionLista.current += 1;
     bloqueo.current = true;
     setOcupado(true);
     try {
@@ -340,7 +340,7 @@ export function VentasDirectas({
   }
   async function prepararRecepcion(id: string) {
     if (bloqueo.current || pendiente || !listo) return;
-    revisionLista.current++;
+    revisionLista.current += 1;
     bloqueo.current = true;
     setOcupado(true);
     try {

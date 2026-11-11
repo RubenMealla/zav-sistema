@@ -288,7 +288,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
 
   useEffect(() => {
     void cargar();
-    return () => { revisionDatos.current++; };
+    return () => { revisionDatos.current += 1; };
   }, [cargar]);
 
   useActualizacionActiva(() => cargar(), cargando || actualizando || cargandoMasPedidos || guardandoCliente || guardandoPedido || !!accionPedido || !!cambiandoEstadoCliente || retirandoSeleccionados || planificando || historialVisible || !!clienteEditando || !!mapaOperativo || selectorUbicacionVisible || selectorClientePedidoVisible || selectorProductosPedidoVisible || seccion === 'venta-directa');
@@ -330,7 +330,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
       return;
     }
 
-    revisionDatos.current++;
+    revisionDatos.current += 1;
     setGuardandoCliente(true);
     setError('');
     try {
@@ -407,7 +407,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
       return;
     }
 
-    revisionDatos.current++;
+    revisionDatos.current += 1;
     setGuardandoCliente(true);
     setError('');
     try {
@@ -452,7 +452,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
 
   async function cambiarEstadoClienteDesdeApp(cliente: Cliente, activo: boolean) {
     if (cambiandoEstadoCliente) return;
-    revisionDatos.current++;
+    revisionDatos.current += 1;
     setCambiandoEstadoCliente(cliente.id);
     setError('');
     try {
@@ -544,7 +544,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
       return;
     }
 
-    revisionDatos.current++;
+    revisionDatos.current += 1;
     setGuardandoPedido(true);
     setError('');
     try {
@@ -631,7 +631,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
     const claveAccion = `cancelar:${id}`;
     if (accionesEnCursoRef.current.has(claveAccion)) return;
     accionesEnCursoRef.current.add(claveAccion);
-    revisionDatos.current++;
+    revisionDatos.current += 1;
     setAccionPedido(id);
     setError('');
     try {
@@ -718,7 +718,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
     if (accionesEnCursoRef.current.has(claveAccion)) return;
     accionesEnCursoRef.current.add(claveAccion);
 
-    revisionDatos.current++;
+    revisionDatos.current += 1;
     setAccionPedido(id);
     setError('');
     setAviso('');
@@ -780,7 +780,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
     if (accionesEnCursoRef.current.has(claveAccion)) return;
     accionesEnCursoRef.current.add(claveAccion);
 
-    revisionDatos.current++;
+    revisionDatos.current += 1;
     setAccionPedido(pedido.id);
     setError('');
     setAviso('');
@@ -843,7 +843,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
     if (accionesEnCursoRef.current.has(claveAccion)) return;
     accionesEnCursoRef.current.add(claveAccion);
 
-    revisionDatos.current++;
+    revisionDatos.current += 1;
     setAccionPedido(id);
     setError('');
     setAviso('');
@@ -1069,7 +1069,7 @@ export function VendedorScreen({ sesion, onCerrarSesion }: Props) {
       return;
     }
 
-    revisionDatos.current++;
+    revisionDatos.current += 1;
     setRetirandoSeleccionados(true);
     setError('');
     try {

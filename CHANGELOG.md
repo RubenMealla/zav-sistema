@@ -1,5 +1,15 @@
 # Cambios de ZAV
 
+## 1.1.1 — candidata en revisión
+
+- Selección de fotografías con vista previa, estado de carga, deshacer y recuperación ante errores en familias y productos.
+- Retiro de formularios, funciones y dependencias sin uso; se conservan los módulos operativos y el historial.
+- Configuración local separada de producción, plantillas por aplicación y controles automáticos para impedir archivos privados en Git.
+- Credenciales sintéticas de CI generadas por ejecución y revisión del historial con valores redactados.
+- Actualización compatible de Next.js, NestJS y dependencias transitivas de seguridad. Los avisos pendientes de Expo se registran en el issue #72.
+
+La candidata actual es `1.1.1-rc.2`, build `10106`. No sustituye la versión estable hasta la revisión y aprobación del propietario.
+
 ## 1.1.0 — 2026-11-04
 
 ### Funcionalidades

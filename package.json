@@ -1,12 +1,13 @@
 {
   "name": "zav-sistema",
-  "version": "1.1.0",
+  "version": "1.1.1-rc.2",
   "private": true,
   "license": "UNLICENSED",
   "description": "Sistema web y móvil para ZAV - Trabajo Final de Diplomado UAJMS 2026",
   "packageManager": "pnpm@12.4.2",
   "scripts": {
-    "version:check": "node scripts/verificar-version.mjs"
+    "version:check": "node scripts/verificar-version.mjs",
+    "security:files": "node scripts/verificar-archivos-publicados.mjs"
   },
   "engines": {
     "node": "24.x",

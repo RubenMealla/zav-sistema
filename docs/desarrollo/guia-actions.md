@@ -1,6 +1,6 @@
 # Guía de GitHub Actions
 
-Para revisar una mejora nueva, comienza en [PR #71](https://github.com/RubenMealla/zav-sistema/pull/71) → **Checks**. Los seis workflows operativos se encuentran en `.github/workflows/`. Los cuatro antiguos de E3 y E4 se conservan como archivos de referencia en `docs/historico/workflows/`, pero no se ejecutan desde esa carpeta.
+Para revisar una mejora, abre el Pull Request de su rama y consulta **Checks**. Los siete workflows operativos se encuentran en `.github/workflows/`. Los cuatro antiguos de E3 y E4 se conservan como archivos de referencia en `docs/historico/workflows/`, pero no se ejecutan desde esa carpeta.
 
 **Importante:** GitHub puede seguir mostrando nombres de workflows históricos en el menú de Actions aunque se retiren sus archivos. No se eliminarán ejecuciones, artefactos, ramas, commits ni PR para ocultarlos.
 
@@ -14,6 +14,9 @@ Para revisar una mejora nueva, comienza en [PR #71](https://github.com/RubenMeal
 | 04 · Android — Compilación APK | `qa-mobile-apk.yml` | APK firmado, identidad, permiso HTTP y prueba de hora QA en emulador |
 | 05 · Monitoreo — Web y API | `verificacion-publica-e4.yml` | Comprobación pública periódica y alerta |
 | 06 · QA especial — Pedidos y recuperación | `qa-recuperacion-rendimiento.yml` | Ensayo aislado de carga y restauración |
+| 07 · Seguridad — Archivos y credenciales | `seguridad-repositorio.yml` | Archivos privados prohibidos en Git y escaneo del historial con valores redactados |
+
+Los workflows de QA generan un JWT y contraseñas sintéticas aleatorias en cada ejecución mediante `scripts/preparar-credenciales-ci.mjs`. Esos valores se enmascaran y no se reutilizan como credenciales de usuarios reales.
 
 ## Workflows históricos archivados
 

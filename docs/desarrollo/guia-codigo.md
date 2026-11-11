@@ -13,6 +13,8 @@ Esta guía facilita cambios manuales durante el desarrollo y la presentación de
 | Mensajes de error y éxito | `apps/web/app/panel/lib/mensajes-panel.ts` |
 | Paginación del panel | `apps/web/app/panel/lib/paginacion-panel.ts` |
 | Modales y notificaciones compartidos | `apps/web/app/componentes/interacciones.tsx` |
+| Selección y vista previa de fotografías | `apps/web/app/componentes/selector-imagen.tsx` y `apps/web/app/estilos/selector-imagen.css` |
+| Configuración por aplicación y archivos privados | `docs/desarrollo/entornos.md` |
 | URL de API en Next.js | `apps/web/app/lib/api-servidor.ts` |
 | Endpoints y reglas del backend | `apps/api/src/**/` (archivos `*.controller.ts` y `*.service.ts`) |
 | Login, JWT y roles | `apps/api/src/auth/` |
@@ -47,6 +49,9 @@ pnpm --filter @zav/web test:e2e
 pnpm --filter @zav/mobile lint
 pnpm --filter @zav/mobile exec tsc --noEmit
 pnpm --filter @zav/mobile test
+pnpm security:files
+pnpm version:check
+pnpm dlx knip@6.44.1 --no-progress
 ```
 
 Las pruebas E2E requieren un PostgreSQL exclusivo de QA. Los resultados se consideran verificados solamente después de comprobar la ejecución. Mantener las ramas y commits históricos, no publicar claves de `.env`, ni ejecutar pruebas destructivas sobre Neon Production.

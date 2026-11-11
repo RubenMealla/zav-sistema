@@ -1,6 +1,6 @@
-export type Rol = 'ADMINISTRADOR' | 'VENDEDOR';
+type Rol = 'ADMINISTRADOR' | 'VENDEDOR';
 
-export type UsuarioSesion = {
+type UsuarioSesion = {
   id: string;
   identificador: string;
   nombre: string;
@@ -44,7 +44,7 @@ export type Disponibilidad = {
   cantidadDisponible: number;
 };
 
-export type EstadoPedido = 'REGISTRADO' | 'EN_DISTRIBUCION' | 'ENTREGADO' | 'CANCELADO';
+type EstadoPedido = 'REGISTRADO' | 'EN_DISTRIBUCION' | 'ENTREGADO' | 'CANCELADO';
 
 export type PedidoResumen = {
   id: string;
@@ -102,14 +102,6 @@ export type ResultadoRetiroMultiple = {
     statusCode?: number;
     message?: string;
   }[];
-};
-
-export type VentaDespacho = {
-  id: string;
-  codigo: 'VENTA_DESPACHO';
-  nombre: string;
-  clase: 'AREA_FISICA';
-  ubicacion: PuntoGeografico | null;
 };
 
 export type PlanificacionParada = PuntoGeografico & {
