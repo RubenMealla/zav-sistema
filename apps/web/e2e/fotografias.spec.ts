@@ -53,6 +53,14 @@ for (const grupo of ["familia", "producto"] as const) {
     await expect(editor.getByAltText("Vista previa de la fotografía")).toHaveAttribute("src", src!);
     if (grupo === "producto") await page.setViewportSize({ width: 390, height: 844 });
     await expect(editor.locator(".selector-imagen-vista")).toBeVisible();
+    const marco = await editor.locator(".selector-imagen-vista").boundingBox();
+    const imagen = await editor.getByAltText("Vista previa de la fotografía").boundingBox();
+    expect(marco).not.toBeNull();
+    expect(imagen).not.toBeNull();
+    expect(imagen!.x).toBeGreaterThanOrEqual(marco!.x);
+    expect(imagen!.y).toBeGreaterThanOrEqual(marco!.y);
+    expect(imagen!.x + imagen!.width).toBeLessThanOrEqual(marco!.x + marco!.width);
+    expect(imagen!.y + imagen!.height).toBeLessThanOrEqual(marco!.y + marco!.height);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await editor.getByRole("alert").getByRole("button").click();
     await editor.locator(".selector-imagen").scrollIntoViewIfNeeded();
