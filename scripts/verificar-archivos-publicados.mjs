@@ -5,7 +5,8 @@ const prohibidos = archivos.filter(ruta => {
   const nombre = ruta.split('/').at(-1);
   return (/^\.env(?:\.|$)/.test(nombre) && !nombre.endsWith('.example')) ||
     /\.(?:pem|key|p8|p12|pfx|jks|keystore|dump)$/i.test(nombre) ||
-    /(?:^|\/)(?:credentials|secrets|backups|node_modules|\.next|\.expo|\.idea)\//.test(ruta) ||
+    /(?:^|\/)(?:credentials|secrets|backups|node_modules|\.next|\.expo|\.idea|\.claude|\.codex)\//.test(ruta) ||
+    /^(?:AGENTS|CLAUDE)\.md$/i.test(nombre) || /\.prompt\.md$/i.test(nombre) ||
     /(?:service-account.*|.*-service-account|firebase-adminsdk.*)\.json$/i.test(nombre);
 });
 if (prohibidos.length) {

@@ -12,7 +12,7 @@ Los tres `.env.example` son plantillas versionadas, no entornos adicionales. No 
 
 ## Configuración y respaldo
 
-Las configuraciones auxiliares de QA, ensayo y respaldo no son necesarias para el arranque habitual, no están versionadas y ninguna aplicación las carga automáticamente. Se conserva una copia verificada fuera del repositorio. Las configuraciones antiguas quedan ignoradas hasta completar su archivo local.
+Las configuraciones auxiliares de QA, ensayo y respaldo se archivaron fuera del repositorio, con copias verificadas. No forman parte del arranque habitual ni están versionadas. Los archivos locales de herramientas también permanecen fuera del árbol de trabajo.
 
 La configuración diaria debe apuntar a una base local de desarrollo, separada de `zav_test`. Crear esa base y aplicar las migraciones antes del primer arranque. Comprobar siempre el destino efectivo de `DATABASE_URL`: las variables del proceso tienen prioridad sobre los archivos.
 

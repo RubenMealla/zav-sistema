@@ -4,7 +4,7 @@ Sistema web y móvil para la gestión de productos terminados, pedidos y distrib
 
 ## Estado de esta revisión
 
-La versión estable publicada es **1.1.0**. Esta rama prepara **1.1.1-rc.1** (Android/iOS build **10105**), pendiente de revisión antes de fusionarse o publicarse. Incluye limpieza de código sin uso, controles de credenciales y mejoras en selección y previsualización de fotografías.
+La versión estable publicada es **1.1.0**. Esta rama prepara **1.1.1-rc.2** (Android/iOS build **10106**), pendiente de revisión antes de fusionarse o publicarse. Incluye limpieza de código sin uso, controles de credenciales y mejoras en selección y previsualización de fotografías.
 
 La configuración de cada aplicación se explica en [Entornos y archivos privados](docs/desarrollo/entornos.md). Solo se publican plantillas `.env.example`; los archivos reales permanecen ignorados. Ejecutar `pnpm security:files`, `pnpm version:check` y las comprobaciones indicadas más adelante.
 
